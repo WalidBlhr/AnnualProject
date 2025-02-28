@@ -1,0 +1,14 @@
+<svg width="200" height="200" xmlns="http://www.w3.org/2000/svg">
+ <!-- Cercle de fond -->
+
+ <!-- Petite silhouette de maison -->
+ <!-- Cœur ou symbole d'entraide (facultatif) -->
+ <!-- Texte LCQ en bas -->
+ <g>
+  <title>Layer 1</title>
+  <circle id="svg_1" fill="#8ecae6" r="100" cy="100" cx="100"/>
+  <path stroke="null" id="svg_2" d="m22.94851,69.04742l50.6411,-43.40666l50.6411,43.40666l0,65.10999l-36.17222,0l0,-43.40666l-28.93777,0l0,43.40666l-36.17222,0l0,-65.10999z" fill="#023047"/>
+  <path stroke="null" id="svg_3" opacity="0.8" d="m124.6155,53.46134c-17.86329,-17.86329 -53.58986,-17.86329 -53.58986,12.5043c0,23.22227 32.15391,50.0172 53.58986,67.88048c21.43594,-17.86329 53.58986,-44.65821 53.58986,-67.88048c0,-30.36759 -35.72657,-30.36759 -53.58986,-12.5043z" fill="#ea2d2e"/>
+  <text transform="matrix(1.50518 0 0 1.50518 -30.2237 -72.651)" stroke="null" id="svg_4" font-weight="bold" font-family="'Maven Pro'" font-size="30" text-anchor="middle" fill="#0074bd" y="164.41631" x="88">LCQ</text>
+ </g>
+</svg>
