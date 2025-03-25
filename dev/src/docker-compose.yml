@@ -1,53 +1,51 @@
-version: '3.8'
-
 services:
-# --------------------------
-# Service PostgreSQL
-# --------------------------
   postgres:
-    image: postgres:14
+    image: postgres:latest
     container_name: quartissimo-postgres
-    restart: always
     environment:
       POSTGRES_DB: quartissimo_db
-      POSTGRES_USER: quartissimo_user
-      POSTGRES_PASSWORD: quartissimo_password
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: V3Gry9LUU9umyy+*
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # --------------------------
-  # Service MongoDB
-  # --------------------------
+  adminer:
+    image: adminer
+    container_name: adminer_ui
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+
   mongodb:
-    image: mongo:6
+    image: mongo:latest
     container_name: quartissimo-mongodb
-    restart: always
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
-  # ================
-  #  BACKEND
-  # ================
   backend:
+    container_name: quartissimo-backend
     build:
       context: ./backend
-      dockerfile: Dockerfile
-    container_name: quartissimo-backend
+    volumes:
+      - ./backend/src:/app/src
     ports:
       - "3000:3000"
-    # Si tu as des variables d'environnement spécifiques
     environment:
-      PORT: 3000
-    volumes:
-      - ./backend:/app
+      - DB_NAME=quartissimo_db
+      - DB_PASSWORD=V3Gry9LUU9umyy+*
+      - DB_USER=admin
+      - DB_SYNCHRONISE=true
+      - DB_HOST=postgres
+    depends_on:
+      - postgres
 
-  # ================
-  #  FRONTEND
-  # ================
   frontend:
     build:
       context: ./frontend
@@ -57,15 +55,11 @@ services:
       - "80:80"
     depends_on:
       - backend
-    # Optionnellement, si tu appelles le backend par exemple avec REACT_APP_BACKEND_URL
     environment:
       REACT_APP_BACKEND_URL: "http://localhost:3000"
     volumes:
       - ./frontend:/app
 
-# --------------------------
-# Volumes persistant
-# --------------------------
 volumes:
   postgres_data:
   mongo_data:

@@ -1,11 +1,11 @@
 # Utilise l'image Node officielle
-FROM node:16-alpine
+FROM node
 
 # Crée un dossier de travail
 WORKDIR /app
 
 # Copie les fichiers de configuration (package.json, etc.)
-COPY package*.json ./
+COPY package.json package-lock.json ./
 
 # Installe les dépendances
 RUN npm install
@@ -17,4 +17,4 @@ COPY . .
 EXPOSE 3000
 
 # Lance la commande 'npm start'
-CMD ["npm", "start"]
+CMD ["npm", "run", "start:dev"]
