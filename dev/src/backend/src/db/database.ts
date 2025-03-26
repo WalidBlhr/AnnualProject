@@ -13,5 +13,5 @@ export const AppDataSource = new DataSource({
     database: config.dbName,
     logging: true,
     synchronize: config.dbSynchronise,
-    entities: [path.join(__dirname, "models/*.ts")],
+    entities: [path.join(__dirname, "models/*.ts")]
 })
