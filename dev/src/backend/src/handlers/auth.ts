@@ -21,7 +21,10 @@ export const createUser = async(req: Request, res: Response) => {
         const userRepository = AppDataSource.getRepository(User)
         const user = await userRepository.save({
             email: createUserRequest.email,
-            password: hashedPassword
+            password: hashedPassword,
+            lastname: createUserRequest.lastname,
+            firstname: createUserRequest.firstname,
+            role: createUserRequest.role
         })
         res.status(201).send({
             id: user.id,
