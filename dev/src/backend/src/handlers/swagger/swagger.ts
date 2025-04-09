@@ -26,7 +26,11 @@ const options: swaggerJsdoc.Options = {
       },
     ],
   },
-  apis: [handlerPath + "/auth.ts", handlerPath + "/validators/*.ts"],
+  apis: [
+    `${handlerPath}/*.ts`, // => user.ts, service.ts, trocOffer.ts, etc.
+    `${handlerPath}/validators/*.ts`,
+    `${handlerPath}/validators/swagger/*.ts`
+  ],
 };
 
 const swaggerSpec = swaggerJsdoc(options);

@@ -116,37 +116,31 @@ export const detailedTrocOfferHandler = async (req: Request, res: Response) => {
  */
 export const updateTrocOfferHandler = async (req: Request, res: Response) => {
   try {
-    // 1) Validation combinée : params + body
-    const validation = updateTrocOfferValidation.validate({
-      ...req.params,
-      ...req.body,
-    });
-    if (validation.error) {
-      return res.status(400).send(generateValidationErrorMessage(validation.error.details));
-    }
+      const validation = updateTrocOfferValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    // 2) Récupération en base
-    const { id, title, description, status } = validation.value;
-    const trocOfferRepo = AppDataSource.getRepository(TrocOffer);
-    const trocOfferFound = await trocOfferRepo.findOneBy({ id });
+      const updateTrocOffer = validation.value
+      const trocOfferRepository = AppDataSource.getRepository(TrocOffer)
+      const trocOfferFound = await trocOfferRepository.findOneBy({ id: updateTrocOffer.id })
+      if (trocOfferFound === null) {
+          res.status(404).send({ "error": `trocOffer ${updateTrocOffer.id} not found` })
+          return
+      }
 
-    if (!trocOfferFound) {
-      return res.status(404).send({ message: `TrocOffer ${id} not found` });
-    }
+      // if (updateTrocOffer.price) {
+      //     trocOfferFound.price = updateTrocOffer.price
+      // }
 
-    // 3) Mise à jour des champs si présents
-    if (title !== undefined) trocOfferFound.title = title;
-    if (description !== undefined) trocOfferFound.description = description;
-    if (status !== undefined) trocOfferFound.status = status;
-
-    const trocOfferUpdated = await trocOfferRepo.save(trocOfferFound);
-
-    return res.send(trocOfferUpdated);
+      const trocOfferUpdate = await trocOfferRepository.save(trocOfferFound)
+      res.status(200).send(trocOfferUpdate)
   } catch (error) {
-    console.error("updateTrocOfferHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}
 
 /**
  * Suppression d’une TrocOffer
@@ -154,24 +148,24 @@ export const updateTrocOfferHandler = async (req: Request, res: Response) => {
  */
 export const deleteTrocOfferHandler = async (req: Request, res: Response) => {
   try {
-    // 1) Validation sur paramètre "id"
-    const validation = trocOfferIdValidation.validate(req.params);
-    if (validation.error) {
-      return res.status(400).send(generateValidationErrorMessage(validation.error.details));
-    }
+      const validation = TrocOfferIdValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    // 2) Récupération & suppression
-    const { id } = validation.value;
-    const trocOfferRepo = AppDataSource.getRepository(TrocOffer);
-    const trocOfferFound = await trocOfferRepo.findOneBy({ id });
-    if (!trocOfferFound) {
-      return res.status(404).send({ message: `TrocOffer ${id} not found` });
-    }
+      const updateTrocOffer = validation.value
+      const trocOfferRepository = AppDataSource.getRepository(TrocOffer)
+      const trocOfferFound = await trocOfferRepository.findOneBy({ id: updateTrocOffer.id })
+      if (trocOfferFound === null) {
+          res.status(404).send({ "error": `trocOffer ${updateTrocOffer.id} not found` })
+          return
+      }
 
-    const trocOfferRemoved = await trocOfferRepo.remove(trocOfferFound);
-    return res.send(trocOfferRemoved);
+      const trocOfferDeleted = await trocOfferRepository.remove(trocOfferFound)
+      res.status(200).send(trocOfferDeleted)
   } catch (error) {
-    console.error("deleteTrocOfferHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}

@@ -1,108 +1,171 @@
-// handlers/eventParticipant.ts
 import { Request, Response } from "express";
+import { createEventParticipantValidation, updateEventParticipantValidation, EventParticipantIdValidation, ListEventParticipantsValidation } from "./validators/eventParticipant";
+import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { EventParticipant } from "../db/models/event_participant";
-import { User } from "../db/models/user";
-import { Event } from "../db/models/event";
 
+/**
+ * Create a new EventParticipant
+ * POST /eventParticipants
+ */
 export const createEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-    // body = { userId, eventId, date_inscription, status_participation }
-    const { userId, eventId, date_inscription, status_participation } = req.body;
+      const validation = createEventParticipantValidation.validate(req.body);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const userRepo = AppDataSource.getRepository(User);
-    const userFound = await userRepo.findOneBy({ id: userId });
-    if (!userFound) {
-      return res.status(404).send({ message: `User ${userId} not found` });
-    }
+      const createEventParticipantRequest = validation.value
+      const eventParticipantRepository = AppDataSource.getRepository(EventParticipant)
+      const eventParticipant = eventParticipantRepository.create({ ...createEventParticipantRequest })
+      const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
 
-    const eventRepo = AppDataSource.getRepository(Event);
-    const eventFound = await eventRepo.findOneBy({ id: eventId });
-    if (!eventFound) {
-      return res.status(404).send({ message: `Event ${eventId} not found` });
-    }
-
-    const epRepo = AppDataSource.getRepository(EventParticipant);
-    const newEp = epRepo.create({
-      user: userFound,
-      event: eventFound,
-      date_inscription,
-      status_participation
-    });
-    const savedEp = await epRepo.save(newEp);
-    return res.status(201).send(savedEp);
+      res.status(201).send(eventParticipantCreated)
   } catch (error) {
-    console.error("createEventParticipantHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
-  }
-};
 
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
+  }
+}
+
+/**
+ * Lire la liste des eventParticipants (READ multiple)
+ * GET /eventParticipants
+ */
 export const listEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-    const epRepo = AppDataSource.getRepository(EventParticipant);
-    const eps = await epRepo.find({
-      relations: ["user", "event"]
-    });
-    return res.send(eps);
-  } catch (error) {
-    console.error("listEventParticipantHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
-  }
-};
+      console.log((req as any).eventParticipant)
+      const validation = ListEventParticipantsValidation.validate(req.query);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-export const getEventParticipantByIdHandler = async (req: Request, res: Response) => {
+      const listEventParticipantRequest = validation.value
+      console.log(listEventParticipantRequest)
+
+      const query = AppDataSource.createQueryBuilder(EventParticipant, 'eventParticipant')
+
+      // if (listEventParticipantRequest.priceMax !== undefined) {
+      //     query.andWhere("eventParticipant.price <= :priceMax", { priceMax: listEventParticipantRequest.priceMax })
+      // }
+
+      query.skip((listEventParticipantRequest.page - 1) * listEventParticipantRequest.limit);
+      query.take(listEventParticipantRequest.limit);
+
+      const [eventParticipants, totalCount] = await query.getManyAndCount();
+
+      const page = listEventParticipantRequest.page
+      const totalPages = Math.ceil(totalCount / listEventParticipantRequest.limit);
+
+      res.send(
+          {
+              data: eventParticipants,
+              page_size: listEventParticipantRequest.limit,
+              page,
+              total_count: totalCount,
+              total_pages: totalPages,
+          }
+      )
+
+  } catch (error) {
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
+  }
+}
+
+/**
+ * Récupérer le détail d’une EventParticipant par id (READ single)
+ * GET /eventParticipants/:id
+ */
+export const detailedEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const epRepo = AppDataSource.getRepository(EventParticipant);
-    const epFound = await epRepo.findOne({
-      where: { id },
-      relations: ["user", "event"]
-    });
-    if (!epFound) {
-      return res.status(404).send({ message: `EventParticipant ${id} not found` });
-    }
+      const validation = EventParticipantIdValidation.validate(req.params);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    return res.send(epFound);
+      const getEventParticipantRequest = validation.value
+      const eventParticipantRepository = AppDataSource.getRepository(EventParticipant)
+      const eventParticipant = await eventParticipantRepository.findOne({
+          where: { id: getEventParticipantRequest.id }
+      })
+      if (eventParticipant === null) {
+          res.status(404).send({ "message": "resource not found" })
+          return
+      }
+
+      res.status(200).send(eventParticipant);
   } catch (error) {
-    console.error("getEventParticipantByIdHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
   }
-};
+}
 
+/**
+ * Mise à jour d’une EventParticipant
+ * PUT /eventParticipants/:id
+ */
 export const updateEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const { status_participation } = req.body; // etc.
+      const validation = updateEventParticipantValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const epRepo = AppDataSource.getRepository(EventParticipant);
-    const epFound = await epRepo.findOneBy({ id });
-    if (!epFound) {
-      return res.status(404).send({ message: `EventParticipant ${id} not found` });
-    }
+      const updateEventParticipant = validation.value
+      const eventParticipantRepository = AppDataSource.getRepository(EventParticipant)
+      const eventParticipantFound = await eventParticipantRepository.findOneBy({ id: updateEventParticipant.id })
+      if (eventParticipantFound === null) {
+          res.status(404).send({ "error": `eventParticipant ${updateEventParticipant.id} not found` })
+          return
+      }
 
-    if (status_participation !== undefined) epFound.status_participation = status_participation;
+      // if (updateEventParticipant.price) {
+      //     eventParticipantFound.price = updateEventParticipant.price
+      // }
 
-    const updatedEp = await epRepo.save(epFound);
-    return res.send(updatedEp);
+      const eventParticipantUpdate = await eventParticipantRepository.save(eventParticipantFound)
+      res.status(200).send(eventParticipantUpdate)
   } catch (error) {
-    console.error("updateEventParticipantHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}
 
+/**
+ * Suppression d’une EventParticipant
+ * DELETE /eventParticipants/:id
+ */
 export const deleteEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const epRepo = AppDataSource.getRepository(EventParticipant);
-    const epFound = await epRepo.findOneBy({ id });
-    if (!epFound) {
-      return res.status(404).send({ message: `EventParticipant ${id} not found` });
-    }
+      const validation = EventParticipantIdValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const removedEp = await epRepo.remove(epFound);
-    return res.send(removedEp);
+      const updateEventParticipant = validation.value
+      const eventParticipantRepository = AppDataSource.getRepository(EventParticipant)
+      const eventParticipantFound = await eventParticipantRepository.findOneBy({ id: updateEventParticipant.id })
+      if (eventParticipantFound === null) {
+          res.status(404).send({ "error": `eventParticipant ${updateEventParticipant.id} not found` })
+          return
+      }
+
+      const eventParticipantDeleted = await eventParticipantRepository.remove(eventParticipantFound)
+      res.status(200).send(eventParticipantDeleted)
   } catch (error) {
-    console.error("deleteEventParticipantHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}

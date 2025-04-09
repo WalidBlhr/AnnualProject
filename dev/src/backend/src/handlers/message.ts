@@ -1,125 +1,171 @@
-// handlers/message.ts
 import { Request, Response } from "express";
+import { createMessageValidation, updateMessageValidation, MessageIdValidation, ListMessagesValidation } from "./validators/message";
+import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { Message } from "../db/models/message";
-import { User } from "../db/models/user";
 
+/**
+ * Create a new Message
+ * POST /messages
+ */
 export const createMessageHandler = async (req: Request, res: Response) => {
   try {
-    // body = { content, date_sent, senderId, receiverId, status }
-    const { content, date_sent, senderId, receiverId, status } = req.body;
+      const validation = createMessageValidation.validate(req.body);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const userRepo = AppDataSource.getRepository(User);
-    const sender = await userRepo.findOneBy({ id: senderId });
-    if (!sender) {
-      return res.status(404).send({ message: `Sender ${senderId} not found` });
-    }
-    const receiver = await userRepo.findOneBy({ id: receiverId });
-    if (!receiver) {
-      return res.status(404).send({ message: `Receiver ${receiverId} not found` });
-    }
+      const createMessageRequest = validation.value
+      const messageRepository = AppDataSource.getRepository(Message)
+      const message = messageRepository.create({ ...createMessageRequest })
+      const messageCreated = await messageRepository.save(message);
 
-    const msgRepo = AppDataSource.getRepository(Message);
-    const newMsg = msgRepo.create({
-      content,
-      date_sent,
-      sender,
-      receiver,
-      status
-    });
-    const savedMsg = await msgRepo.save(newMsg);
-    return res.status(201).send(savedMsg);
+      res.status(201).send(messageCreated)
   } catch (error) {
-    console.error("createMessageHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
-  }
-};
 
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
+  }
+}
+
+/**
+ * Lire la liste des messages (READ multiple)
+ * GET /messages
+ */
 export const listMessageHandler = async (req: Request, res: Response) => {
   try {
-    // Ex: on peut lister tous les messages ou seulement ceux d'un user
-    // Filtre user ? ex: /messages?userId=12
-    const userId = req.query.userId ? parseInt(req.query.userId as string, 10) : null;
+      console.log((req as any).message)
+      const validation = ListMessagesValidation.validate(req.query);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const msgRepo = AppDataSource.getRepository(Message);
-    let messages: Message[];
+      const listMessageRequest = validation.value
+      console.log(listMessageRequest)
 
-    if (userId) {
-      // Tous les messages où userId est sender ou receiver
-      messages = await msgRepo.find({
-        where: [
-          { sender: { id: userId } },
-          { receiver: { id: userId } }
-        ],
-        relations: ["sender", "receiver"]
-      });
-    } else {
-      messages = await msgRepo.find({
-        relations: ["sender", "receiver"]
-      });
-    }
+      const query = AppDataSource.createQueryBuilder(Message, 'message')
 
-    return res.send(messages);
+      // if (listMessageRequest.priceMax !== undefined) {
+      //     query.andWhere("message.price <= :priceMax", { priceMax: listMessageRequest.priceMax })
+      // }
+
+      query.skip((listMessageRequest.page - 1) * listMessageRequest.limit);
+      query.take(listMessageRequest.limit);
+
+      const [messages, totalCount] = await query.getManyAndCount();
+
+      const page = listMessageRequest.page
+      const totalPages = Math.ceil(totalCount / listMessageRequest.limit);
+
+      res.send(
+          {
+              data: messages,
+              page_size: listMessageRequest.limit,
+              page,
+              total_count: totalCount,
+              total_pages: totalPages,
+          }
+      )
+
   } catch (error) {
-    console.error("listMessageHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
   }
-};
+}
 
-export const getMessageByIdHandler = async (req: Request, res: Response) => {
+/**
+ * Récupérer le détail d’une Message par id (READ single)
+ * GET /messages/:id
+ */
+export const detailedMessageHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const msgRepo = AppDataSource.getRepository(Message);
-    const messageFound = await msgRepo.findOne({
-      where: { id },
-      relations: ["sender", "receiver"]
-    });
-    if (!messageFound) {
-      return res.status(404).send({ message: `Message ${id} not found` });
-    }
+      const validation = MessageIdValidation.validate(req.params);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    return res.send(messageFound);
+      const getMessageRequest = validation.value
+      const messageRepository = AppDataSource.getRepository(Message)
+      const message = await messageRepository.findOne({
+          where: { id: getMessageRequest.id }
+      })
+      if (message === null) {
+          res.status(404).send({ "message": "resource not found" })
+          return
+      }
+
+      res.status(200).send(message);
   } catch (error) {
-    console.error("getMessageByIdHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
   }
-};
+}
 
+/**
+ * Mise à jour d’une Message
+ * PUT /messages/:id
+ */
 export const updateMessageHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const { content, status } = req.body;
+      const validation = updateMessageValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const msgRepo = AppDataSource.getRepository(Message);
-    const msgFound = await msgRepo.findOneBy({ id });
-    if (!msgFound) {
-      return res.status(404).send({ message: `Message ${id} not found` });
-    }
+      const updateMessage = validation.value
+      const messageRepository = AppDataSource.getRepository(Message)
+      const messageFound = await messageRepository.findOneBy({ id: updateMessage.id })
+      if (messageFound === null) {
+          res.status(404).send({ "error": `message ${updateMessage.id} not found` })
+          return
+      }
 
-    if (content !== undefined) msgFound.content = content;
-    if (status !== undefined) msgFound.status = status;
+      // if (updateMessage.price) {
+      //     messageFound.price = updateMessage.price
+      // }
 
-    const updatedMsg = await msgRepo.save(msgFound);
-    return res.send(updatedMsg);
+      const messageUpdate = await messageRepository.save(messageFound)
+      res.status(200).send(messageUpdate)
   } catch (error) {
-    console.error("updateMessageHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}
 
+/**
+ * Suppression d’une Message
+ * DELETE /messages/:id
+ */
 export const deleteMessageHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const msgRepo = AppDataSource.getRepository(Message);
-    const msgFound = await msgRepo.findOneBy({ id });
-    if (!msgFound) {
-      return res.status(404).send({ message: `Message ${id} not found` });
-    }
+      const validation = MessageIdValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const removedMsg = await msgRepo.remove(msgFound);
-    return res.send(removedMsg);
+      const updateMessage = validation.value
+      const messageRepository = AppDataSource.getRepository(Message)
+      const messageFound = await messageRepository.findOneBy({ id: updateMessage.id })
+      if (messageFound === null) {
+          res.status(404).send({ "error": `message ${updateMessage.id} not found` })
+          return
+      }
+
+      const messageDeleted = await messageRepository.remove(messageFound)
+      res.status(200).send(messageDeleted)
   } catch (error) {
-    console.error("deleteMessageHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}

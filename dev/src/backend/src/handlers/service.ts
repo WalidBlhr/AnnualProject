@@ -1,106 +1,171 @@
-// handlers/service.ts
 import { Request, Response } from "express";
-import { CreateProductValidation } from "./validators/create-product";
+import { createServiceValidation, updateServiceValidation, ServiceIdValidation, ListServicesValidation } from "./validators/service";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { Service } from "../db/models/service";
-import { User } from "../db/models/user";
 
+/**
+ * Create a new Service
+ * POST /services
+ */
 export const createServiceHandler = async (req: Request, res: Response) => {
   try {
-    // body = { type_service, description, date, status, userId }
-    const { type_service, description, date, status, userId } = req.body;
+      const validation = createServiceValidation.validate(req.body);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const userRepo = AppDataSource.getRepository(User);
-    const userFound = await userRepo.findOneBy({ id: userId });
-    if (!userFound) {
-      res.status(404).send({ message: `User ${userId} not found` });
-    }
+      const createServiceRequest = validation.value
+      const serviceRepository = AppDataSource.getRepository(Service)
+      const service = serviceRepository.create({ ...createServiceRequest })
+      const serviceCreated = await serviceRepository.save(service);
 
-    const serviceRepo = AppDataSource.getRepository(Service);
-    const newService = serviceRepo.create({
-      type_service,
-      description,
-      date,
-      status,
-      user: userFound
-    });
-    const savedService = await serviceRepo.save(newService);
-    res.send(savedService);
+      res.status(201).send(serviceCreated)
   } catch (error) {
-    console.error("createServiceHandler error:", error);
-    res.status(500).send({ message: "internal error" });
-  }
-};
 
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
+  }
+}
+
+/**
+ * Lire la liste des services (READ multiple)
+ * GET /services
+ */
 export const listServiceHandler = async (req: Request, res: Response) => {
   try {
-    const serviceRepo = AppDataSource.getRepository(Service);
-    const services = await serviceRepo.find({
-      relations: ["user"]
-    });
-    return res.send(services);
-  } catch (error) {
-    console.error("listServiceHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
-  }
-};
+      console.log((req as any).service)
+      const validation = ListServicesValidation.validate(req.query);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-export const getServiceByIdHandler = async (req: Request, res: Response) => {
+      const listServiceRequest = validation.value
+      console.log(listServiceRequest)
+
+      const query = AppDataSource.createQueryBuilder(Service, 'service')
+
+      // if (listServiceRequest.priceMax !== undefined) {
+      //     query.andWhere("service.price <= :priceMax", { priceMax: listServiceRequest.priceMax })
+      // }
+
+      query.skip((listServiceRequest.page - 1) * listServiceRequest.limit);
+      query.take(listServiceRequest.limit);
+
+      const [services, totalCount] = await query.getManyAndCount();
+
+      const page = listServiceRequest.page
+      const totalPages = Math.ceil(totalCount / listServiceRequest.limit);
+
+      res.send(
+          {
+              data: services,
+              page_size: listServiceRequest.limit,
+              page,
+              total_count: totalCount,
+              total_pages: totalPages,
+          }
+      )
+
+  } catch (error) {
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
+  }
+}
+
+/**
+ * Récupérer le détail d’une Service par id (READ single)
+ * GET /services/:id
+ */
+export const detailedServiceHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const serviceRepo = AppDataSource.getRepository(Service);
-    const serviceFound = await serviceRepo.findOne({
-      where: { id },
-      relations: ["user"]
-    });
-    if (!serviceFound) {
-      return res.status(404).send({ message: `Service ${id} not found` });
-    }
+      const validation = ServiceIdValidation.validate(req.params);
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    return res.send(serviceFound);
+      const getServiceRequest = validation.value
+      const serviceRepository = AppDataSource.getRepository(Service)
+      const service = await serviceRepository.findOne({
+          where: { id: getServiceRequest.id }
+      })
+      if (service === null) {
+          res.status(404).send({ "message": "resource not found" })
+          return
+      }
+
+      res.status(200).send(service);
   } catch (error) {
-    console.error("getServiceByIdHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      if (error instanceof Error) {
+          console.log(`Internal error: ${error.message}`)
+      }
+      res.status(500).send({ "message": "internal error" })
   }
-};
+}
 
+/**
+ * Mise à jour d’une Service
+ * PUT /services/:id
+ */
 export const updateServiceHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const { type_service, description, date, status } = req.body;
+      const validation = updateServiceValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
 
-    const serviceRepo = AppDataSource.getRepository(Service);
-    const serviceFound = await serviceRepo.findOneBy({ id });
-    if (!serviceFound) {
-      return res.status(404).send({ message: `Service ${id} not found` });
-    }
+      const updateService = validation.value
+      const serviceRepository = AppDataSource.getRepository(Service)
+      const serviceFound = await serviceRepository.findOneBy({ id: updateService.id })
+      if (serviceFound === null) {
+          res.status(404).send({ "error": `service ${updateService.id} not found` })
+          return
+      }
 
-    if (type_service !== undefined) serviceFound.type_service = type_service;
-    if (description !== undefined) serviceFound.description = description;
-    if (date !== undefined) serviceFound.date = date;
-    if (status !== undefined) serviceFound.status = status;
+      // if (updateService.price) {
+      //     serviceFound.price = updateService.price
+      // }
 
-    const updatedService = await serviceRepo.save(serviceFound);
-    return res.send(updatedService);
+      const serviceUpdate = await serviceRepository.save(serviceFound)
+      res.status(200).send(serviceUpdate)
   } catch (error) {
-    console.error("updateServiceHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}
 
+/**
+ * Suppression d’une Service
+ * DELETE /services/:id
+ */
 export const deleteServiceHandler = async (req: Request, res: Response) => {
   try {
-    const id = parseInt(req.params.id, 10);
-    const serviceRepo = AppDataSource.getRepository(Service);
-    const serviceFound = await serviceRepo.findOneBy({ id });
-    if (!serviceFound) {
-      return res.status(404).send({ message: `Service ${id} not found` });
-    }
-    const removedService = await serviceRepo.remove(serviceFound);
-    return res.send(removedService);
+      const validation = ServiceIdValidation.validate({ ...req.params, ...req.body })
+      if (validation.error) {
+          res.status(400).send(generateValidationErrorMessage(validation.error.details))
+          return
+      }
+
+      const updateService = validation.value
+      const serviceRepository = AppDataSource.getRepository(Service)
+      const serviceFound = await serviceRepository.findOneBy({ id: updateService.id })
+      if (serviceFound === null) {
+          res.status(404).send({ "error": `service ${updateService.id} not found` })
+          return
+      }
+
+      const serviceDeleted = await serviceRepository.remove(serviceFound)
+      res.status(200).send(serviceDeleted)
   } catch (error) {
-    console.error("deleteServiceHandler error:", error);
-    return res.status(500).send({ message: "internal error" });
+      console.log(error)
+      res.status(500).send({ error: "Internal error" })
   }
-};
+}
