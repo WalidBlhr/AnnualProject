@@ -1,3 +1,4 @@
+// File: dev/src/backend/src/db/database.ts
 import path from "path";
 import { DataSource } from "typeorm";
 import { config } from "../config/config";

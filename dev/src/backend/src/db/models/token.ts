@@ -1,3 +1,4 @@
+// File: dev/src/backend/src/db/models/token.ts
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "./user";
 

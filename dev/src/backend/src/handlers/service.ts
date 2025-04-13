@@ -1,3 +1,4 @@
+// File: dev/src/backend/src/handlers/service.ts
 import { Request, Response } from "express";
 import { createServiceValidation, updateServiceValidation, ServiceIdValidation, ListServicesValidation } from "./validators/service";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
@@ -80,7 +81,7 @@ export const listServiceHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Récupérer le détail d’une Service par id (READ single)
+ * Récupérer le détail d'une Service par id (READ single)
  * GET /services/:id
  */
 export const detailedServiceHandler = async (req: Request, res: Response) => {
@@ -111,7 +112,7 @@ export const detailedServiceHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Mise à jour d’une Service
+ * Mise à jour d'une Service
  * PUT /services/:id
  */
 export const updateServiceHandler = async (req: Request, res: Response) => {
@@ -143,7 +144,7 @@ export const updateServiceHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Suppression d’une Service
+ * Suppression d'une Service
  * DELETE /services/:id
  */
 export const deleteServiceHandler = async (req: Request, res: Response) => {

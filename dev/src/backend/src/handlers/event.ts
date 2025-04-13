@@ -1,3 +1,4 @@
+// File: dev/src/backend/src/handlers/event.ts
 import { Request, Response } from "express";
 import { createEventValidation, updateEventValidation, EventIdValidation, ListEventsValidation } from "./validators/event";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
@@ -80,7 +81,7 @@ export const listEventHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Récupérer le détail d’une Event par id (READ single)
+ * Récupérer le détail d'une Event par id (READ single)
  * GET /events/:id
  */
 export const detailedEventHandler = async (req: Request, res: Response) => {
@@ -111,7 +112,7 @@ export const detailedEventHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Mise à jour d’une Event
+ * Mise à jour d'une Event
  * PUT /events/:id
  */
 export const updateEventHandler = async (req: Request, res: Response) => {
@@ -143,7 +144,7 @@ export const updateEventHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Suppression d’une Event
+ * Suppression d'une Event
  * DELETE /events/:id
  */
 export const deleteEventHandler = async (req: Request, res: Response) => {

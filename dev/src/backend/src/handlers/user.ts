@@ -1,4 +1,4 @@
-// handlers/user.ts
+// File: dev/src/backend/src/handlers/user.ts
 import { Request, Response } from "express";
 import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";

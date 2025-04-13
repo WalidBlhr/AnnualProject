@@ -1,5 +1,6 @@
+// File: dev/src/backend/src/handlers/handler.ts
 import { Application, Request, Response } from "express";
-import { createUser, login } from "./auth";
+import { createUser, login, getCurrentUser } from "./auth";
 import { authMiddleware } from "../middleware/auth";
 
 import { deleteUserHandler, detailedUserHandler, listUserHandler, updateUserHandler } from "./user";
@@ -21,6 +22,14 @@ export const initHandlers = (app: Application) => {
    *     responses:
    *       200:
    *         description: OK
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                   example: ping
    */
   app.get("/health", (_: Request, res: Response) => {
     res.send({ message: "ping" });
@@ -55,17 +64,19 @@ export const initHandlers = (app: Application) => {
    *   post:
    *     tags:
    *       - Auth
-   *     summary: Se connecter (login)
+   *     summary: Se connecter
    *     requestBody:
    *       required: true
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/LoginUserValidationRequest'
+   *             $ref: '#/components/schemas/LoginUserRequest'
    *     responses:
-   *       201:
-   *         description: Renvoie le token JWT
+   *       200:
+   *         description: Connexion réussie
    *       400:
+   *         description: Erreur de validation
+   *       401:
    *         description: Email ou mot de passe invalide
    *       500:
    *         description: Erreur interne
@@ -699,4 +710,23 @@ export const initHandlers = (app: Application) => {
    *         description: Participation supprimée
    */
   app.delete("/event-participants/:id", authMiddleware, deleteEventParticipantHandler);
+
+  /**
+   * @openapi
+   * /users/me:
+   *   get:
+   *     tags:
+   *       - User
+   *     summary: Récupérer les informations de l'utilisateur connecté
+   *     security:
+   *       - bearerAuth: []
+   *     responses:
+   *       200:
+   *         description: Informations de l'utilisateur
+   *       401:
+   *         description: Non authentifié
+   *       500:
+   *         description: Erreur interne
+   */
+  app.get("/users/me", authMiddleware, getCurrentUser);
 };

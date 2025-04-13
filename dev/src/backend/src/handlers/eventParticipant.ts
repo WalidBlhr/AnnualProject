@@ -1,3 +1,4 @@
+// File: dev/src/backend/src/handlers/eventParticipant.ts
 import { Request, Response } from "express";
 import { createEventParticipantValidation, updateEventParticipantValidation, EventParticipantIdValidation, ListEventParticipantsValidation } from "./validators/eventParticipant";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
@@ -80,7 +81,7 @@ export const listEventParticipantHandler = async (req: Request, res: Response) =
 }
 
 /**
- * Récupérer le détail d’une EventParticipant par id (READ single)
+ * Récupérer le détail d'une EventParticipant par id (READ single)
  * GET /eventParticipants/:id
  */
 export const detailedEventParticipantHandler = async (req: Request, res: Response) => {
@@ -111,7 +112,7 @@ export const detailedEventParticipantHandler = async (req: Request, res: Respons
 }
 
 /**
- * Mise à jour d’une EventParticipant
+ * Mise à jour d'une EventParticipant
  * PUT /eventParticipants/:id
  */
 export const updateEventParticipantHandler = async (req: Request, res: Response) => {
@@ -143,7 +144,7 @@ export const updateEventParticipantHandler = async (req: Request, res: Response)
 }
 
 /**
- * Suppression d’une EventParticipant
+ * Suppression d'une EventParticipant
  * DELETE /eventParticipants/:id
  */
 export const deleteEventParticipantHandler = async (req: Request, res: Response) => {
