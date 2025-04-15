@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/db/models/message.ts
 import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
 import { User } from "./user";
 

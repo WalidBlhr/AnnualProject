@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/handlers/message.ts
 import { Request, Response } from "express";
 import { createMessageValidation, updateMessageValidation, MessageIdValidation, ListMessagesValidation } from "./validators/message";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
@@ -81,7 +80,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Récupérer le détail d'une Message par id (READ single)
+ * Récupérer le détail d’une Message par id (READ single)
  * GET /messages/:id
  */
 export const detailedMessageHandler = async (req: Request, res: Response) => {
@@ -112,7 +111,7 @@ export const detailedMessageHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Mise à jour d'une Message
+ * Mise à jour d’une Message
  * PUT /messages/:id
  */
 export const updateMessageHandler = async (req: Request, res: Response) => {
@@ -144,7 +143,7 @@ export const updateMessageHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Suppression d'une Message
+ * Suppression d’une Message
  * DELETE /messages/:id
  */
 export const deleteMessageHandler = async (req: Request, res: Response) => {

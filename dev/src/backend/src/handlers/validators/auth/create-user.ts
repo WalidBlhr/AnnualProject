@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/handlers/validators/auth/create-user.ts
 import Joi from "joi";
 
 export interface CreateUserRequest {

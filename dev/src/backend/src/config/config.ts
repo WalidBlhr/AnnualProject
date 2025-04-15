@@ -1,8 +1,6 @@
 import dotenv from 'dotenv';
-import path from 'path';
 
-// Charger le fichier .env depuis le dossier backend
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
+dotenv.config();
 
 export interface Configuration {
     dbName: string;
@@ -22,13 +20,6 @@ const initConfig = (): Configuration => {
     } = process.env;
 
     if (!DB_NAME || !DB_PASSWORD || !DB_SYNCHRONISE || !DB_USER || !DB_HOST) {
-        console.log('Environment variables:', {
-            DB_NAME,
-            DB_PASSWORD,
-            DB_USER,
-            DB_SYNCHRONISE,
-            DB_HOST
-        });
         throw new Error("Missing environment variables");
     }
 

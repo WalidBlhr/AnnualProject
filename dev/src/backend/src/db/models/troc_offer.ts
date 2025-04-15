@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/db/models/troc_offer.ts
 import { Column, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, } from "typeorm"
 import { User } from "./user";
 

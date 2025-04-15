@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/handlers/validators/trocOffer.ts
 import Joi from "joi";
 
 // READ (liste)

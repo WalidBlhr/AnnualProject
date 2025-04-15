@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/handlers/validators/event.ts
 import Joi from "joi";
 
 /**

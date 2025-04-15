@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/db/models/event_participant.ts
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, OneToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
 import { User } from "./user";
 import { Event } from "./event";

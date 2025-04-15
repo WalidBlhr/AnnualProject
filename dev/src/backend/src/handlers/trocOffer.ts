@@ -1,4 +1,3 @@
-// File: dev/src/backend/src/handlers/trocOffer.ts
 import { Request, Response } from "express";
 import { createTrocOfferValidation, updateTrocOfferValidation, TrocOfferIdValidation, ListTrocOffersValidation } from "./validators/trocOffer";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
@@ -81,7 +80,7 @@ export const listTrocOfferHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Récupérer le détail d'une TrocOffer par id (READ single)
+ * Récupérer le détail d’une TrocOffer par id (READ single)
  * GET /trocoffers/:id
  */
 export const detailedTrocOfferHandler = async (req: Request, res: Response) => {
@@ -112,7 +111,7 @@ export const detailedTrocOfferHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Mise à jour d'une TrocOffer
+ * Mise à jour d’une TrocOffer
  * PUT /trocoffers/:id
  */
 export const updateTrocOfferHandler = async (req: Request, res: Response) => {
@@ -144,7 +143,7 @@ export const updateTrocOfferHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Suppression d'une TrocOffer
+ * Suppression d’une TrocOffer
  * DELETE /trocoffers/:id
  */
 export const deleteTrocOfferHandler = async (req: Request, res: Response) => {
