@@ -95,9 +95,9 @@ export const updateUserHandler = async (req: Request, res: Response) => {
           return
       }
 
-      // if (updateUser.price) {
-      //     userFound.price = updateUser.price
-      // }
+      if (updateUser.lastname) {
+          userFound.lastname = updateUser.lastname
+      }
 
       const userUpdate = await userRepository.save(userFound)
       res.status(200).send(userUpdate)

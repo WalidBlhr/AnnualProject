@@ -28,10 +28,10 @@ export interface UserId {
 // UPDATE - PUT
 export interface UpdateUserRequest {
     id: number
-    // price?: number
+    lastname: string
 }
 
 export const UserUpdateValidation = Joi.object<UpdateUserRequest>({
     id: Joi.number().required(),
-    // price: Joi.number().min(1)
+    lastname: Joi.string().required()
 })

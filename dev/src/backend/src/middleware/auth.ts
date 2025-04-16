@@ -1,8 +1,18 @@
 import { NextFunction, Request, Response } from "express";
+
+// Extend the Request interface to include the user property
+// declare global {
+//     namespace Express {
+//         interface Request {
+//             user?: { id: string; role: number };
+//         }
+//     }
+// }
+import { verify } from "jsonwebtoken";
 import { AppDataSource } from "../db/database";
 import { Token } from "../db/models/token";
-import { verify } from "jsonwebtoken";
 
+// Middleware d'authentification existant
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const authHeader = req.headers.authorization
@@ -40,3 +50,21 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
 
     }
 }
+
+// Middleware pour autoriser uniquement les administrateurs
+export const isAdmin = (req: Request, res: Response, next: NextFunction): void => {
+    if ((req as any).user && (req as any).user.role === 1) {
+      next();
+    } else {
+      res.status(403).send({ message: "Forbidden" });
+    }
+};
+
+// Middleware pour vérifier que l'utilisateur est propriétaire ou admin
+export const isOwnerOrAdmin = (req: Request, res: Response, next: NextFunction): void => {
+    if ((req as any).user?.role === 1 || (req as any).user?.id === req.params.id) {
+        next();
+    } else {
+        res.status(403).send({ message: 'Forbidden' });
+    }
+};

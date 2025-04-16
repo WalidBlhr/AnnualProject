@@ -1,6 +1,6 @@
 import { Application, Request, Response } from "express";
 import { createUser, login } from "./auth";
-import { authMiddleware } from "../middleware/auth";
+import { authMiddleware, isOwnerOrAdmin, isAdmin } from "../middleware/auth";
 
 import { deleteUserHandler, detailedUserHandler, listUserHandler, updateUserHandler } from "./user";
 import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
@@ -146,7 +146,7 @@ export const initHandlers = (app: Application) => {
    *       404:
    *         description: Utilisateur non trouvé
    */
-  app.put("/users/:id", authMiddleware, updateUserHandler);
+  app.put("/users/:id", authMiddleware, isOwnerOrAdmin, updateUserHandler);
 
   /**
    * @openapi
@@ -171,7 +171,7 @@ export const initHandlers = (app: Application) => {
    *       404:
    *         description: Utilisateur non trouvé
    */
-  app.delete("/users/:id", authMiddleware, deleteUserHandler);
+  app.delete("/users/:id", authMiddleware, isAdmin, deleteUserHandler);
 
   /**
    * @openapi

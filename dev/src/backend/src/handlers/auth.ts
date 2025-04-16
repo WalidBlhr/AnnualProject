@@ -70,7 +70,7 @@ export const login = async (req: Request, res: Response) => {
         }
 
         const secret = "valuerandom"
-        const token = sign({ userId: user.id, email: user.email}, secret, {expiresIn: '1h'})
+        const token = sign({ userId: user.id, email: user.email, role: user.role}, secret, {expiresIn: '1h'})
 
         const tokenRepository = AppDataSource.getRepository(Token)
         const tokenCreated = await tokenRepository.save({token, user})
