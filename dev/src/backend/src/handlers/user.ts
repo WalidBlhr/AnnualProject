@@ -108,7 +108,8 @@ export const updateUserHandler = async (req: Request, res: Response) => {
             userFound.email = updateUser.email
         }
 
-        if (updateUser.role) {
+        // Modification ici : vérifier si la propriété existe plutôt que sa valeur
+        if (updateUser.role !== undefined) {
             userFound.role = updateUser.role
         }   
 
