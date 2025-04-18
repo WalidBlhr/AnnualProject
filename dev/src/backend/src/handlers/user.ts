@@ -4,6 +4,7 @@ import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";
 import { ListUsersValidation, UserIdValidation, UserUpdateValidation } from "./validators/user";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
+import { Token } from "../db/models/token";
 
 // READ (liste) - GET /users
 export const listUserHandler = async (req: Request, res: Response) => {
@@ -81,26 +82,38 @@ export const detailedUserHandler = async (req: Request, res: Response) => {
 // UPDATE - PUT /users/:id
 export const updateUserHandler = async (req: Request, res: Response) => {
   try {
-      const validation = UserUpdateValidation.validate({ ...req.params, ...req.body })
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+        const validation = UserUpdateValidation.validate({ ...req.params, ...req.body })
+        if (validation.error) {
+            res.status(400).send(generateValidationErrorMessage(validation.error.details))
+            return
+        }
 
-      const updateUser = validation.value
-      const userRepository = AppDataSource.getRepository(User)
-      const userFound = await userRepository.findOneBy({ id: updateUser.id })
-      if (userFound === null) {
-          res.status(404).send({ "error": `user ${updateUser.id} not found` })
-          return
-      }
+        const updateUser = validation.value
+        const userRepository = AppDataSource.getRepository(User)
+        const userFound = await userRepository.findOneBy({ id: updateUser.id })
+        if (userFound === null) {
+            res.status(404).send({ "error": `user ${updateUser.id} not found` })
+            return
+        }
 
-      if (updateUser.lastname) {
-          userFound.lastname = updateUser.lastname
-      }
+        if (updateUser.lastname) {
+            userFound.lastname = updateUser.lastname
+        }
 
-      const userUpdate = await userRepository.save(userFound)
-      res.status(200).send(userUpdate)
+        if (updateUser.firstname) {
+            userFound.firstname = updateUser.firstname
+        }
+
+        if (updateUser.email) {
+            userFound.email = updateUser.email
+        }
+
+        if (updateUser.role) {
+            userFound.role = updateUser.role
+        }   
+
+        const userUpdate = await userRepository.save(userFound)
+        res.status(200).send(userUpdate)
   } catch (error) {
       console.log(error)
       res.status(500).send({ error: "Internal error" })
@@ -109,25 +122,32 @@ export const updateUserHandler = async (req: Request, res: Response) => {
 
 // DELETE - DELETE /users/:id
 export const deleteUserHandler = async (req: Request, res: Response) => {
-  try {
-      const validation = UserIdValidation.validate({ ...req.params, ...req.body })
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+    try {
+        const validation = UserIdValidation.validate({ ...req.params, ...req.body });
+        if (validation.error) {
+            res.status(400).send(generateValidationErrorMessage(validation.error.details));
+            return;
+        }
 
-      const updateUser = validation.value
-      const userRepository = AppDataSource.getRepository(User)
-      const userFound = await userRepository.findOneBy({ id: updateUser.id })
-      if (userFound === null) {
-          res.status(404).send({ "error": `user ${updateUser.id} not found` })
-          return
-      }
+        const updateUser = validation.value;
+        const userRepository = AppDataSource.getRepository(User);
+        const tokenRepository = AppDataSource.getRepository(Token);
 
-      const userDeleted = await userRepository.remove(userFound)
-      res.status(200).send(userDeleted)
-  } catch (error) {
-      console.log(error)
-      res.status(500).send({ error: "Internal error" })
-  }
-}
+        // Supprimer d'abord les tokens associés
+        await tokenRepository.delete({ user: { id: updateUser.id } });
+
+        // Ensuite supprimer l'utilisateur
+        const userFound = await userRepository.findOneBy({ id: updateUser.id });
+        if (userFound === null) {
+            res.status(404).send({ "error": `user ${updateUser.id} not found` });
+            return;
+        }
+
+        const userDeleted = await userRepository.remove(userFound);
+        res.status(200).send(userDeleted);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ error: "Internal error" });
+    }
+};
+

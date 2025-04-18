@@ -10,6 +10,7 @@ import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './components/ui/theme';
 import './services/axios';
+import AdminUsers from './pages/Admin/AdminUsers';
 
 const App: React.FC = () => {
     return (
@@ -28,6 +29,11 @@ const App: React.FC = () => {
                             </AdminRoute>
                         } 
                     />
+                    <Route path="/admin/users" element={
+                        <AdminRoute>
+                            <AdminUsers />
+                        </AdminRoute>
+                    } />
                 </Routes>
                 <Footer />
             </Router>
