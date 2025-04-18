@@ -1,4 +1,5 @@
 import express from "express"
+import cors from "cors"
 import { initHandlers } from "./handlers/handler"
 import { AppDataSource } from "./db/database"
 import { swaggerDocs } from "./handlers/swagger/swagger"
@@ -6,6 +7,14 @@ import { swaggerDocs } from "./handlers/swagger/swagger"
 const app = async () => {
     const app = express()
     const port = 3000
+
+    app.use(cors({
+        origin: 'http://localhost', // URL de votre frontend
+        credentials: true,
+        methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+        allowedHeaders: ['Content-Type', 'Authorization']
+    }))
+
     app.use(express.json())
     initHandlers(app)
     try {

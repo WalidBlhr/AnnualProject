@@ -56,7 +56,9 @@ services:
     depends_on:
       - backend
     environment:
-      REACT_APP_BACKEND_URL: "http://localhost:3000"
+      - CHOKIDAR_USEPOLLING=true  # Pour la détection des changements
+      - WDS_SOCKET_PORT=0   
+      - REACT_APP_BACKEND_URL=http://localhost:3000
     volumes:
       - ./frontend:/app
 

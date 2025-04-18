@@ -1,13 +1,61 @@
-body {
+/* dev/src/frontend/src/index.css */
+
+/* Reset and common styles */
+* {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-    monospace;
+:root {
+  --primary-color: #202C39;
+  --secondary-color: #5C8D89;
+  --accent-color: #E94F37;
+  --background-color: #F0F7EE;
+  --light-accent: #A7D7C5;
+  --text-color: #202C39;
+  --font-family: 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* Base styles */
+body {
+  background-color: var(--background-color);
+  font-family: var(--font-family);
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+/* Header styling */
+header {
+  background-color: var(--primary-color);
+  padding: 1rem;
+  text-align: center;
+  color: white;
+}
+
+/* Layout using Grid */
+.main-container {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh;
+}
+
+/* Main content styling */
+main {
+  padding: 2rem;
+}
+
+/* Footer styling */
+footer {
+  background-color: var(--secondary-color);
+  color: white;
+  text-align: center;
+  padding: 1rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  main {
+    padding: 1rem;
+  }
 }
