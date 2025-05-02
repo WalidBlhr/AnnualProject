@@ -11,6 +11,7 @@ import { ThemeProvider } from '@mui/material/styles';
 import theme from './components/ui/theme';
 import './services/axios';
 import AdminUsers from './pages/Admin/AdminUsers';
+import AdminEvents from './pages/Admin/AdminEvents';
 
 const App: React.FC = () => {
     return (
@@ -34,6 +35,14 @@ const App: React.FC = () => {
                             <AdminUsers />
                         </AdminRoute>
                     } />
+                    <Route 
+                        path="/admin/events" 
+                        element={
+                            <AdminRoute>
+                                <AdminEvents />
+                            </AdminRoute>
+                        } 
+                    />
                 </Routes>
                 <Footer />
             </Router>

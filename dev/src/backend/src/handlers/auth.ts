@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { createUserValidation, LoginUserValidation } from "./validators/auth/create-user";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
-import { compare, hash } from "bcrypt";
+import { compare, hash } from "bcryptjs";
 import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";
 import { QueryFailedError } from "typeorm";
