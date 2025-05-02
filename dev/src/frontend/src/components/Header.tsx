@@ -28,7 +28,38 @@ const Header: React.FC = () => {
                         }} 
                     />
                 </Box>
-                <Box sx={{ flexGrow: 1 }} />
+                <Box sx={{ flexGrow: 1 }}>
+                    {token && (
+                        <>
+                            <Button 
+                                color="inherit" 
+                                component={Link} 
+                                to="/trocs"
+                                sx={{
+                                    mr: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(231, 79, 55, 0.1)'
+                                    }
+                                }}
+                            >
+                                Trocs
+                            </Button>
+                            <Button 
+                                color="inherit" 
+                                component={Link} 
+                                to="/messages"
+                                sx={{
+                                    mr: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(231, 79, 55, 0.1)'
+                                    }
+                                }}
+                            >
+                                Messages
+                            </Button>
+                        </>
+                    )}
+                </Box>
                 <Box>
                     {token ? (
                         <>

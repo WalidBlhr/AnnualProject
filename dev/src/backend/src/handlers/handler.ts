@@ -40,12 +40,12 @@ export const initHandlers = (app: Application) => {
    *           schema:
    *             $ref: '#/components/schemas/CreateUserRequest'
    *     responses:
-   *       201:
-   *         description: Utilisateur créé
-   *       400:
-   *         description: Erreur de validation (ex: email déjà existant)
-   *       500:
-   *         description: Erreur interne
+   *       '201':
+   *         description: Utilisateur créé avec succès
+   *       '400':
+   *         description: "Erreur de validation (ex: email déjà existant)"
+   *       '500':
+   *         description: Erreur interne du serveur
    */
   app.post("/auth/signup", createUser);
 

@@ -3,6 +3,14 @@ import { createMessageValidation, updateMessageValidation, MessageIdValidation, 
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { Message } from "../db/models/message";
+import { User } from "../db/models/user";
+import { jwtDecode } from "jwt-decode";  // Modification de l'import
+
+interface DecodedToken {
+  userId: number;
+  email: string;
+  exp: number;
+}
 
 /**
  * Create a new Message
@@ -18,12 +26,37 @@ export const createMessageHandler = async (req: Request, res: Response) => {
 
       const createMessageRequest = validation.value
       const messageRepository = AppDataSource.getRepository(Message)
-      const message = messageRepository.create({ ...createMessageRequest })
-      const messageCreated = await messageRepository.save(message);
+      const userRepository = AppDataSource.getRepository(User)
 
-      res.status(201).send(messageCreated)
+      // Chercher l'expéditeur et le destinataire
+      const sender = await userRepository.findOneBy({ id: createMessageRequest.senderId })
+      const receiver = await userRepository.findOneBy({ id: createMessageRequest.receiverId })
+
+      if (!sender || !receiver) {
+          res.status(400).send({ "message": "Expéditeur ou destinataire non trouvé" })
+          return
+      }
+
+      // Créer le message avec les relations
+      const message = messageRepository.create({ 
+          ...createMessageRequest,
+          sender: sender,
+          receiver: receiver
+      })
+      
+      const messageCreated = await messageRepository.save(message)
+
+      // Recharger le message avec toutes les relations pour la réponse
+      const messageWithRelations = await messageRepository.findOne({
+          where: { id: messageCreated.id },
+          relations: {
+              sender: true,
+              receiver: true
+          }
+      })
+
+      res.status(201).send(messageWithRelations)
   } catch (error) {
-
       if (error instanceof Error) {
           console.log(`Internal error: ${error.message}`)
       }
@@ -37,47 +70,59 @@ export const createMessageHandler = async (req: Request, res: Response) => {
  */
 export const listMessageHandler = async (req: Request, res: Response) => {
   try {
-      console.log((req as any).message)
-      const validation = ListMessagesValidation.validate(req.query);
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+    const validation = ListMessagesValidation.validate(req.query);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details))
+      return
+    }
 
-      const listMessageRequest = validation.value
-      console.log(listMessageRequest)
+    const query = AppDataSource.createQueryBuilder(Message, 'message')
+      .leftJoinAndSelect('message.sender', 'sender')
+      .leftJoinAndSelect('message.receiver', 'receiver')
+      .select([
+        'message.id',
+        'message.content',
+        'message.date_sent',
+        'message.status',
+        'sender.id',
+        'sender.firstname',
+        'sender.lastname',
+        'receiver.id',
+        'receiver.firstname',
+        'receiver.lastname'
+      ])
+      .orderBy('message.date_sent', 'DESC');
 
-      const query = AppDataSource.createQueryBuilder(Message, 'message')
+    // Si senderId et receiverId sont fournis, filtrer les messages
+    if (req.query.senderId && req.query.receiverId) {
+      query.where(
+        '(message.sender_id = :senderId AND message.receiver_id = :receiverId) OR (message.sender_id = :receiverId AND message.receiver_id = :senderId)',
+        { 
+          senderId: req.query.senderId,
+          receiverId: req.query.receiverId 
+        }
+      );
+    } else {
+      // Sinon, récupérer tous les messages de l'utilisateur connecté
+      const token = req.headers.authorization?.split(' ')[1];
+      const decoded = jwtDecode<{ userId: number }>(token!);
+      query.where(
+        'message.sender_id = :userId OR message.receiver_id = :userId',
+        { userId: decoded.userId }
+      );
+    }
 
-      // if (listMessageRequest.priceMax !== undefined) {
-      //     query.andWhere("message.price <= :priceMax", { priceMax: listMessageRequest.priceMax })
-      // }
+    const [messages, totalCount] = await query.getManyAndCount();
 
-      query.skip((listMessageRequest.page - 1) * listMessageRequest.limit);
-      query.take(listMessageRequest.limit);
-
-      const [messages, totalCount] = await query.getManyAndCount();
-
-      const page = listMessageRequest.page
-      const totalPages = Math.ceil(totalCount / listMessageRequest.limit);
-
-      res.send(
-          {
-              data: messages,
-              page_size: listMessageRequest.limit,
-              page,
-              total_count: totalCount,
-              total_pages: totalPages,
-          }
-      )
-
+    res.send({
+      data: messages,
+      total_count: totalCount
+    });
   } catch (error) {
-      if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
-      }
-      res.status(500).send({ "message": "internal error" })
+    console.error(error);
+    res.status(500).send({ message: "internal error" });
   }
-}
+};
 
 /**
  * Récupérer le détail d’une Message par id (READ single)
@@ -93,8 +138,13 @@ export const detailedMessageHandler = async (req: Request, res: Response) => {
 
       const getMessageRequest = validation.value
       const messageRepository = AppDataSource.getRepository(Message)
+      // Modifier cette partie pour inclure les relations
       const message = await messageRepository.findOne({
-          where: { id: getMessageRequest.id }
+          where: { id: getMessageRequest.id },
+          relations: {
+              sender: true,
+              receiver: true
+          }
       })
       if (message === null) {
           res.status(404).send({ "message": "resource not found" })
@@ -124,18 +174,39 @@ export const updateMessageHandler = async (req: Request, res: Response) => {
 
       const updateMessage = validation.value
       const messageRepository = AppDataSource.getRepository(Message)
-      const messageFound = await messageRepository.findOneBy({ id: updateMessage.id })
+      // Modifier cette partie pour inclure les relations
+      const messageFound = await messageRepository.findOne({
+          where: { id: updateMessage.id },
+          relations: {
+              sender: true,
+              receiver: true
+          }
+      })
       if (messageFound === null) {
           res.status(404).send({ "error": `message ${updateMessage.id} not found` })
           return
       }
 
-      // if (updateMessage.price) {
-      //     messageFound.price = updateMessage.price
-      // }
+      // Mettre à jour les champs
+      if (updateMessage.content) {
+          messageFound.content = updateMessage.content
+      }
+      if (updateMessage.status) {
+          messageFound.status = updateMessage.status
+      }
 
       const messageUpdate = await messageRepository.save(messageFound)
-      res.status(200).send(messageUpdate)
+      
+      // Recharger le message avec toutes les relations pour la réponse
+      const updatedMessageWithRelations = await messageRepository.findOne({
+          where: { id: messageUpdate.id },
+          relations: {
+              sender: true,
+              receiver: true
+          }
+      })
+
+      res.status(200).send(updatedMessageWithRelations)
   } catch (error) {
       console.log(error)
       res.status(500).send({ error: "Internal error" })

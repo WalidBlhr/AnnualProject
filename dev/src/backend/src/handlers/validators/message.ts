@@ -6,12 +6,15 @@ import Joi from "joi";
 export interface ListMessagesRequest {
   page: number;
   limit: number;
-  // Vous pouvez ajouter ici d'autres champs de filtrage (senderId, receiverId, etc.) si nécessaire
+  senderId?: number;
+  receiverId?: number;
 }
 
 export const ListMessagesValidation = Joi.object<ListMessagesRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
+  senderId: Joi.number(),
+  receiverId: Joi.number()
 }).options({ abortEarly: false });
 
 /**

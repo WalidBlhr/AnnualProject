@@ -31,7 +31,7 @@ export interface CreateTrocOfferRequest {
   description: string,
   creation_date: Date,
   status: string,
-  TrocOfferId: number
+  userId: number // Changer TrocOfferId en userId
 }
 
 export const createTrocOfferValidation = Joi.object<CreateTrocOfferRequest>({
@@ -39,7 +39,7 @@ export const createTrocOfferValidation = Joi.object<CreateTrocOfferRequest>({
   description: Joi.string().required(),
   creation_date: Joi.date().required(),
   status: Joi.string().valid("open", "closed", "pending").default("open"),
-  TrocOfferId: Joi.number().required(),
+  userId: Joi.number().required() // Changer TrocOfferId en userId
 }).options({ abortEarly: false });
 
 // UPDATE

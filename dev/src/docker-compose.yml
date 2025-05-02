@@ -46,13 +46,29 @@ services:
     depends_on:
       - postgres
 
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: quartissimo-frontend
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - backend
+  #   environment:
+  #     - CHOKIDAR_USEPOLLING=true  # Pour la détection des changements
+  #     - WDS_SOCKET_PORT=0   
+  #     - REACT_APP_BACKEND_URL=http://localhost:3000
+  #   volumes:
+  #     - ./frontend:/app    # Ce volume est crucial pour le hot-reload
+  
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: quartissimo-frontend
     ports:
-      - "80:80"
+      - "80:3000"
     depends_on:
       - backend
     environment:
@@ -60,7 +76,8 @@ services:
       - WDS_SOCKET_PORT=0   
       - REACT_APP_BACKEND_URL=http://localhost:3000
     volumes:
-      - ./frontend:/app
+      - ./frontend:/app    # Ce volume est crucial pour le hot-reload
+      - /app/node_modules
 
 volumes:
   postgres_data:

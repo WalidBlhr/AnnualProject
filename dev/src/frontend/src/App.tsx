@@ -10,8 +10,13 @@ import AdminRoute from './components/AdminRoute';
 import { ThemeProvider } from '@mui/material/styles';
 import theme from './components/ui/theme';
 import './services/axios';
+import TrocOffersList from './pages/TrocOffers/TrocOffersList';
+import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
+import Conversation from './pages/Messages/Conversation';
+import Messages from './pages/Messages/Messages';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminEvents from './pages/Admin/AdminEvents';
+import AdminMessages from './pages/Admin/AdminMessages';
 
 const App: React.FC = () => {
     return (
@@ -22,6 +27,10 @@ const App: React.FC = () => {
                     <Route path="/" element={<Home />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/signup" element={<Signup />} />
+                    <Route path="/trocs" element={<TrocOffersList />} />
+                    <Route path="/trocs/:id" element={<TrocOfferDetail />} />
+                    <Route path="/messages/:userId" element={<Conversation />} />
+                    <Route path="/messages" element={<Messages />} />
                     <Route 
                         path="/admin" 
                         element={
@@ -40,6 +49,14 @@ const App: React.FC = () => {
                         element={
                             <AdminRoute>
                                 <AdminEvents />
+                            </AdminRoute>
+                        } 
+                    />
+                    <Route 
+                        path="/admin/messages" 
+                        element={
+                            <AdminRoute>
+                                <AdminMessages />
                             </AdminRoute>
                         } 
                     />
