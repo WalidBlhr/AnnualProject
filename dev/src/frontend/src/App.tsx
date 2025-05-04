@@ -17,51 +17,54 @@ import Messages from './pages/Messages/Messages';
 import AdminUsers from './pages/Admin/AdminUsers';
 import AdminEvents from './pages/Admin/AdminEvents';
 import AdminMessages from './pages/Admin/AdminMessages';
+import { AuthProvider } from './contexts/AuthContext';
 
 const App: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <Router>
-                <Header />
-                <Routes>
-                    <Route path="/" element={<Home />} />
-                    <Route path="/login" element={<Login />} />
-                    <Route path="/signup" element={<Signup />} />
-                    <Route path="/trocs" element={<TrocOffersList />} />
-                    <Route path="/trocs/:id" element={<TrocOfferDetail />} />
-                    <Route path="/messages/:userId" element={<Conversation />} />
-                    <Route path="/messages" element={<Messages />} />
-                    <Route 
-                        path="/admin" 
-                        element={
+                <AuthProvider>
+                    <Header />
+                    <Routes>
+                        <Route path="/" element={<Home />} />
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<Signup />} />
+                        <Route path="/trocs" element={<TrocOffersList />} />
+                        <Route path="/trocs/:id" element={<TrocOfferDetail />} />
+                        <Route path="/messages/:userId" element={<Conversation />} />
+                        <Route path="/messages" element={<Messages />} />
+                        <Route 
+                            path="/admin" 
+                            element={
+                                <AdminRoute>
+                                    <AdminDashboard />
+                                </AdminRoute>
+                            } 
+                        />
+                        <Route path="/admin/users" element={
                             <AdminRoute>
-                                <AdminDashboard />
+                                <AdminUsers />
                             </AdminRoute>
-                        } 
-                    />
-                    <Route path="/admin/users" element={
-                        <AdminRoute>
-                            <AdminUsers />
-                        </AdminRoute>
-                    } />
-                    <Route 
-                        path="/admin/events" 
-                        element={
-                            <AdminRoute>
-                                <AdminEvents />
-                            </AdminRoute>
-                        } 
-                    />
-                    <Route 
-                        path="/admin/messages" 
-                        element={
-                            <AdminRoute>
-                                <AdminMessages />
-                            </AdminRoute>
-                        } 
-                    />
-                </Routes>
-                <Footer />
+                        } />
+                        <Route 
+                            path="/admin/events" 
+                            element={
+                                <AdminRoute>
+                                    <AdminEvents />
+                                </AdminRoute>
+                            } 
+                        />
+                        <Route 
+                            path="/admin/messages" 
+                            element={
+                                <AdminRoute>
+                                    <AdminMessages />
+                                </AdminRoute>
+                            } 
+                        />
+                    </Routes>
+                    <Footer />
+                </AuthProvider>
             </Router>
         </ThemeProvider>
     );
