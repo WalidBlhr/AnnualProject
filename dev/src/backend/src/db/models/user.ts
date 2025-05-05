@@ -37,8 +37,11 @@ export class User {
     @OneToMany(() => Token, token => token.user)
     tokens: Token[];
 
-    @OneToMany(() => Service, service => service.user)
-    services: Service[];
+    @OneToMany(() => Service, service => service.provider)
+    providedServices: Service[];
+
+    @OneToMany(() => Service, service => service.requester)
+    requestedServices: Service[];
 
     @OneToMany(() => TrocOffer, offer => offer.user)
     offers: TrocOffer[];
@@ -63,7 +66,8 @@ export class User {
         createdAt: Date, 
         updatedAt: Date, 
         tokens: Token[], 
-        services: Service[], 
+        providedServices: Service[], 
+        requestedServices: Service[], 
         offers: TrocOffer[], 
         sentMessages: Message[], 
         receivedMessages: Message[], 
@@ -79,7 +83,8 @@ export class User {
         this.createdAt = createdAt
         this.updatedAt = updatedAt
         this.tokens = tokens
-        this.services = services
+        this.providedServices = providedServices
+        this.requestedServices = requestedServices
         this.offers = offers
         this.sentMessages = sentMessages
         this.receivedMessages = receivedMessages

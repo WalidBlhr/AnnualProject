@@ -11,9 +11,12 @@ import {
   Box,
   Alert,
   Snackbar,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import axios from 'axios';
 import jwtDecode from 'jwt-decode';
+import { STATUS_LABELS, STATUS_COLORS, TrocOfferStatus } from '../../types/trocOffer';
 
 interface TrocOffer {
   id: number;
@@ -21,6 +24,7 @@ interface TrocOffer {
   description: string;
   creation_date: string;
   status: string;
+  image_url?: string;
   user: {
     id: number;
     firstname: string;
@@ -85,6 +89,25 @@ const TrocOfferDetail: React.FC = () => {
     return decoded.userId === trocOffer?.user?.id;
   };
 
+  const handleStatusChange = async (newStatus: TrocOfferStatus) => {
+    try {
+      await axios.put(
+        `http://localhost:3000/trocoffers/${id}`,
+        { status: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        }
+      );
+      setTrocOffer(prev => prev ? { ...prev, status: newStatus } : null);
+      showAlert('Statut mis à jour avec succès', 'success');
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Erreur lors de la mise à jour du statut';
+      showAlert(errorMessage, 'error');
+    }
+  };
+
   if (!trocOffer) {
     return <Container>Chargement...</Container>;
   }
@@ -98,12 +121,61 @@ const TrocOfferDetail: React.FC = () => {
               <Typography variant="h4" component="h1">
                 {trocOffer.title}
               </Typography>
-              <Chip 
-                label={trocOffer.status} 
-                color={trocOffer.status === 'open' ? 'success' : 'default'}
-              />
+              {isOwner() ? (
+                <Select
+                  value={trocOffer.status}
+                  onChange={(e) => handleStatusChange(e.target.value as TrocOfferStatus)}
+                  size="small"
+                >
+                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      <Chip 
+                        label={label}
+                        color={STATUS_COLORS[value as TrocOfferStatus]}
+                        size="small"
+                      />
+                    </MenuItem>
+                  ))}
+                </Select>
+              ) : (
+                <Chip 
+                  label={STATUS_LABELS[trocOffer.status as TrocOfferStatus]}
+                  color={STATUS_COLORS[trocOffer.status as TrocOfferStatus]}
+                />
+              )}
             </Box>
           </Grid>
+
+          {/* Ajoutez ce bloc pour l'image */}
+          {trocOffer.image_url && (
+            <Grid item xs={12}>
+              <Box 
+                sx={{ 
+                  width: '100%',
+                  maxHeight: '500px', // Augmenté la hauteur maximale
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  bgcolor: 'background.paper',
+                  borderRadius: 1,
+                  mb: 2,
+                  overflow: 'hidden'
+                }}
+              >
+                <img
+                  src={trocOffer.image_url}
+                  alt={trocOffer.title}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: '500px', // Hauteur maximale de l'image
+                    objectFit: 'cover', // Changed from 'contain' to 'cover'
+                    display: 'block',
+                    margin: 'auto'
+                  }}
+                />
+              </Box>
+            </Grid>
+          )}
 
           <Grid item xs={12}>
             <Divider />

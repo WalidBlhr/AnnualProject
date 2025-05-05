@@ -4,38 +4,76 @@ import { User } from "./user";
 @Entity({ name: "service" })
 export class Service {
     @PrimaryGeneratedColumn()
-    id: number
+    id: number;
 
     @Column()
-    type_service: string
+    title: string;
 
     @Column()
-    description: string
-
-    @Column({ type: "timestamptz" })
-    date: Date
+    description: string;
 
     @Column()
-    status: string // "en_attente", "termine", ...
+    type: string;
+
+    @Column()
+    status: string;
+
+    @Column({ type: 'timestamptz' })
+    date_start: Date;
+
+    @Column({ type: 'timestamptz' })
+    date_end: Date;
+
+    @Column({ type: 'jsonb', nullable: true })
+    availability: {
+        days: string[];
+        time_slots: {
+            start: string;
+            end: string;
+        }[];
+    };
 
     @CreateDateColumn({ type: "timestamptz" })
-    createdAt: Date
+    createdAt: Date;
 
     @UpdateDateColumn({ type: "timestamptz" })
-    updatedAt: Date
+    updatedAt: Date;
 
-    @ManyToOne(() => User, user => user.services)
-    @JoinColumn({ name: 'user_id' })
-    user: User;
+    @ManyToOne(() => User, user => user.providedServices)
+    @JoinColumn({ name: 'provider_id' })
+    provider: User;
 
-    constructor(id: number, type_service: string, description: string, date: Date, status: string, createdAt: Date, updatedAt: Date, user: User) {
-        this.id = id
-        this.type_service = type_service
-        this.description = description
-        this.date = date
-        this.status = status
-        this.createdAt = createdAt
-        this.updatedAt = updatedAt
-        this.user = user
+    @ManyToOne(() => User, user => user.requestedServices, { nullable: true })
+    @JoinColumn({ name: 'requester_id' })
+    requester: User | null;
+
+    constructor(
+        id: number, 
+        title: string, 
+        description: string, 
+        type: string, 
+        createdAt: Date, 
+        updatedAt: Date,
+        date_start: Date, 
+        date_end: Date, 
+        status: string, 
+        provider: User, 
+        requester?: User
+    ) {
+        this.id = id;
+        this.title = title;
+        this.description = description;
+        this.type = type;
+        this.status = status;
+        this.date_start = date_start;
+        this.date_end = date_end;
+        this.availability = {
+            days: [],
+            time_slots: []
+        };
+        this.createdAt = createdAt;
+        this.updatedAt = updatedAt;
+        this.provider = provider;
+        this.requester = requester || null;
     }
 }

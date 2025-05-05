@@ -11,45 +11,48 @@ import { User } from "../db/models/user";
  */
 export const createTrocOfferHandler = async (req: Request, res: Response) => {
   try {
-      const validation = createTrocOfferValidation.validate(req.body);
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
+    const validation = createTrocOfferValidation.validate(req.body);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details))
+      return
+    }
+
+    const createTrocOfferRequest = validation.value
+    const trocOfferRepository = AppDataSource.getRepository(TrocOffer)
+    const userRepository = AppDataSource.getRepository(User)
+
+    const user = await userRepository.findOneBy({ id: createTrocOfferRequest.userId })
+    if (!user) {
+      res.status(400).send({ "message": "Utilisateur non trouvé" })
+      return
+    }
+
+    // Ajoutez l'URL de l'image si elle existe avec le port correct
+    const imageUrl = req.file ? `http://localhost:3000/uploads/troc-images/${req.file.filename}` : null;
+
+    // Créer le TrocOffer avec l'utilisateur et l'image
+    const trocOffer = trocOfferRepository.create({ 
+      ...createTrocOfferRequest,
+      image_url: imageUrl,
+      user: user 
+    });
+    
+    const trocOfferCreated = await trocOfferRepository.save(trocOffer)
+
+    // Recharger l'offre avec les relations pour la réponse
+    const trocOfferWithRelations = await trocOfferRepository.findOne({
+      where: { id: trocOfferCreated.id },
+      relations: {
+        user: true
       }
+    })
 
-      const createTrocOfferRequest = validation.value
-      const trocOfferRepository = AppDataSource.getRepository(TrocOffer)
-      const userRepository = AppDataSource.getRepository(User)
-
-      // Chercher l'utilisateur
-      const user = await userRepository.findOneBy({ id: createTrocOfferRequest.userId })
-      if (!user) {
-          res.status(400).send({ "message": "Utilisateur non trouvé" })
-          return
-      }
-
-      // Créer le TrocOffer avec l'utilisateur
-      const trocOffer = trocOfferRepository.create({ 
-          ...createTrocOfferRequest,
-          user: user 
-      })
-      
-      const trocOfferCreated = await trocOfferRepository.save(trocOffer)
-
-      // Recharger l'offre avec les relations pour la réponse
-      const trocOfferWithRelations = await trocOfferRepository.findOne({
-          where: { id: trocOfferCreated.id },
-          relations: {
-              user: true
-          }
-      })
-
-      res.status(201).send(trocOfferWithRelations)
+    res.status(201).send(trocOfferWithRelations)
   } catch (error) {
-      if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
-      }
-      res.status(500).send({ "message": "internal error" })
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`)
+    }
+    res.status(500).send({ "message": "internal error" })
   }
 }
 
@@ -68,13 +71,15 @@ export const listTrocOfferHandler = async (req: Request, res: Response) => {
       const listTrocOfferRequest = validation.value
 
       const query = AppDataSource.createQueryBuilder(TrocOffer, 'trocOffer')
-        .leftJoinAndSelect('trocOffer.user', 'user') // Ajouter cette ligne pour charger la relation user
+        .leftJoinAndSelect('trocOffer.user', 'user')
         .select([
           'trocOffer.id',
           'trocOffer.title',
           'trocOffer.description',
           'trocOffer.creation_date',
           'trocOffer.status',
+          'trocOffer.type',        // Ajout du type
+          'trocOffer.image_url',   // Ajout de l'image_url
           'user.id',
           'user.firstname',
           'user.lastname'
@@ -125,6 +130,7 @@ export const detailedTrocOfferHandler = async (req: Request, res: Response) => {
               'trocOffer.description',
               'trocOffer.creation_date',
               'trocOffer.status',
+              'trocOffer.image_url',
               'user.id',
               'user.firstname',
               'user.lastname'
@@ -152,31 +158,42 @@ export const detailedTrocOfferHandler = async (req: Request, res: Response) => {
  */
 export const updateTrocOfferHandler = async (req: Request, res: Response) => {
   try {
-      const validation = updateTrocOfferValidation.validate({ ...req.params, ...req.body })
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
+    const validation = updateTrocOfferValidation.validate({ ...req.params, ...req.body });
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const updateTrocOffer = validation.value;
+    const trocOfferRepository = AppDataSource.getRepository(TrocOffer);
+    const trocOfferFound = await trocOfferRepository.findOneBy({ id: updateTrocOffer.id });
+
+    if (trocOfferFound === null) {
+      res.status(404).send({ "error": `trocOffer ${updateTrocOffer.id} not found` });
+      return;
+    }
+
+    // Vérifier que la transition de statut est valide
+    if (updateTrocOffer.status) {
+      const currentStatus = trocOfferFound.status;
+      const newStatus = updateTrocOffer.status;
+
+      if (currentStatus === 'closed' && newStatus !== 'closed') {
+        res.status(400).send({ "error": "Une offre terminée ne peut pas être réouverte" });
+        return;
       }
+    }
 
-      const updateTrocOffer = validation.value
-      const trocOfferRepository = AppDataSource.getRepository(TrocOffer)
-      const trocOfferFound = await trocOfferRepository.findOneBy({ id: updateTrocOffer.id })
-      if (trocOfferFound === null) {
-          res.status(404).send({ "error": `trocOffer ${updateTrocOffer.id} not found` })
-          return
-      }
+    // Mettre à jour les champs modifiés
+    Object.assign(trocOfferFound, updateTrocOffer);
 
-      // if (updateTrocOffer.price) {
-      //     trocOfferFound.price = updateTrocOffer.price
-      // }
-
-      const trocOfferUpdate = await trocOfferRepository.save(trocOfferFound)
-      res.status(200).send(trocOfferUpdate)
+    const trocOfferUpdate = await trocOfferRepository.save(trocOfferFound);
+    res.status(200).send(trocOfferUpdate);
   } catch (error) {
-      console.log(error)
-      res.status(500).send({ error: "Internal error" })
+    console.log(error);
+    res.status(500).send({ error: "Internal error" });
   }
-}
+};
 
 /**
  * Suppression d’une TrocOffer

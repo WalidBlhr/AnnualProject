@@ -3,6 +3,7 @@ import cors from "cors"
 import { initHandlers } from "./handlers/handler"
 import { AppDataSource } from "./db/database"
 import { swaggerDocs } from "./handlers/swagger/swagger"
+import path from 'path';
 
 const app = async () => {
     const app = express()
@@ -16,6 +17,7 @@ const app = async () => {
     }))
 
     app.use(express.json())
+    app.use('/uploads', cors(), express.static(path.join(__dirname, '../uploads')));
     initHandlers(app)
     try {
         await AppDataSource.initialize()

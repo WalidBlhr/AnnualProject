@@ -37,47 +37,51 @@ export const createServiceHandler = async (req: Request, res: Response) => {
  */
 export const listServiceHandler = async (req: Request, res: Response) => {
   try {
-      console.log((req as any).service)
-      const validation = ListServicesValidation.validate(req.query);
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+    const validation = ListServicesValidation.validate(req.query);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
 
-      const listServiceRequest = validation.value
-      console.log(listServiceRequest)
+    const listServiceRequest = validation.value;
+    const query = AppDataSource.createQueryBuilder(Service, 'service')
+      .leftJoinAndSelect('service.provider', 'provider')
+      .leftJoinAndSelect('service.requester', 'requester');
 
-      const query = AppDataSource.createQueryBuilder(Service, 'service')
+    // Ajout des filtres
+    if (listServiceRequest.type) {
+      query.andWhere("service.type = :type", { type: listServiceRequest.type });
+    }
+    if (listServiceRequest.status) {
+      query.andWhere("service.status = :status", { status: listServiceRequest.status });
+    }
+    if (listServiceRequest.date_start) {
+      query.andWhere("service.date_start >= :date_start", { date_start: listServiceRequest.date_start });
+    }
+    if (listServiceRequest.date_end) {
+      query.andWhere("service.date_end <= :date_end", { date_end: listServiceRequest.date_end });
+    }
 
-      // if (listServiceRequest.priceMax !== undefined) {
-      //     query.andWhere("service.price <= :priceMax", { priceMax: listServiceRequest.priceMax })
-      // }
+    // Pagination
+    query.skip((listServiceRequest.page - 1) * listServiceRequest.limit);
+    query.take(listServiceRequest.limit);
 
-      query.skip((listServiceRequest.page - 1) * listServiceRequest.limit);
-      query.take(listServiceRequest.limit);
+    const [services, totalCount] = await query.getManyAndCount();
 
-      const [services, totalCount] = await query.getManyAndCount();
-
-      const page = listServiceRequest.page
-      const totalPages = Math.ceil(totalCount / listServiceRequest.limit);
-
-      res.send(
-          {
-              data: services,
-              page_size: listServiceRequest.limit,
-              page,
-              total_count: totalCount,
-              total_pages: totalPages,
-          }
-      )
-
+    res.send({
+      data: services,
+      page_size: listServiceRequest.limit,
+      page: listServiceRequest.page,
+      total_count: totalCount,
+      total_pages: Math.ceil(totalCount / listServiceRequest.limit),
+    });
   } catch (error) {
-      if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
-      }
-      res.status(500).send({ "message": "internal error" })
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ "message": "internal error" });
   }
-}
+};
 
 /**
  * Récupérer le détail d’une Service par id (READ single)
@@ -116,31 +120,61 @@ export const detailedServiceHandler = async (req: Request, res: Response) => {
  */
 export const updateServiceHandler = async (req: Request, res: Response) => {
   try {
-      const validation = updateServiceValidation.validate({ ...req.params, ...req.body })
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
+    const validation = updateServiceValidation.validate({ ...req.params, ...req.body });
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const updateService = validation.value;
+    const serviceRepository = AppDataSource.getRepository(Service);
+    const serviceFound = await serviceRepository.findOneBy({ id: updateService.id });
+    
+    if (serviceFound === null) {
+      res.status(404).send({ "error": `service ${updateService.id} not found` });
+      return;
+    }
+
+    // Mise à jour des champs
+    if (updateService.title) {
+      serviceFound.title = updateService.title;
+    }
+    if (updateService.description) {
+      serviceFound.description = updateService.description;
+    }
+    if (updateService.type) {
+      serviceFound.type = updateService.type;
+    }
+    if (updateService.date_start) {
+      serviceFound.date_start = updateService.date_start;
+    }
+    if (updateService.date_end) {
+      serviceFound.date_end = updateService.date_end;
+    }
+    if (updateService.availability) {
+      serviceFound.availability = updateService.availability;
+    }
+    if (updateService.status) {
+      serviceFound.status = updateService.status;
+    }
+
+    const serviceUpdate = await serviceRepository.save(serviceFound);
+    
+    // Recharger le service avec les relations
+    const updatedServiceWithRelations = await serviceRepository.findOne({
+      where: { id: serviceUpdate.id },
+      relations: {
+        provider: true,
+        requester: true
       }
+    });
 
-      const updateService = validation.value
-      const serviceRepository = AppDataSource.getRepository(Service)
-      const serviceFound = await serviceRepository.findOneBy({ id: updateService.id })
-      if (serviceFound === null) {
-          res.status(404).send({ "error": `service ${updateService.id} not found` })
-          return
-      }
-
-      // if (updateService.price) {
-      //     serviceFound.price = updateService.price
-      // }
-
-      const serviceUpdate = await serviceRepository.save(serviceFound)
-      res.status(200).send(serviceUpdate)
+    res.status(200).send(updatedServiceWithRelations);
   } catch (error) {
-      console.log(error)
-      res.status(500).send({ error: "Internal error" })
+    console.log(error);
+    res.status(500).send({ error: "Internal error" });
   }
-}
+};
 
 /**
  * Suppression d’une Service

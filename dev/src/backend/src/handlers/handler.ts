@@ -1,6 +1,7 @@
 import { Application, Request, Response } from "express";
 import { createUser, login } from "./auth";
 import { authMiddleware, isOwnerOrAdmin, isAdmin } from "../middleware/auth";
+import { upload } from '../config/multer';
 
 import { deleteUserHandler, detailedUserHandler, listUserHandler, updateUserHandler } from "./user";
 import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
@@ -299,7 +300,7 @@ export const initHandlers = (app: Application) => {
    *       201:
    *         description: TrocOffer créé
    */
-  app.post("/trocoffers", authMiddleware, createTrocOfferHandler);
+  app.post("/trocoffers", authMiddleware, upload.single('image'), createTrocOfferHandler);
 
   /**
    * @openapi

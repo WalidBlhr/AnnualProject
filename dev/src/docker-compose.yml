@@ -35,6 +35,7 @@ services:
       context: ./backend
     volumes:
       - ./backend/src:/app/src
+      - ./backend/uploads:/app/uploads
     ports:
       - "3000:3000"
     environment:
