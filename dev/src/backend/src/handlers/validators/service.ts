@@ -115,3 +115,19 @@ export const updateServiceValidation = Joi.object<UpdateServiceRequest>({
   }),
   status: Joi.string().valid('available', 'booked', 'completed')
 }).options({ abortEarly: false });
+
+// Ajoutez cette interface pour la requête de réservation
+export interface BookServiceRequest {
+  id: number;
+  day: string;
+  timeSlot: string;
+  note?: string;
+}
+
+// Ajoutez cette validation
+export const bookServiceValidation = Joi.object<BookServiceRequest>({
+  id: Joi.number().required(),
+  day: Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday').required(),
+  timeSlot: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
+  note: Joi.string()
+}).options({ abortEarly: false });

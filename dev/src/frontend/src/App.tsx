@@ -18,6 +18,8 @@ import AdminUsers from './pages/Admin/AdminUsers';
 import AdminEvents from './pages/Admin/AdminEvents';
 import AdminMessages from './pages/Admin/AdminMessages';
 import { AuthProvider } from './contexts/AuthContext';
+import ServicesList from './pages/Services/ServicesList';
+import ServiceDetail from './pages/Services/ServiceDetail';
 
 const App: React.FC = () => {
     return (
@@ -33,6 +35,8 @@ const App: React.FC = () => {
                         <Route path="/trocs/:id" element={<TrocOfferDetail />} />
                         <Route path="/messages/:userId" element={<Conversation />} />
                         <Route path="/messages" element={<Messages />} />
+                        <Route path="/services" element={<ServicesList />} />
+                        <Route path="/services/:id" element={<ServiceDetail />} />
                         <Route 
                             path="/admin" 
                             element={

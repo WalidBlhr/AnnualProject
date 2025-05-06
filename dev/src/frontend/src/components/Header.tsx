@@ -47,6 +47,19 @@ const Header: React.FC = () => {
                             <Button 
                                 color="inherit" 
                                 component={Link} 
+                                to="/services"
+                                sx={{
+                                    mr: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(231, 79, 55, 0.1)'
+                                    }
+                                }}
+                            >
+                                Services
+                            </Button>
+                            <Button 
+                                color="inherit" 
+                                component={Link} 
                                 to="/messages"
                                 sx={{
                                     mr: 2,
