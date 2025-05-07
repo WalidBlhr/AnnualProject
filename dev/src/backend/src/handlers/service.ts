@@ -436,6 +436,26 @@ export const cancelServiceBookingHandler = async (req: Request, res: Response) =
     service.requester = null;
 
     const updatedService = await serviceRepository.save(service);
+    
+    const messageRepository = AppDataSource.getRepository(Message);
+    const userRepository = AppDataSource.getRepository(User);
+    const requester = await userRepository.findOneBy({ id: decoded.userId });
+    if (!requester) {
+      res.status(404).send({ error: 'Utilisateur non trouvé' });
+      return;
+    }
+    service.requester = requester;
+
+    // Dans cancelServiceBookingHandler, ajouter la notification d'annulation :
+    const newMessage = messageRepository.create({
+      content: `Réservation annulée pour le service "${service.title}"
+Date : ${service.date_start}`,
+      date_sent: new Date(), // Ajout de la date d'envoi
+      sender: requester,
+      receiver: service.provider,
+      status: 'unread'
+    });
+    await messageRepository.save(newMessage);
 
     res.status(200).send(updatedService);
   } catch (error) {
