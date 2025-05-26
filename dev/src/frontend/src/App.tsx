@@ -20,6 +20,9 @@ import AdminMessages from './pages/Admin/AdminMessages';
 import { AuthProvider } from './contexts/AuthContext';
 import ServicesList from './pages/Services/ServicesList';
 import ServiceDetail from './pages/Services/ServiceDetail';
+import Events from './pages/Events/Events';
+import EventDetail from './pages/Events/EventDetail';
+import MyEvents from './pages/Events/MyEvents';
 
 const App: React.FC = () => {
     return (
@@ -37,6 +40,9 @@ const App: React.FC = () => {
                         <Route path="/messages" element={<Messages />} />
                         <Route path="/services" element={<ServicesList />} />
                         <Route path="/services/:id" element={<ServiceDetail />} />
+                        <Route path="/events" element={<Events />} />
+                        <Route path="/events/:id" element={<EventDetail />} />
+                        <Route path="/my-events" element={<MyEvents />} />
                         <Route 
                             path="/admin" 
                             element={

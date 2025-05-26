@@ -3,6 +3,8 @@ import { createEventParticipantValidation, updateEventParticipantValidation, Eve
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { EventParticipant } from "../db/models/event_participant";
+import { User } from "../db/models/user";
+import { Event } from "../db/models/event";
 
 /**
  * Create a new EventParticipant
@@ -10,26 +12,46 @@ import { EventParticipant } from "../db/models/event_participant";
  */
 export const createEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-      const validation = createEventParticipantValidation.validate(req.body);
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+    const validation = createEventParticipantValidation.validate(req.body);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
 
-      const createEventParticipantRequest = validation.value
-      const eventParticipantRepository = AppDataSource.getRepository(EventParticipant)
-      const eventParticipant = eventParticipantRepository.create({ ...createEventParticipantRequest })
-      const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
-
-      res.status(201).send(eventParticipantCreated)
+    const { userId, eventId, date_inscription, status_participation } = validation.value;
+    
+    // Récupérer les entités User et Event
+    const userRepository = AppDataSource.getRepository(User);
+    const eventRepository = AppDataSource.getRepository(Event);
+    const eventParticipantRepository = AppDataSource.getRepository(EventParticipant);
+    
+    // Trouver les objets complets
+    const user = await userRepository.findOneBy({ id: userId });
+    const event = await eventRepository.findOneBy({ id: eventId });
+    
+    if (!user || !event) {
+      res.status(404).send({ message: "Utilisateur ou événement non trouvé" });
+      return;
+    }
+    
+    // Créer l'inscription avec le constructeur comme dans vos autres handlers
+    const eventParticipant = new EventParticipant(
+      0, // L'ID sera généré automatiquement
+      user,
+      event,
+      new Date(date_inscription),
+      status_participation || 'pending'
+    );
+    
+    const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
+    res.status(201).send(eventParticipantCreated);
   } catch (error) {
-
-      if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
-      }
-      res.status(500).send({ "message": "internal error" })
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ message: "internal error" });
   }
-}
+};
 
 /**
  * Lire la liste des eventParticipants (READ multiple)
@@ -37,47 +59,57 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
  */
 export const listEventParticipantHandler = async (req: Request, res: Response) => {
   try {
-      console.log((req as any).eventParticipant)
-      const validation = ListEventParticipantsValidation.validate(req.query);
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+    const validation = ListEventParticipantsValidation.validate(req.query);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
 
-      const listEventParticipantRequest = validation.value
-      console.log(listEventParticipantRequest)
+    const listEventParticipantRequest = validation.value;
+    console.log(listEventParticipantRequest);
 
-      const query = AppDataSource.createQueryBuilder(EventParticipant, 'eventParticipant')
+    // Créer la requête avec des jointures pour obtenir les détails utilisateur
+    const query = AppDataSource.createQueryBuilder(EventParticipant, 'eventParticipant')
+      .leftJoinAndSelect('eventParticipant.user', 'user')
+      .leftJoinAndSelect('eventParticipant.event', 'event')
+      .select([
+        'eventParticipant',
+        'user.id',
+        'user.firstname',
+        'user.lastname',
+        'event.id', 
+        'event.name'
+      ]);
 
-      // if (listEventParticipantRequest.priceMax !== undefined) {
-      //     query.andWhere("eventParticipant.price <= :priceMax", { priceMax: listEventParticipantRequest.priceMax })
-      // }
+    // Appliquer le filtre eventId s'il est présent
+    if (listEventParticipantRequest.eventId) {
+      query.andWhere("eventParticipant.event_id = :eventId", { eventId: listEventParticipantRequest.eventId });
+    }
 
-      query.skip((listEventParticipantRequest.page - 1) * listEventParticipantRequest.limit);
-      query.take(listEventParticipantRequest.limit);
+    // Pagination
+    query.skip((listEventParticipantRequest.page - 1) * listEventParticipantRequest.limit);
+    query.take(listEventParticipantRequest.limit);
 
-      const [eventParticipants, totalCount] = await query.getManyAndCount();
+    const [eventParticipants, totalCount] = await query.getManyAndCount();
 
-      const page = listEventParticipantRequest.page
-      const totalPages = Math.ceil(totalCount / listEventParticipantRequest.limit);
+    const page = listEventParticipantRequest.page;
+    const totalPages = Math.ceil(totalCount / listEventParticipantRequest.limit);
 
-      res.send(
-          {
-              data: eventParticipants,
-              page_size: listEventParticipantRequest.limit,
-              page,
-              total_count: totalCount,
-              total_pages: totalPages,
-          }
-      )
+    res.send({
+      data: eventParticipants,
+      page_size: listEventParticipantRequest.limit,
+      page,
+      total_count: totalCount,
+      total_pages: totalPages,
+    });
 
   } catch (error) {
-      if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
-      }
-      res.status(500).send({ "message": "internal error" })
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ "message": "internal error" });
   }
-}
+};
 
 /**
  * Récupérer le détail d’une EventParticipant par id (READ single)
