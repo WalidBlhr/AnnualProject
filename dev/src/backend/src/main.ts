@@ -4,6 +4,8 @@ import { initHandlers } from "./handlers/handler"
 import { AppDataSource } from "./db/database"
 import { swaggerDocs } from "./handlers/swagger/swagger"
 import path from 'path';
+import cron from 'node-cron';
+import { checkEventStatus } from './jobs/eventStatusChecker';
 
 const app = async () => {
     const app = express()
@@ -26,6 +28,16 @@ const app = async () => {
             console.error(error.message)
         }
     }
+
+    // Configuration du cron job pour vérifier les événements toutes les heures
+    cron.schedule('0 * * * *', async () => {
+        console.log('Vérification des statuts d\'événements...');
+        try {
+            await checkEventStatus();
+        } catch (error) {
+            console.error('Erreur lors de la vérification des événements:', error);
+        }
+    });
 
     app.listen(port, () => {
         console.log(`Server running on http://localhost:${port}`)

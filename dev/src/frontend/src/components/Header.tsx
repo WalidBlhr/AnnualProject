@@ -96,6 +96,19 @@ const Header: React.FC = () => {
                             >
                                 Messages
                             </Button>
+                            <Button 
+                                color="inherit" 
+                                component={Link} 
+                                to="/absences"
+                                sx={{
+                                    mr: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(231, 79, 55, 0.1)'
+                                    }
+                                }}
+                            >
+                                Surveillance logement
+                            </Button>
                         </>
                     )}
                 </Box>

@@ -5,6 +5,7 @@ import { AppDataSource } from "../db/database";
 import { EventParticipant } from "../db/models/event_participant";
 import { User } from "../db/models/user";
 import { Event } from "../db/models/event";
+import { Not } from "typeorm";
 
 /**
  * Create a new EventParticipant
@@ -34,6 +35,19 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
       return;
     }
     
+    // Vérifier si l'événement a atteint son quota maximum
+    const currentParticipantsCount = await eventParticipantRepository.count({
+      where: {
+        event: { id: eventId },
+        status_participation: Not('canceled')
+      }
+    });
+    
+    if (currentParticipantsCount >= event.max_participants) {
+      res.status(400).send({ error: "Le nombre maximum de participants est atteint" });
+      return;
+    }
+    
     // Créer l'inscription avec le constructeur comme dans vos autres handlers
     const eventParticipant = new EventParticipant(
       0, // L'ID sera généré automatiquement
@@ -44,6 +58,16 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
     );
     
     const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
+
+    // Vérifier si l'événement a atteint son quota minimum (pour le marquer comme confirmé)
+    if (currentParticipantsCount + 1 >= (event.min_participants ?? 0) && event.status === 'pending') {
+      event.status = 'confirmed';
+      await eventRepository.save(event);
+      
+      // Notifier tous les participants que l'événement est confirmé
+      await sendEventConfirmationNotifications(event.id);
+    }
+    
     res.status(201).send(eventParticipantCreated);
   } catch (error) {
     if (error instanceof Error) {
@@ -201,3 +225,7 @@ export const deleteEventParticipantHandler = async (req: Request, res: Response)
       res.status(500).send({ error: "Internal error" })
   }
 }
+function sendEventConfirmationNotifications(id: number) {
+  throw new Error("Function not implemented.");
+}
+

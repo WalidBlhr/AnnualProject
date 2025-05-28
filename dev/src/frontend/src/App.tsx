@@ -23,6 +23,8 @@ import ServiceDetail from './pages/Services/ServiceDetail';
 import Events from './pages/Events/Events';
 import EventDetail from './pages/Events/EventDetail';
 import MyEvents from './pages/Events/MyEvents';
+import Absences from './pages/Absences/Absences';
+import ProtectedRoute from './components/ProtectedRoute';
 
 const App: React.FC = () => {
     return (
@@ -72,6 +74,11 @@ const App: React.FC = () => {
                                 </AdminRoute>
                             } 
                         />
+                        <Route path="/absences" element={
+                            <ProtectedRoute>
+                                <Absences />
+                            </ProtectedRoute>
+                        } />
                     </Routes>
                     <Footer />
                 </AuthProvider>

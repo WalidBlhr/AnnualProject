@@ -19,7 +19,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField
+  TextField,
+  LinearProgress
 } from '@mui/material';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -37,7 +38,7 @@ interface Event {
   location: string;
   max_participants: number;
   min_participants: number;
-  status: string;
+  status: 'open' | 'closed' | 'pending' | 'draft' | 'canceled'; // Ajout de 'canceled'
   participants?: Participant[];
 }
 
@@ -285,6 +286,7 @@ const EventDetail = () => {
       case 'closed': return 'Fermé';
       case 'pending': return 'En attente';
       case 'draft': return 'Brouillon';
+      case 'canceled': return 'Annulé'; // Ajout de ce cas
       default: return status;
     }
   };
@@ -299,6 +301,7 @@ const EventDetail = () => {
 
   const participantsCount = participants.length;
   const remainingSlots = event.max_participants - participantsCount;
+  const isMaxReached = participants.length >= event.max_participants;
 
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
@@ -360,13 +363,14 @@ const EventDetail = () => {
                   {!isParticipant ? (
                     <Button
                       variant="contained"
-                      color="primary"
-                      disabled={remainingSlots <= 0}
                       onClick={() => setOpenDialog(true)}
+                      disabled={isParticipant || isMaxReached}
                     >
-                      {remainingSlots <= 0 
-                        ? 'Complet' 
-                        : 'S\'inscrire à cette sortie'}
+                      {isParticipant 
+                        ? 'Déjà inscrit' 
+                        : isMaxReached 
+                          ? 'Complet' 
+                          : 'S\'inscrire'}
                     </Button>
                   ) : (
                     <>
@@ -478,6 +482,27 @@ const EventDetail = () => {
           {alert.message}
         </Alert>
       </Snackbar>
+
+      {/* Indicateur de statut */}
+      <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
+        <Typography variant="body2" color="text.secondary">
+          {`${participants.length} / ${event.max_participants} participants`}
+          {event.min_participants > 0 && 
+            ` (minimum: ${event.min_participants})`}
+        </Typography>
+        <LinearProgress 
+          variant="determinate" 
+          value={(participants.length / event.max_participants) * 100}
+          sx={{ ml: 2, flexGrow: 1 }} 
+        />
+      </Box>
+
+      {/* Avertissement pour le minimum de participants */}
+      {event.status === 'pending' && participants.length < event.min_participants && (
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          L'événement sera annulé s'il n'y a pas au moins {event.min_participants} participants.
+        </Alert>
+      )}
     </Container>
   );
 };

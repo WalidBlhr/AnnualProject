@@ -9,6 +9,16 @@ import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandle
 import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
 import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
+import {
+  createAbsenceHandler,
+  listAbsencesHandler,
+  detailedAbsenceHandler,
+  updateAbsenceHandler,
+  deleteAbsenceHandler,
+  addTrustedContactHandler,
+  removeTrustedContactHandler,
+  listTrustedContactsHandler
+} from "./absence";
 
 export const initHandlers = (app: Application) => {
   /**
@@ -767,4 +777,177 @@ export const initHandlers = (app: Application) => {
    *         description: Participation supprimée
    */
   app.delete("/event-participants/:id", authMiddleware, deleteEventParticipantHandler);
+
+  /**
+   * @openapi
+   * /absences:
+   *   post:
+   *     tags:
+   *       - Absences
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Déclarer une absence
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateAbsenceRequest'
+   *     responses:
+   *       201:
+   *         description: Absence créée
+   */
+  app.post("/absences", authMiddleware, createAbsenceHandler);
+
+  /**
+   * @openapi
+   * /absences:
+   *   get:
+   *     tags:
+   *       - Absences
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Liste des absences
+   *     responses:
+   *       200:
+   *         description: Liste des absences
+   */
+  app.get("/absences", authMiddleware, listAbsencesHandler);
+
+  /**
+   * @openapi
+   * /absences/{id}:
+   *   get:
+   *     tags:
+   *       - Absences
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Détails d'une absence
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: number
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Détails de l'absence
+   */
+  app.get("/absences/:id", authMiddleware, detailedAbsenceHandler);
+
+  /**
+   * @openapi
+   * /absences/{id}:
+   *   put:
+   *     tags:
+   *       - Absences
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Mise à jour d'une absence
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: number
+   *         required: true
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/UpdateAbsenceRequest'
+   *     responses:
+   *       200:
+   *         description: Absence mise à jour
+   */
+  app.put("/absences/:id", authMiddleware, updateAbsenceHandler);
+
+  /**
+   * @openapi
+   * /absences/{id}:
+   *   delete:
+   *     tags:
+   *       - Absences
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Suppression d'une absence
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: number
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Absence supprimée
+   */
+  app.delete("/absences/:id", authMiddleware, deleteAbsenceHandler);
+
+  /**
+   * @openapi
+   * /trusted-contacts:
+   *   post:
+   *     tags:
+   *       - TrustedContacts
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Ajouter un contact de confiance
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/TrustedContactRequest'
+   *     responses:
+   *       200:
+   *         description: Contact de confiance ajouté
+   */
+  app.post("/trusted-contacts", authMiddleware, addTrustedContactHandler);
+
+  /**
+   * @openapi
+   * /trusted-contacts/{userId}/{trustedUserId}:
+   *   delete:
+   *     tags:
+   *       - TrustedContacts
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Supprimer un contact de confiance
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         schema:
+   *           type: number
+   *         required: true
+   *       - in: path
+   *         name: trustedUserId
+   *         schema:
+   *           type: number
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Contact de confiance supprimé
+   */
+  app.delete("/trusted-contacts/:userId/:trustedUserId", authMiddleware, removeTrustedContactHandler);
+
+  /**
+   * @openapi
+   * /users/{userId}/trusted-contacts:
+   *   get:
+   *     tags:
+   *       - TrustedContacts
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Liste des contacts de confiance d'un utilisateur
+   *     parameters:
+   *       - in: path
+   *         name: userId
+   *         schema:
+   *           type: number
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Liste des contacts de confiance
+   */
+  app.get("/users/:userId/trusted-contacts", authMiddleware, listTrustedContactsHandler);
 };

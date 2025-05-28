@@ -1,13 +1,15 @@
-import { Column, CreateDateColumn, Entity, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
+import { Column, CreateDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
 import { Token } from "./token"
 import { Service } from "./service";
 import { Event } from "./event";
 import { TrocOffer } from "./troc_offer";
 import { Message } from "./message";
 import { EventParticipant } from "./event_participant";
+import { Absence } from "./absence";
 
 @Entity({ name: "user" })
 export class User {
+    [x: string]: any;
     @PrimaryGeneratedColumn()
     id: number
 
@@ -57,6 +59,17 @@ export class User {
 
     @OneToMany(() => Event, event => event.creator)
     createdEvents: Event[];
+
+    @OneToMany(() => Absence, absence => absence.user)
+    absences: Absence[] = [];
+
+    @ManyToMany(() => User)
+    @JoinTable({
+        name: "trusted_contacts",
+        joinColumn: { name: "user_id", referencedColumnName: "id" },
+        inverseJoinColumn: { name: "trusted_user_id", referencedColumnName: "id" }
+    })
+    trusted_contacts: User[] = [];
 
     constructor(id: number, 
         email: string, password: string, 
