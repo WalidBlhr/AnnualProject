@@ -15,6 +15,14 @@ import { In } from "typeorm";
 import { Message } from "../db/models/message";
 
 /**
+ * Fonction utilitaire pour formater les dates
+ */
+function formatDate(date: Date | string): string {
+  const d = new Date(date);
+  return `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getFullYear()}`;
+}
+
+/**
  * Créer une nouvelle déclaration d'absence
  * POST /absences
  */
@@ -59,7 +67,8 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
       new Date(start_date),
       new Date(end_date),
       notes || '',
-      'pending'
+      'pending',
+      []
     );
 
     // Ajouter les contacts de confiance si spécifiés
@@ -70,7 +79,7 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
       // Envoyer une notification à chaque contact de confiance
       for (const trustedUser of trustedUsers) {
         const newMessage = messageRepository.create({
-          content: `${user.firstname} ${user.lastname} vous a désigné comme contact de confiance pendant son absence du ${new Date(start_date).toLocaleDateString()} au ${new Date(end_date).toLocaleDateString()}.`,
+          content: `${user.firstname} ${user.lastname} vous a désigné comme contact de confiance pendant son absence du ${formatDate(start_date)} au ${formatDate(end_date)}.`,
           date_sent: new Date(),
           sender: user,
           receiver: trustedUser,
@@ -263,7 +272,7 @@ export const updateAbsenceHandler = async (req: Request, res: Response) => {
             'refusé la demande de surveillance de logement';
             
           const newMessage = messageRepository.create({
-            content: `${trustedUser.firstname} ${trustedUser.lastname} a ${statusMessage} pendant votre absence du ${absenceFound.start_date.toLocaleDateString()} au ${absenceFound.end_date.toLocaleDateString()}.`,
+            content: `${trustedUser.firstname} ${trustedUser.lastname} a ${statusMessage} pendant votre absence du ${formatDate(absenceFound.start_date)} au ${formatDate(absenceFound.end_date)}.`,
             date_sent: new Date(),
             sender: trustedUser,
             receiver: absenceFound.user,
@@ -280,8 +289,17 @@ export const updateAbsenceHandler = async (req: Request, res: Response) => {
       absenceFound.trusted_contacts = trustedUsers;
     }
 
-    const absenceUpdated = await absenceRepository.save(absenceFound);
-    res.status(200).send(absenceUpdated);
+    try {
+      const absenceUpdated = await absenceRepository.save(absenceFound);
+      res.status(200).send(absenceUpdated);
+    } catch (error) {
+      console.error("Erreur SQL:", error);
+      if (error instanceof Error) {
+        res.status(500).send({ error: "Internal error: " + error.message });
+      } else {
+        res.status(500).send({ error: "Internal error" });
+      }
+    }
   } catch (error) {
     console.log(error);
     res.status(500).send({ error: "Internal error" });

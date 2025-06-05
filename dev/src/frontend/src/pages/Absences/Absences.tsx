@@ -245,7 +245,6 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       const absenceData = {
-        userId,
         start_date: startDate.format('YYYY-MM-DD'),
         end_date: endDate.format('YYYY-MM-DD'),
         notes,
@@ -286,7 +285,7 @@ const Absences: React.FC = () => {
   };
 
   const handleDeleteAbsence = async (id: number) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette absence ?")) {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette absence ?")) {
       return;
     }
     
@@ -360,7 +359,7 @@ const Absences: React.FC = () => {
 
   const handleRemoveContact = async (trustedUserId: number) => {
     if (!userId) return;
-    if (!confirm("Êtes-vous sûr de vouloir retirer ce contact de confiance ?")) {
+    if (!window.confirm("Êtes-vous sûr de vouloir retirer ce contact de confiance ?")) {
       return;
     }
     

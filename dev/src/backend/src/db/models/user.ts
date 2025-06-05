@@ -61,7 +61,7 @@ export class User {
     createdEvents: Event[];
 
     @OneToMany(() => Absence, absence => absence.user)
-    absences: Absence[] = [];
+    absences: Absence[];
 
     @ManyToMany(() => User)
     @JoinTable({
@@ -69,7 +69,13 @@ export class User {
         joinColumn: { name: "user_id", referencedColumnName: "id" },
         inverseJoinColumn: { name: "trusted_user_id", referencedColumnName: "id" }
     })
-    trusted_contacts: User[] = [];
+    trusted_contacts: User[];
+
+    @Column({ nullable: true, default: 'offline' })
+    status: string;
+
+    @Column({ type: "timestamptz", nullable: true, default: () => "CURRENT_TIMESTAMP"})
+    last_active: Date;
 
     constructor(id: number, 
         email: string, password: string, 
@@ -85,7 +91,11 @@ export class User {
         sentMessages: Message[], 
         receivedMessages: Message[], 
         eventParticipations: EventParticipant[], 
-        createdEvents: Event[]
+        createdEvents: Event[],
+        absences: Absence[],
+        trusted_contacts: User[],
+        status: 'online' | 'offline',
+        last_active: Date
     ) {
         this.id = id
         this.email = email
@@ -103,5 +113,9 @@ export class User {
         this.receivedMessages = receivedMessages
         this.eventParticipations = eventParticipations
         this.createdEvents = createdEvents
+        this.absences = absences
+        this.trusted_contacts = trusted_contacts
+        this.status = status
+        this.last_active = last_active
     }
 }

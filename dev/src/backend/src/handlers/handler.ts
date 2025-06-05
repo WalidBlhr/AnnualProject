@@ -3,10 +3,10 @@ import { createUser, login } from "./auth";
 import { authMiddleware, isOwnerOrAdmin, isAdmin } from "../middleware/auth";
 import { upload } from '../config/multer';
 
-import { deleteUserHandler, detailedUserHandler, listUserHandler, updateUserHandler } from "./user";
+import { deleteUserHandler, detailedUserHandler, listUserHandler, updateUserHandler, getUserStatusHandler } from "./user";
 import { bookServiceHandler, createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, cancelServiceBookingHandler } from "./service";
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
-import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
+import { createMessageHandler, deleteMessageHandler, listMessageHandler, detailedMessageHandler, updateMessageHandler } from "./message";
 import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
 import {
@@ -528,7 +528,7 @@ export const initHandlers = (app: Application) => {
    *       - Messages
    *     security:
    *       - bearerAuth: []
-   *     summary: Met à jour un message
+   *     summary: Mettre à jour un message (marquer comme lu)
    *     parameters:
    *       - in: path
    *         name: id
@@ -540,7 +540,11 @@ export const initHandlers = (app: Application) => {
    *       content:
    *         application/json:
    *           schema:
-   *             $ref: '#/components/schemas/UpdateMessageRequest'
+   *             type: object
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 example: read
    *     responses:
    *       200:
    *         description: Message mis à jour
@@ -950,4 +954,26 @@ export const initHandlers = (app: Application) => {
    *         description: Liste des contacts de confiance
    */
   app.get("/users/:userId/trusted-contacts", authMiddleware, listTrustedContactsHandler);
+
+  /**
+   * @openapi
+   * /users/status:
+   *   get:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Récupérer le statut de connexion de plusieurs utilisateurs
+   *     parameters:
+   *       - in: query
+   *         name: userIds
+   *         required: true
+   *         schema:
+   *           type: string
+   *         description: Liste d'IDs d'utilisateurs séparés par des virgules
+   *     responses:
+   *       200:
+   *         description: Statuts des utilisateurs
+   */
+  app.get("/users/status", authMiddleware, getUserStatusHandler);
 };

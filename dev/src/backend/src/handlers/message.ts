@@ -5,6 +5,7 @@ import { AppDataSource } from "../db/database";
 import { Message } from "../db/models/message";
 import { User } from "../db/models/user";
 import { jwtDecode } from "jwt-decode";  // Modification de l'import
+import jwt from 'jsonwebtoken';
 
 interface DecodedToken {
   userId: number;
@@ -161,57 +162,54 @@ export const detailedMessageHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Mise à jour d’une Message
+ * Mise à jour d'un message (marquer comme lu)
  * PUT /messages/:id
  */
 export const updateMessageHandler = async (req: Request, res: Response) => {
   try {
-      const validation = updateMessageValidation.validate({ ...req.params, ...req.body })
-      if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
-      }
+    const validation = MessageIdValidation.validate(req.params);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
 
-      const updateMessage = validation.value
-      const messageRepository = AppDataSource.getRepository(Message)
-      // Modifier cette partie pour inclure les relations
-      const messageFound = await messageRepository.findOne({
-          where: { id: updateMessage.id },
-          relations: {
-              sender: true,
-              receiver: true
-          }
-      })
-      if (messageFound === null) {
-          res.status(404).send({ "error": `message ${updateMessage.id} not found` })
-          return
-      }
+    const messageId = validation.value;
+    const messageRepository = AppDataSource.getRepository(Message);
+    const message = await messageRepository.findOne({
+      where: { id: messageId.id },
+      relations: ['receiver']
+    });
+    
+    if (!message) {
+      res.status(404).send({ error: "Message non trouvé" });
+      return;
+    }
 
-      // Mettre à jour les champs
-      if (updateMessage.content) {
-          messageFound.content = updateMessage.content
-      }
-      if (updateMessage.status) {
-          messageFound.status = updateMessage.status
-      }
+    // Vérifier que l'utilisateur est bien le destinataire
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      res.status(401).send({ error: 'Non authentifié' });
+      return;
+    }
+    
+    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    if (decoded.userId !== message.receiver.id) {
+      res.status(403).send({ error: "Vous n'êtes pas autorisé à mettre à jour ce message" });
+      return;
+    }
 
-      const messageUpdate = await messageRepository.save(messageFound)
-      
-      // Recharger le message avec toutes les relations pour la réponse
-      const updatedMessageWithRelations = await messageRepository.findOne({
-          where: { id: messageUpdate.id },
-          relations: {
-              sender: true,
-              receiver: true
-          }
-      })
+    // Mettre à jour le statut
+    if (req.body.status) {
+      message.status = req.body.status;
+    }
 
-      res.status(200).send(updatedMessageWithRelations)
+    const updatedMessage = await messageRepository.save(message);
+    res.status(200).send(updatedMessage);
   } catch (error) {
-      console.log(error)
-      res.status(500).send({ error: "Internal error" })
+    console.error(error);
+    res.status(500).send({ message: "internal error" });
   }
-}
+};
 
 /**
  * Suppression d’une Message

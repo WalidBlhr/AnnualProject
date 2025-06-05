@@ -150,5 +150,42 @@ export const deleteUserHandler = async (req: Request, res: Response) => {
         console.log(error);
         res.status(500).send({ error: "Internal error" });
     }
+}
+
+/**
+ * Récupérer le statut des utilisateurs
+ * GET /users/status
+ */
+export const getUserStatusHandler = async (req: Request, res: Response) => {
+    try {
+        const userIds = req.query.userIds as string;
+        
+        if (!userIds) {
+            res.status(400).send({ error: "Le paramètre userIds est requis" });
+            return;
+        }
+        
+        const userIdsArray = userIds.split(',').map(id => parseInt(id));
+        const userRepository = AppDataSource.getRepository(User);
+        
+        const users = await userRepository
+            .createQueryBuilder("user")
+            .select(["user.id", "user.status", "user.last_active"])
+            .where("user.id IN (:...userIds)", { userIds: userIdsArray })
+            .getMany();
+        
+        const statusMap = users.reduce((acc: Record<number, any>, user) => {
+            acc[user.id] = {
+                status: user.status,
+                lastActive: user.last_active
+            };
+            return acc;
+        }, {});
+        
+        res.status(200).send(statusMap);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({ error: "Internal error" });
+    }
 };
 

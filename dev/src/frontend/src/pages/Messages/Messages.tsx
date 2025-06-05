@@ -1,49 +1,27 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   Container,
-  Paper,
   Typography,
+  Box,
   List,
   ListItem,
   ListItemText,
   ListItemAvatar,
   Avatar,
+  Paper,
   Divider,
-  Box,
   Badge,
-  Alert,
   Snackbar,
+  Alert,
+  Button,
 } from '@mui/material';
-import PersonIcon from '@mui/icons-material/Person';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import jwtDecode from "jwt-decode";
+import jwtDecode from 'jwt-decode';
+import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
+import { useSocket } from '../../contexts/SocketContext';
 
-interface Message {
-  id: number;
-  content: string;
-  date_sent: string;
-  status: string;
-  sender: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-  receiver: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-}
-
-interface Conversation {
-  otherUserId: number;
-  otherUserName: string;
-  lastMessage: Message;
-  unreadCount: number;
-}
-
-const Messages: React.FC = () => {
+const Messages = () => {
   const navigate = useNavigate();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [alert, setAlert] = useState<{
@@ -51,6 +29,36 @@ const Messages: React.FC = () => {
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
+  const { isOnline } = useSocket(); // Utilisez le contexte Socket
+
+  interface Message {
+    id: number;
+    content: string;
+    date_sent: string;
+    status: string;
+    sender: {
+      id: number;
+      firstname: string;
+      lastname: string;
+    };
+    receiver: {
+      id: number;
+      firstname: string;
+      lastname: string;
+    };
+  }
+
+  // Ajoutez ce type existant ou vérifiez s'il est déjà défini
+  interface Conversation {
+    otherUserId: number;
+    otherUserName: string;
+    lastMessage: {
+      content: string;
+      date_sent: string;
+      status: string;
+    };
+    unreadCount: number;
+  }
 
   useEffect(() => {
     fetchConversations();
@@ -116,90 +124,101 @@ const Messages: React.FC = () => {
     setAlert({ open: true, message, severity });
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return new Intl.DateTimeFormat('fr-FR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
-  };
-
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
-          Mes conversations
-        </Typography>
-
+      <Typography variant="h4" gutterBottom>Mes messages</Typography>
+      
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={() => navigate('/new-message')}
+        >
+          Nouveau message
+        </Button>
+      </Box>
+      
+      <Paper elevation={2}>
         <List>
           {conversations.length === 0 ? (
             <ListItem>
               <ListItemText primary="Aucune conversation" />
             </ListItem>
           ) : (
-            conversations.map((conversation) => (
+            conversations.map((conversation, index) => (
               <React.Fragment key={conversation.otherUserId}>
+                {index > 0 && <Divider />}
                 <ListItem 
-                  button 
+                  button
                   onClick={() => navigate(`/messages/${conversation.otherUserId}`)}
-                  sx={{
-                    '&:hover': {
-                      backgroundColor: 'rgba(0, 0, 0, 0.04)',
-                    },
-                  }}
                 >
                   <ListItemAvatar>
-                    <Avatar>
-                      <PersonIcon />
-                    </Avatar>
+                    <Badge
+                      overlap="circular"
+                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                      badgeContent={
+                        <FiberManualRecordIcon 
+                          sx={{ 
+                            fontSize: 14, 
+                            color: isOnline(conversation.otherUserId) ? 'success.main' : 'text.disabled' 
+                          }}
+                        />
+                      }
+                    >
+                      <Avatar>
+                        {conversation.otherUserName.charAt(0)}
+                      </Avatar>
+                    </Badge>
                   </ListItemAvatar>
-                  <ListItemText
+                  <ListItemText 
                     primary={
-                      <Box display="flex" justifyContent="space-between" alignItems="center">
-                        <Typography component="span" variant="body1">
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography variant="subtitle1">
                           {conversation.otherUserName}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {new Date(conversation.lastMessage.date_sent).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </Typography>
+                      </Box>
+                    }
+                    secondary={
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            maxWidth: '250px'
+                          }}
+                        >
+                          {conversation.lastMessage.content}
                         </Typography>
                         {conversation.unreadCount > 0 && (
                           <Badge 
                             badgeContent={conversation.unreadCount} 
-                            color="primary"
-                            sx={{ ml: 2 }}
+                            color="primary" 
+                            sx={{ ml: 1 }}
                           />
                         )}
                       </Box>
                     }
-                    secondary={
-                      <>
-                        <Typography component="span" variant="body2">
-                          {conversation.lastMessage.content}
-                        </Typography>
-                        <br />
-                        <Typography component="span" variant="caption" color="textSecondary">
-                          {formatDate(conversation.lastMessage.date_sent)}
-                        </Typography>
-                      </>
-                    }
                   />
                 </ListItem>
-                <Divider variant="inset" component="li" />
               </React.Fragment>
             ))
           )}
         </List>
       </Paper>
-
+      
+      {/* Snackbar d'alerte */}
       <Snackbar
         open={alert.open}
         autoHideDuration={6000}
         onClose={() => setAlert({ ...alert, open: false })}
       >
-        <Alert
-          severity={alert.severity}
-          onClose={() => setAlert({ ...alert, open: false })}
-        >
+        <Alert severity={alert.severity} onClose={() => setAlert({ ...alert, open: false })}>
           {alert.message}
         </Alert>
       </Snackbar>

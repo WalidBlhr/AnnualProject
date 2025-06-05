@@ -25,62 +25,67 @@ import EventDetail from './pages/Events/EventDetail';
 import MyEvents from './pages/Events/MyEvents';
 import Absences from './pages/Absences/Absences';
 import ProtectedRoute from './components/ProtectedRoute';
+import { SocketProvider } from './contexts/SocketContext';
+import NewMessage from './pages/Messages/NewMessage';
 
 const App: React.FC = () => {
     return (
         <ThemeProvider theme={theme}>
             <Router>
                 <AuthProvider>
-                    <Header />
-                    <Routes>
-                        <Route path="/" element={<Home />} />
-                        <Route path="/login" element={<Login />} />
-                        <Route path="/signup" element={<Signup />} />
-                        <Route path="/trocs" element={<TrocOffersList />} />
-                        <Route path="/trocs/:id" element={<TrocOfferDetail />} />
-                        <Route path="/messages/:userId" element={<Conversation />} />
-                        <Route path="/messages" element={<Messages />} />
-                        <Route path="/services" element={<ServicesList />} />
-                        <Route path="/services/:id" element={<ServiceDetail />} />
-                        <Route path="/events" element={<Events />} />
-                        <Route path="/events/:id" element={<EventDetail />} />
-                        <Route path="/my-events" element={<MyEvents />} />
-                        <Route 
-                            path="/admin" 
-                            element={
+                    <SocketProvider>
+                        <Header />
+                        <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/signup" element={<Signup />} />
+                            <Route path="/trocs" element={<TrocOffersList />} />
+                            <Route path="/trocs/:id" element={<TrocOfferDetail />} />
+                            <Route path="/messages/:userId" element={<Conversation />} />
+                            <Route path="/messages" element={<Messages />} />
+                            <Route path="/services" element={<ServicesList />} />
+                            <Route path="/services/:id" element={<ServiceDetail />} />
+                            <Route path="/events" element={<Events />} />
+                            <Route path="/events/:id" element={<EventDetail />} />
+                            <Route path="/my-events" element={<MyEvents />} />
+                            <Route path="/new-message" element={<NewMessage />} />
+                            <Route 
+                                path="/admin" 
+                                element={
+                                    <AdminRoute>
+                                        <AdminDashboard />
+                                    </AdminRoute>
+                                } 
+                            />
+                            <Route path="/admin/users" element={
                                 <AdminRoute>
-                                    <AdminDashboard />
+                                    <AdminUsers />
                                 </AdminRoute>
-                            } 
-                        />
-                        <Route path="/admin/users" element={
-                            <AdminRoute>
-                                <AdminUsers />
-                            </AdminRoute>
-                        } />
-                        <Route 
-                            path="/admin/events" 
-                            element={
-                                <AdminRoute>
-                                    <AdminEvents />
-                                </AdminRoute>
-                            } 
-                        />
-                        <Route 
-                            path="/admin/messages" 
-                            element={
-                                <AdminRoute>
-                                    <AdminMessages />
-                                </AdminRoute>
-                            } 
-                        />
-                        <Route path="/absences" element={
-                            <ProtectedRoute>
-                                <Absences />
-                            </ProtectedRoute>
-                        } />
-                    </Routes>
-                    <Footer />
+                            } />
+                            <Route 
+                                path="/admin/events" 
+                                element={
+                                    <AdminRoute>
+                                        <AdminEvents />
+                                    </AdminRoute>
+                                } 
+                            />
+                            <Route 
+                                path="/admin/messages" 
+                                element={
+                                    <AdminRoute>
+                                        <AdminMessages />
+                                    </AdminRoute>
+                                } 
+                            />
+                            <Route path="/absences" element={
+                                <ProtectedRoute>
+                                    <Absences />
+                                </ProtectedRoute>
+                            } />
+                        </Routes>
+                        <Footer />
+                    </SocketProvider>
                 </AuthProvider>
             </Router>
         </ThemeProvider>
