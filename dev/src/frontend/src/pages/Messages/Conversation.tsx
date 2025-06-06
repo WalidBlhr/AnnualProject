@@ -15,7 +15,9 @@ import {
   Divider,
   CircularProgress,
   IconButton,
-  Badge
+  Badge,
+  Tooltip,
+  Chip
 } from '@mui/material';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -51,7 +53,7 @@ const Conversation = () => {
   const { userId, trocId } = useParams<{ userId: string, trocId?: string }>();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { socket, isOnline } = useSocket();
+  const { socket, isOnline, fetchUserStatuses } = useSocket();
   
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -220,6 +222,13 @@ const Conversation = () => {
     setAlert({ open: true, message, severity });
   };
 
+  useEffect(() => {
+    if (userId) {
+      // Charger le statut initial de l'autre utilisateur
+      fetchUserStatuses([parseInt(userId)]);
+    }
+  }, [userId, fetchUserStatuses]);
+
   if (isLoading) {
     return (
       <Container sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
@@ -241,14 +250,16 @@ const Conversation = () => {
               Conversation avec {otherUser.firstname} {otherUser.lastname}
               {trocId && ' (via une offre de troc)'}
             </Typography>
-            <Badge
-              sx={{ ml: 1 }}
-              variant="dot"
-              overlap="circular"
-              color={isOnline(parseInt(userId!)) ? "success" : "default"}
-            >
-              <FiberManualRecordIcon fontSize="small" />
-            </Badge>
+            
+            <Tooltip title={isOnline(parseInt(userId!)) ? "En ligne" : "Hors ligne"}>
+              <Chip 
+                icon={<FiberManualRecordIcon sx={{ fontSize: 16 }} />} 
+                label={isOnline(parseInt(userId!)) ? "En ligne" : "Hors ligne"}
+                color={isOnline(parseInt(userId!)) ? "success" : "default"}
+                size="small"
+                sx={{ ml: 2 }}
+              />
+            </Tooltip>
           </Box>
           <Button variant="outlined" onClick={() => navigate(trocId ? `/trocs/${trocId}` : '/messages')}>
             Retour

@@ -14,6 +14,7 @@ import {
   Snackbar,
   Alert,
   Button,
+  Tooltip,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -29,8 +30,8 @@ const Messages = () => {
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
-  const { isOnline } = useSocket(); // Utilisez le contexte Socket
-
+  const { isOnline, fetchUserStatuses } = useSocket(); // Utilisé pour vérifier si un utilisateur est en ligne
+  
   interface Message {
     id: number;
     content: string;
@@ -63,6 +64,19 @@ const Messages = () => {
   useEffect(() => {
     fetchConversations();
   }, []);
+
+  useEffect(() => {
+    if (conversations.length > 0) {
+      // Récupérer le statut initial de tous les utilisateurs de conversation
+      const userIds = conversations.map(conv => conv.otherUserId);
+      
+      // Pour chaque utilisateur, faire un appel séparé
+      // (puisque l'API ne prend qu'un seul userId à la fois)
+      userIds.forEach(id => {
+        fetchUserStatuses([id]);
+      });
+    }
+  }, [conversations, fetchUserStatuses]);
 
   const fetchConversations = async () => {
     try {
@@ -123,7 +137,7 @@ const Messages = () => {
   const showAlert = (message: string, severity: 'success' | 'error') => {
     setAlert({ open: true, message, severity });
   };
-
+  
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Mes messages</Typography>
@@ -145,69 +159,87 @@ const Messages = () => {
               <ListItemText primary="Aucune conversation" />
             </ListItem>
           ) : (
-            conversations.map((conversation, index) => (
-              <React.Fragment key={conversation.otherUserId}>
-                {index > 0 && <Divider />}
-                <ListItem 
-                  button
-                  onClick={() => navigate(`/messages/${conversation.otherUserId}`)}
-                >
-                  <ListItemAvatar>
-                    <Badge
-                      overlap="circular"
-                      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                      badgeContent={
-                        <FiberManualRecordIcon 
-                          sx={{ 
-                            fontSize: 14, 
-                            color: isOnline(conversation.otherUserId) ? 'success.main' : 'text.disabled' 
-                          }}
-                        />
+            conversations.map((conversation, index) => {
+              const PrimaryText = (
+                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Typography variant="subtitle1" component="span">
+                      {conversation.otherUserName}
+                    </Typography>
+                    {isOnline(conversation.otherUserId) && (
+                      <Typography
+                        variant="caption"
+                        component="span"
+                        sx={{ ml: 1, color: 'success.main' }}
+                      >
+                        (en ligne)
+                      </Typography>
+                    )}
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    {new Date(conversation.lastMessage.date_sent).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </Typography>
+                </Box>
+              );
+
+              return (
+                <React.Fragment key={conversation.otherUserId}>
+                  {index > 0 && <Divider />}
+                  <ListItem button onClick={() => navigate(`/messages/${conversation.otherUserId}`)}>
+                    <ListItemAvatar>
+                      <Badge
+                        overlap="circular"
+                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                        badgeContent={
+                          <Tooltip title={isOnline(conversation.otherUserId) ? "En ligne" : "Hors ligne"}>
+                            <FiberManualRecordIcon 
+                              sx={{ 
+                                fontSize: 14, 
+                                color: isOnline(conversation.otherUserId) ? 'success.main' : 'text.disabled' 
+                              }}
+                            />
+                          </Tooltip>
+                        }
+                      >
+                        <Avatar>
+                          {conversation.otherUserName.charAt(0)}
+                        </Avatar>
+                      </Badge>
+                    </ListItemAvatar>
+
+                    <ListItemText
+                      primary={PrimaryText}
+                      secondary={
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary"
+                            sx={{
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              maxWidth: '250px'
+                            }}
+                          >
+                            {conversation.lastMessage.content}
+                          </Typography>
+                          {conversation.unreadCount > 0 && (
+                            <Badge 
+                              badgeContent={conversation.unreadCount} 
+                              color="primary" 
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                        </Box>
                       }
-                    >
-                      <Avatar>
-                        {conversation.otherUserName.charAt(0)}
-                      </Avatar>
-                    </Badge>
-                  </ListItemAvatar>
-                  <ListItemText 
-                    primary={
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography variant="subtitle1">
-                          {conversation.otherUserName}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {new Date(conversation.lastMessage.date_sent).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </Typography>
-                      </Box>
-                    }
-                    secondary={
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                        <Typography 
-                          variant="body2" 
-                          color="text.secondary"
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                            maxWidth: '250px'
-                          }}
-                        >
-                          {conversation.lastMessage.content}
-                        </Typography>
-                        {conversation.unreadCount > 0 && (
-                          <Badge 
-                            badgeContent={conversation.unreadCount} 
-                            color="primary" 
-                            sx={{ ml: 1 }}
-                          />
-                        )}
-                      </Box>
-                    }
-                  />
-                </ListItem>
-              </React.Fragment>
-            ))
+                    />
+                  </ListItem>
+                </React.Fragment>
+              );
+            })
           )}
         </List>
       </Paper>

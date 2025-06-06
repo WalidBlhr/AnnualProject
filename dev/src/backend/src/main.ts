@@ -75,17 +75,20 @@ const app = async () => {
         }
         connectedUsers.get(userId)!.push(socket.id);
         
-        // Mettre à jour le statut utilisateur dans la BD
+        // Pour la mise en ligne
         const userRepository = AppDataSource.getRepository(User);
-        await userRepository.update(userId, { 
-            status: 'online' as any
-        });
-        
-        // Diffuser le changement de statut
-        io.emit('user_status_change', { 
-            userId: userId, 
-            status: 'online' 
-        });
+        const userToUpdate = await userRepository.findOneBy({ id: userId });
+        if (userToUpdate) {
+            userToUpdate.status = 'online';
+            userToUpdate.last_active = new Date();
+            await userRepository.save(userToUpdate);
+            
+            // Diffuser le changement de statut
+            io.emit('user_status_change', { 
+                userId: userId, 
+                status: 'online' 
+            });
+        }
         
         // Gestion de la déconnexion
         socket.on('disconnect', async () => {
@@ -104,15 +107,19 @@ const app = async () => {
                     connectedUsers.delete(userId);
                     
                     // Mettre à jour la BD
-                    await userRepository.update(userId, { 
-                        status: 'offline' as any
-                    });
-                    
-                    // Diffuser le changement de statut
-                    io.emit('user_status_change', { 
-                        userId: userId, 
-                        status: 'offline' 
-                    });
+                    const userRepository = AppDataSource.getRepository(User);
+                    const userToUpdate = await userRepository.findOneBy({ id: userId });
+                    if (userToUpdate) {
+                        userToUpdate.status = 'offline';
+                        userToUpdate.last_active = new Date();
+                        await userRepository.save(userToUpdate);
+                        
+                        // Diffuser le changement de statut
+                        io.emit('user_status_change', { 
+                            userId: userId, 
+                            status: 'offline' 
+                        });
+                    }
                 }
             }
         });

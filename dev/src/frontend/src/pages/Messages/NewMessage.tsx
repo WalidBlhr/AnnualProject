@@ -11,7 +11,8 @@ import {
   Autocomplete,
   CircularProgress,
   Avatar,
-  Divider
+  Divider,
+  Chip
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -135,9 +136,11 @@ const NewMessage = () => {
                     <Box sx={{ flexGrow: 1 }}>
                       {option.firstname} {option.lastname}
                     </Box>
-                    <FiberManualRecordIcon 
-                      fontSize="small" 
-                      sx={{ color: isOnline(option.id) ? 'success.main' : 'text.disabled' }}
+                    <Chip
+                      icon={<FiberManualRecordIcon sx={{ fontSize: 14 }} />}
+                      label={isOnline(option.id) ? "En ligne" : "Hors ligne"}
+                      color={isOnline(option.id) ? "success" : "default"}
+                      size="small"
                     />
                   </Box>
                 </Box>

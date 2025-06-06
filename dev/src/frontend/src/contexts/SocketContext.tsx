@@ -1,17 +1,20 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useAuth } from './AuthContext';
+import axios from 'axios';
 
 interface SocketContextType {
   socket: Socket | null;
   onlineUsers: number[];
   isOnline: (userId: number) => boolean;
+  fetchUserStatuses: (userIds: number[]) => Promise<void>;
 }
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   onlineUsers: [],
-  isOnline: () => false
+  isOnline: () => false,
+  fetchUserStatuses: async () => {}
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -21,6 +24,38 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [onlineUsers, setOnlineUsers] = useState<number[]>([]);
   const { isAuthenticated } = useAuth();
   const token = localStorage.getItem('token');
+
+  // Fonction pour charger le statut initial d'un ou plusieurs utilisateurs
+  const fetchUserStatuses = async (userIds: number[]) => {
+    if (!token) return;
+    
+    try {
+      // Appel à notre nouvel endpoint
+      const response = await axios.get(
+        `http://localhost:3000/api/user-status?userId=${userIds[0]}`, // N.B.: on ne traite qu'un utilisateur à la fois
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Si l'utilisateur est en ligne, l'ajouter à notre liste
+      if (response.data.status === 'online') {
+        setOnlineUsers(prev => {
+          if (!prev.includes(response.data.id)) {
+            return [...prev, response.data.id];
+          }
+          return prev;
+        });
+      }
+      
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération du statut:', error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     // Créer la connexion socket seulement si l'utilisateur est authentifié
@@ -55,7 +90,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isOnline = (userId: number) => onlineUsers.includes(userId);
 
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers, isOnline }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, isOnline, fetchUserStatuses }}>
       {children}
     </SocketContext.Provider>
   );

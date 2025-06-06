@@ -41,3 +41,10 @@ export const UserUpdateValidation = Joi.object<UpdateUserRequest>({
     email: Joi.string().email().required(),
     role: Joi.number().required().min(0).max(1),
 })
+
+export const UserIdsQueryValidation = Joi.object({
+  userIds: Joi.string()
+    .required()
+    .pattern(/^(\d+)(,\d+)*$/) // Format: "1" ou "1,2,3"
+    .message('userIds doit être une liste d\'identifiants numériques séparés par des virgules')
+}).options({ abortEarly: false });

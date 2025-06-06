@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";
-import { ListUsersValidation, UserIdValidation, UserUpdateValidation } from "./validators/user";
+import { ListUsersValidation, UserIdsQueryValidation, UserIdValidation, UserUpdateValidation } from "./validators/user";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { Token } from "../db/models/token";
 
@@ -153,39 +153,51 @@ export const deleteUserHandler = async (req: Request, res: Response) => {
 }
 
 /**
- * Récupérer le statut des utilisateurs
- * GET /users/status
+ * Récupérer le statut d'un utilisateur
+ * GET /api/user-status
  */
 export const getUserStatusHandler = async (req: Request, res: Response) => {
-    try {
-        const userIds = req.query.userIds as string;
-        
-        if (!userIds) {
-            res.status(400).send({ error: "Le paramètre userIds est requis" });
-            return;
-        }
-        
-        const userIdsArray = userIds.split(',').map(id => parseInt(id));
-        const userRepository = AppDataSource.getRepository(User);
-        
-        const users = await userRepository
-            .createQueryBuilder("user")
-            .select(["user.id", "user.status", "user.last_active"])
-            .where("user.id IN (:...userIds)", { userIds: userIdsArray })
-            .getMany();
-        
-        const statusMap = users.reduce((acc: Record<number, any>, user) => {
-            acc[user.id] = {
-                status: user.status,
-                lastActive: user.last_active
-            };
-            return acc;
-        }, {});
-        
-        res.status(200).send(statusMap);
-    } catch (error) {
-        console.log(error);
-        res.status(500).send({ error: "Internal error" });
+  try {
+    console.log('Query params reçus:', req.query);
+    
+    // Récupérer l'ID dans la query string
+    const userId = req.query.userId;
+    
+    // Vérifier que l'ID est présent
+    if (!userId) {
+      return res.status(400).send({ error: "Le paramètre 'userId' est requis" });
     }
+    
+    // Convertir en nombre
+    const userIdNum = parseInt(userId as string);
+    
+    // Vérifier que c'est un nombre valide
+    if (isNaN(userIdNum)) {
+      return res.status(400).send({ error: "L'ID utilisateur doit être un nombre" });
+    }
+    
+    // Récupérer le statut de l'utilisateur
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({
+      where: { id: userIdNum },
+      select: ['id', 'status', 'last_active']
+    });
+    
+    // Si l'utilisateur n'existe pas
+    if (!user) {
+      return res.status(404).send({ error: "Utilisateur non trouvé" });
+    }
+    
+    // Renvoyer le statut
+    return res.status(200).send({
+      id: user.id,
+      status: user.status || 'offline',
+      lastActive: user.last_active
+    });
+    
+  } catch (error) {
+    console.error("Erreur dans getUserStatusHandler:", error);
+    return res.status(500).send({ error: "Erreur interne du serveur" });
+  }
 };
 

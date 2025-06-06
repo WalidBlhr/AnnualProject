@@ -21,6 +21,7 @@ import {
 } from "./absence";
 
 export const initHandlers = (app: Application) => {
+  // Commencez par les routes statiques
   /**
    * @openapi
    * /health:
@@ -36,7 +37,8 @@ export const initHandlers = (app: Application) => {
   app.get("/health", (_: Request, res: Response) => {
     res.send({ message: "pingyes" });
   });
-
+  
+  // Ensuite les routes d'authentification
   /**
    * @openapi
    * /auth/signup:
@@ -82,7 +84,37 @@ export const initHandlers = (app: Application) => {
    *         description: Erreur interne
    */
   app.post("/auth/login", login);
-
+  
+  // Ajoutez la route de statut utilisateur AVANT les routes avec paramètres variables
+  /**
+   * @openapi
+   * /api/user-status:
+   *   get:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Récupérer le statut de connexion d'un utilisateur
+   *     parameters:
+   *       - in: query
+   *         name: userId
+   *         required: true
+   *         schema:
+   *           type: number
+   *         description: ID de l'utilisateur dont on veut connaître le statut
+   *     responses:
+   *       200:
+   *         description: Statut de l'utilisateur
+   *       400:
+   *         description: ID utilisateur manquant ou invalide
+   *       404:
+   *         description: Utilisateur non trouvé
+   */
+  app.get("/api/user-status", authMiddleware, (req, res, next) => {
+    getUserStatusHandler(req, res).catch(next);
+  });
+  
+  // Ensuite les autres routes
   /**
    * @openapi
    * /users:
@@ -954,26 +986,4 @@ export const initHandlers = (app: Application) => {
    *         description: Liste des contacts de confiance
    */
   app.get("/users/:userId/trusted-contacts", authMiddleware, listTrustedContactsHandler);
-
-  /**
-   * @openapi
-   * /users/status:
-   *   get:
-   *     tags:
-   *       - Users
-   *     security:
-   *       - bearerAuth: []
-   *     summary: Récupérer le statut de connexion de plusieurs utilisateurs
-   *     parameters:
-   *       - in: query
-   *         name: userIds
-   *         required: true
-   *         schema:
-   *           type: string
-   *         description: Liste d'IDs d'utilisateurs séparés par des virgules
-   *     responses:
-   *       200:
-   *         description: Statuts des utilisateurs
-   */
-  app.get("/users/status", authMiddleware, getUserStatusHandler);
 };

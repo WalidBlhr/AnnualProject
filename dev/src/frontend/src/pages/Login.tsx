@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TextField, Button, Container, Typography, Alert } from '@mui/material';
 import { login } from '../services/auth';
 import { useNavigate } from 'react-router-dom';
+import { io } from "socket.io-client";
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
@@ -14,7 +15,14 @@ const Login: React.FC = () => {
         setError('');
         
         try {
-            await login(email, password);
+            const { token } = await login(email, password);
+
+            const socket = io('http://localhost:3000', {
+                auth: { token },
+                autoConnect: true,
+                reconnection: true,
+                reconnectionAttempts: 5
+            });
             // Redirection après connexion réussie
             navigate('/');
         } catch (err: any) {
