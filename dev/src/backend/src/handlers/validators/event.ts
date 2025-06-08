@@ -6,13 +6,15 @@ import Joi from "joi";
 export interface ListEventsRequest {
   page: number;
   limit: number;
-  // Ajoutez ici d'autres filtres (par ex. status, location, date range, etc.)
+  type?: string;
+  category?: string;
 }
 
 export const ListEventsValidation = Joi.object<ListEventsRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
-  // Ex: status: Joi.string().optional()
+  type: Joi.string().valid("regular", "community").optional(),
+  category: Joi.string().optional()
 }).options({ abortEarly: false });
 
 /**
@@ -36,8 +38,12 @@ export interface CreateEventRequest {
   location: string;
   max_participants: number;
   min_participants?: number;
-  status: string;      // "open", "closed", etc.
-  creatorId?: number;  // si vous associez directement le créateur
+  status: string;
+  creatorId?: number;
+  type?: string;
+  category?: string;
+  description?: string;
+  equipment_needed?: string;
 }
 
 export const createEventValidation = Joi.object<CreateEventRequest>({
@@ -47,7 +53,15 @@ export const createEventValidation = Joi.object<CreateEventRequest>({
   max_participants: Joi.number().min(1).required(),
   min_participants: Joi.number().min(1).optional(),
   status: Joi.string().valid("open", "closed", "draft", "pending").default("open"),
-  creatorId: Joi.number().optional(), // si vous gérez la liaison à l'utilisateur
+  creatorId: Joi.number().optional(),
+  type: Joi.string().valid("regular", "community").default("regular"),
+  category: Joi.string().when('type', {
+    is: 'community',
+    then: Joi.string().valid("cleaning", "waste_collection", "neighborhood_party", "other").required(),
+    otherwise: Joi.string().optional()
+  }),
+  description: Joi.string().optional(),
+  equipment_needed: Joi.string().optional()
 }).options({ abortEarly: false });
 
 /**
@@ -62,6 +76,10 @@ export interface UpdateEventRequest {
   max_participants?: number;
   min_participants?: number;
   status?: string;
+  type?: string;
+  category?: string;
+  description?: string;
+  equipment_needed?: string;
 }
 
 export const updateEventValidation = Joi.object<UpdateEventRequest>({
@@ -72,4 +90,8 @@ export const updateEventValidation = Joi.object<UpdateEventRequest>({
   max_participants: Joi.number().min(1).optional(),
   min_participants: Joi.number().min(1).optional(),
   status: Joi.string().valid("open", "closed", "draft", "pending").optional(),
+  type: Joi.string().valid("regular", "community").optional(),
+  category: Joi.string().valid("cleaning", "waste_collection", "neighborhood_party", "other").optional(),
+  description: Joi.string().optional(),
+  equipment_needed: Joi.string().optional()
 }).options({ abortEarly: false });

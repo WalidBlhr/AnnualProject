@@ -189,12 +189,20 @@ const Absences: React.FC = () => {
     }
   };
 
+  interface UsersResponse {
+    data: User[];
+    page_size: number;
+    page: number;
+    total_count: number;
+    total_pages: number;
+  }
+
   const fetchAvailableUsers = async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await axios.get(
+      const response = await axios.get<UsersResponse>(
         'http://localhost:3000/users',
         {
           headers: {

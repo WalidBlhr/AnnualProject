@@ -6,6 +6,7 @@ import { EventParticipant } from "../db/models/event_participant";
 import { User } from "../db/models/user";
 import { Event } from "../db/models/event";
 import { Not } from "typeorm";
+import { Message } from "../db/models/message";
 
 /**
  * Create a new EventParticipant
@@ -65,6 +66,18 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
       await eventRepository.save(event);
       
       // Notifier tous les participants que l'événement est confirmé
+      if (event.type === 'community') {
+        const messageRepository = AppDataSource.getRepository(Message);
+        const newMessage = messageRepository.create({
+          content: `Votre événement communautaire "${event.name}" a atteint le nombre minimum de participants et est maintenant confirmé!`,
+          date_sent: new Date(),
+          sender: { id: 1 } as User,
+          receiver: event.creator,
+          status: 'unread'
+        });
+        await messageRepository.save(newMessage);
+      }
+      
       await sendEventConfirmationNotifications(event.id);
     }
     
@@ -225,7 +238,39 @@ export const deleteEventParticipantHandler = async (req: Request, res: Response)
       res.status(500).send({ error: "Internal error" })
   }
 }
-function sendEventConfirmationNotifications(id: number) {
-  throw new Error("Function not implemented.");
+
+// Ajouter cette fonction pour envoyer une notification aux participants des événements communautaires
+async function sendEventConfirmationNotifications(eventId: number) {
+  const eventRepository = AppDataSource.getRepository(Event);
+  const participantRepository = AppDataSource.getRepository(EventParticipant);
+  const messageRepository = AppDataSource.getRepository(Message);
+
+  const event = await eventRepository.findOne({
+    where: { id: eventId },
+    relations: ['creator']
+  });
+
+  if (!event) return;
+
+  // Récupérer tous les participants
+  const participants = await participantRepository.find({
+    where: { event: { id: eventId } },
+    relations: ['user']
+  });
+
+  // Pour chaque participant, envoyer un message
+  const messagePromises = participants.map(participant => {
+    const messageRepository = AppDataSource.getRepository(Message);
+    const newMessage = messageRepository.create({
+      content: `L'événement "${event.name}" auquel vous êtes inscrit est maintenant confirmé et aura lieu le ${new Date(event.date).toLocaleDateString()} à ${event.location}.`,
+      date_sent: new Date(),
+      sender: event.creator,
+      receiver: participant.user,
+      status: 'unread'
+    });
+    return messageRepository.save(newMessage);
+  });
+
+  await Promise.all(messagePromises);
 }
 

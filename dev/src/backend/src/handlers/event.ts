@@ -3,6 +3,7 @@ import { createEventValidation, updateEventValidation, EventIdValidation, ListEv
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { Event } from "../db/models/event";
+import { User } from "../db/models/user";
 
 /**
  * Create a new Event
@@ -12,22 +13,51 @@ export const createEventHandler = async (req: Request, res: Response) => {
   try {
       const validation = createEventValidation.validate(req.body);
       if (validation.error) {
-          res.status(400).send(generateValidationErrorMessage(validation.error.details))
-          return
+          res.status(400).send(generateValidationErrorMessage(validation.error.details));
+          return;
       }
 
-      const createEventRequest = validation.value
-      const eventRepository = AppDataSource.getRepository(Event)
-      const event = eventRepository.create({ ...createEventRequest })
+      const { 
+          name, date, location, max_participants, min_participants, status, 
+          creatorId, type, category, description, equipment_needed 
+      } = validation.value;
+
+      // Récupérer le créateur de l'événement
+      const userRepository = AppDataSource.getRepository(User);
+      const decoded = (req as any).decoded;
+      
+      const user = await userRepository.findOneBy({ id: creatorId || decoded.userId });
+      if (!user) {
+          res.status(404).send({ "message": "creator not found" });
+          return;
+      }
+
+      // Créer l'événement
+      const event = new Event(
+          0, // ID auto-généré
+          name,
+          new Date(date),
+          location,
+          max_participants,
+          min_participants || null,
+          status,
+          user,
+          type || "regular",
+          category || null,
+          description || null,
+          equipment_needed || null,
+          [] // Empty array for participants
+      );
+
+      const eventRepository = AppDataSource.getRepository(Event);
       const eventCreated = await eventRepository.save(event);
-
-      res.status(201).send(eventCreated)
+      
+      res.status(201).send(eventCreated);
   } catch (error) {
-
       if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
+          console.log(`Internal error: ${error.message}`);
       }
-      res.status(500).send({ "message": "internal error" })
+      res.status(500).send({ "message": "internal error" });
   }
 }
 
@@ -37,45 +67,49 @@ export const createEventHandler = async (req: Request, res: Response) => {
  */
 export const listEventHandler = async (req: Request, res: Response) => {
   try {
-      console.log((req as any).event)
       const validation = ListEventsValidation.validate(req.query);
       if (validation.error) {
           res.status(400).send(generateValidationErrorMessage(validation.error.details))
           return
       }
 
-      const listEventRequest = validation.value
-      console.log(listEventRequest)
+      const listEventRequest = validation.value;
+      console.log(listEventRequest);
 
       const query = AppDataSource.createQueryBuilder(Event, 'event')
+                               .leftJoinAndSelect("event.creator", "user");
 
-      // if (listEventRequest.priceMax !== undefined) {
-      //     query.andWhere("event.price <= :priceMax", { priceMax: listEventRequest.priceMax })
-      // }
+      // Filtrer par type d'événement si spécifié
+      if (listEventRequest.type) {
+          query.andWhere("event.type = :type", { type: listEventRequest.type });
+      }
+
+      // Filtrer par catégorie si spécifiée
+      if (listEventRequest.category) {
+          query.andWhere("event.category = :category", { category: listEventRequest.category });
+      }
 
       query.skip((listEventRequest.page - 1) * listEventRequest.limit);
       query.take(listEventRequest.limit);
 
       const [events, totalCount] = await query.getManyAndCount();
 
-      const page = listEventRequest.page
+      const page = listEventRequest.page;
       const totalPages = Math.ceil(totalCount / listEventRequest.limit);
 
-      res.send(
-          {
-              data: events,
-              page_size: listEventRequest.limit,
-              page,
-              total_count: totalCount,
-              total_pages: totalPages,
-          }
-      )
+      res.send({
+          data: events,
+          page_size: listEventRequest.limit,
+          page,
+          total_count: totalCount,
+          total_pages: totalPages,
+      });
 
   } catch (error) {
       if (error instanceof Error) {
-          console.log(`Internal error: ${error.message}`)
+          console.log(`Internal error: ${error.message}`);
       }
-      res.status(500).send({ "message": "internal error" })
+      res.status(500).send({ "message": "internal error" });
   }
 }
 

@@ -27,6 +27,8 @@ import Absences from './pages/Absences/Absences';
 import ProtectedRoute from './components/ProtectedRoute';
 import { SocketProvider } from './contexts/SocketContext';
 import NewMessage from './pages/Messages/NewMessage';
+import CommunityEvents from './pages/Events/CommunityEvents';
+import CreateEvent from './pages/Events/CreateEvent';
 
 const App: React.FC = () => {
     return (
@@ -45,9 +47,9 @@ const App: React.FC = () => {
                             <Route path="/messages" element={<Messages />} />
                             <Route path="/services" element={<ServicesList />} />
                             <Route path="/services/:id" element={<ServiceDetail />} />
-                            <Route path="/events" element={<Events />} />
-                            <Route path="/events/:id" element={<EventDetail />} />
-                            <Route path="/my-events" element={<MyEvents />} />
+                            <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+                            <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
+                            <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
                             <Route path="/new-message" element={<NewMessage />} />
                             <Route 
                                 path="/admin" 
@@ -83,6 +85,8 @@ const App: React.FC = () => {
                                     <Absences />
                                 </ProtectedRoute>
                             } />
+                            <Route path="/community-events" element={<ProtectedRoute><CommunityEvents /></ProtectedRoute>} />
+                            <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
                         </Routes>
                         <Footer />
                     </SocketProvider>

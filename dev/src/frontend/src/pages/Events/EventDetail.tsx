@@ -29,6 +29,10 @@ import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GroupIcon from '@mui/icons-material/Group';
 import PersonIcon from '@mui/icons-material/Person';
 import jwtDecode from 'jwt-decode';
+import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
+import DeleteIcon from '@mui/icons-material/Delete';
+import CelebrationIcon from '@mui/icons-material/Celebration';
+import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 
 // Types définis selon la structure de l'API
 interface Event {
@@ -38,8 +42,12 @@ interface Event {
   location: string;
   max_participants: number;
   min_participants: number;
-  status: 'open' | 'closed' | 'pending' | 'draft' | 'canceled'; // Ajout de 'canceled'
+  status: 'open' | 'closed' | 'pending' | 'draft' | 'canceled';
   participants?: Participant[];
+  type?: string;
+  category?: string;
+  description?: string;
+  equipment_needed?: string;
 }
 
 interface Participant {
@@ -295,6 +303,59 @@ const EventDetail = () => {
     setAlert({ open: true, message, severity });
   };
 
+  const renderCategoryInfo = () => {
+    if (!event?.type || event.type !== 'community' || !event.category) {
+      return null;
+    }
+    
+    let icon;
+    let categoryLabel;
+    
+    switch (event.category) {
+      case 'cleaning':
+        icon = <CleaningServicesIcon color="primary" />;
+        categoryLabel = 'Nettoyage';
+        break;
+      case 'waste_collection':
+        icon = <DeleteIcon color="primary" />;
+        categoryLabel = 'Collecte de déchets';
+        break;
+      case 'neighborhood_party':
+        icon = <CelebrationIcon color="primary" />;
+        categoryLabel = 'Fête de quartier';
+        break;
+      default:
+        icon = <VolunteerActivismIcon color="primary" />;
+        categoryLabel = 'Autre';
+    }
+    
+    return (
+      <Box sx={{ mt: 2 }}>
+        <Typography variant="subtitle1" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          {icon}
+          Événement communautaire: {categoryLabel}
+        </Typography>
+        
+        {event.description && (
+          <Typography variant="body1" paragraph>
+            {event.description}
+          </Typography>
+        )}
+        
+        {event.equipment_needed && (
+          <Box sx={{ mt: 2, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+            <Typography variant="subtitle2" gutterBottom color="primary">
+              Matériel nécessaire:
+            </Typography>
+            <Typography variant="body2">
+              {event.equipment_needed}
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
   if (!event) {
     return <Container>Chargement...</Container>;
   }
@@ -310,6 +371,15 @@ const EventDetail = () => {
           {event.name}
         </Typography>
         
+        {renderCategoryInfo()}
+        
+        <Box sx={{ mt: 3, display: 'flex', alignItems: 'center', gap: 1 }}>
+          <EventIcon />
+          <Typography variant="subtitle1">
+            {formatDate(event.date)}
+          </Typography>
+        </Box>
+        
         <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
           <Chip 
             label={getStatusLabel(event.status)}
@@ -320,13 +390,6 @@ const EventDetail = () => {
         <Grid container spacing={3}>
           <Grid item xs={12} md={8}>
             <Box sx={{ mb: 2 }}>
-              <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <EventIcon color="primary" />
-                <Typography variant="body1">
-                  {formatDate(event.date)}
-                </Typography>
-              </Box>
-              
               <Box sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                 <LocationOnIcon color="primary" />
                 <Typography variant="body1">
