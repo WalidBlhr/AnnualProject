@@ -9,6 +9,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { User } from "./db/models/user";
+import { connectMongoDB } from "./db/mongodb"; // Import MongoDB connection
 
 const app = async () => {
     const app = express()
@@ -27,7 +28,7 @@ const app = async () => {
     });
     
     app.use(cors({
-        origin: 'http://localhost', // URL de votre frontend
+        origin: 'http://localhost',
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization']
@@ -38,10 +39,13 @@ const app = async () => {
     initHandlers(app)
     
     try {
-        await AppDataSource.initialize()
+        // Connect to PostgreSQL
+        await AppDataSource.initialize();
+        // Connect to MongoDB
+        await connectMongoDB();
     } catch (error) {
         if (error instanceof Error) {
-            console.error(error.message)
+            console.error(error.message);
         }
     }
 
@@ -140,6 +144,9 @@ const app = async () => {
     server.listen(port, () => {
         console.log(`Server running on http://localhost:${port}`)
         swaggerDocs(app, port);
+        
+        // Planifier la vérification des statuts des événements (toutes les heures)
+        setInterval(checkEventStatus, 60 * 60 * 1000);
     })
 }
 

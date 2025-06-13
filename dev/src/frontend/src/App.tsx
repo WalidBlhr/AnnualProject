@@ -29,6 +29,10 @@ import { SocketProvider } from './contexts/SocketContext';
 import NewMessage from './pages/Messages/NewMessage';
 import CommunityEvents from './pages/Events/CommunityEvents';
 import CreateEvent from './pages/Events/CreateEvent';
+import JournalHome from './pages/Journal/JournalHome';
+import ArticleEditor from './pages/Journal/ArticleEditor';
+import ArticleDetail from './pages/Journal/ArticleDetail';
+import Categories from './pages/Journal/Categories';
 
 const App: React.FC = () => {
     return (
@@ -87,6 +91,11 @@ const App: React.FC = () => {
                             } />
                             <Route path="/community-events" element={<ProtectedRoute><CommunityEvents /></ProtectedRoute>} />
                             <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
+                            <Route path="/journal" element={<ProtectedRoute><JournalHome /></ProtectedRoute>} />
+                            <Route path="/journal/editor/:id?" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+                            <Route path="/journal/editor" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+                            <Route path="/journal/article/:id" element={<ProtectedRoute><ArticleDetail /></ProtectedRoute>} />
+                            <Route path="/journal/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
                         </Routes>
                         <Footer />
                     </SocketProvider>

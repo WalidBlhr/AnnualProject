@@ -19,6 +19,14 @@ import {
   removeTrustedContactHandler,
   listTrustedContactsHandler
 } from "./absence";
+import { 
+    createArticleHandler, 
+    listArticlesHandler, 
+    getArticleHandler, 
+    updateArticleHandler, 
+    deleteArticleHandler 
+} from './article';
+import { createCategoryHandler, listCategoriesHandler, deleteCategoryHandler } from "./category";
 
 export const initHandlers = (app: Application) => {
   // Commencez par les routes statiques
@@ -986,4 +994,223 @@ export const initHandlers = (app: Application) => {
    *         description: Liste des contacts de confiance
    */
   app.get("/users/:userId/trusted-contacts", authMiddleware, listTrustedContactsHandler);
-};
+
+  /**
+   * @openapi
+   * /journal/articles:
+   *   post:
+   *     tags:
+   *       - Journal
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Create a new article
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               title:
+   *                 type: string
+   *               content:
+   *                 type: string
+   *               category:
+   *                 type: string
+   *               isPublic:
+   *                 type: boolean
+   *               imageUrl:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Article created successfully
+   */
+  app.post("/journal/articles", authMiddleware, (req, res, next) => {
+    createArticleHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/articles:
+   *   get:
+   *     tags:
+   *       - Journal
+   *     summary: Get all articles
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Number of items per page
+   *       - in: query
+   *         name: category
+   *         schema:
+   *           type: string
+   *         description: Filter by category
+   *       - in: query
+   *         name: isPublic
+   *         schema:
+   *           type: boolean
+   *         description: Filter by public/private status
+   *     responses:
+   *       200:
+   *         description: List of articles
+   */
+  app.get("/journal/articles", (req, res, next) => {
+    listArticlesHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/articles/{id}:
+   *   get:
+   *     tags:
+   *       - Journal
+   *     summary: Get article by ID
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: string
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Article details
+   */
+  app.get("/journal/articles/:id", (req, res, next) => {
+    getArticleHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/articles/{id}:
+   *   put:
+   *     tags:
+   *       - Journal
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Update an article
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: string
+   *         required: true
+   *     requestBody:
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               title:
+   *                 type: string
+   *               content:
+   *                 type: string
+   *               category:
+   *                 type: string
+   *               status:
+   *                 type: string
+   *               isPublic:
+   *                 type: boolean
+   *     responses:
+   *       200:
+   *         description: Article updated successfully
+   */
+  app.put("/journal/articles/:id", authMiddleware, (req, res, next) => {
+    updateArticleHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/articles/{id}:
+   *   delete:
+   *     tags:
+   *       - Journal
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Delete an article
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: string
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Article deleted successfully
+   */
+  app.delete("/journal/articles/:id", authMiddleware, (req, res, next) => {
+    deleteArticleHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/categories:
+   *   post:
+   *     tags:
+   *       - Journal
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Create a new category
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               description:
+   *                 type: string
+   *     responses:
+   *       201:
+   *         description: Category created successfully
+   */
+  app.post("/journal/categories", authMiddleware, isAdmin, (req, res, next) => {
+    createCategoryHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/categories:
+   *   get:
+   *     tags:
+   *       - Journal
+   *     summary: Get all categories
+   *     responses:
+   *       200:
+   *         description: List of categories
+   */
+  app.get("/journal/categories", (req, res, next) => {
+    listCategoriesHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/categories/{id}:
+   *   delete:
+   *     tags:
+   *       - Journal
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Delete a category
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: string
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Category deleted successfully
+   */
+  app.delete("/journal/categories/:id", authMiddleware, isAdmin, (req, res, next) => {
+    deleteCategoryHandler(req, res).catch(next);
+  });
+}

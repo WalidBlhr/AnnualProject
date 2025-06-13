@@ -66,6 +66,7 @@ services:
       - DB_HOST=postgres
     depends_on:
       - postgres
+      - mongodb
 
   # frontend:
   #   build:

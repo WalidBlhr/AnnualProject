@@ -19,6 +19,7 @@ const Header: React.FC = () => {
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [eventsAnchorEl, setEventsAnchorEl] = useState<null | HTMLElement>(null);
     const [servicesAnchorEl, setServicesAnchorEl] = useState<null | HTMLElement>(null);
+    const [journalAnchorEl, setJournalAnchorEl] = useState<null | HTMLElement>(null);
 
     const handleLogout = () => {
         localStorage.removeItem('token');
@@ -84,10 +85,46 @@ const Header: React.FC = () => {
                             </MenuItem>
                         </Menu>
                         
+                        {/* Journal dropdown - NEW */}
+                        <Button 
+                            color="inherit"
+                            endIcon={<KeyboardArrowDownIcon />}
+                            onClick={(e) => setJournalAnchorEl(e.currentTarget)}
+                        >
+                            Journal
+                        </Button>
+                        <Menu
+                            anchorEl={journalAnchorEl}
+                            open={Boolean(journalAnchorEl)}
+                            onClose={() => setJournalAnchorEl(null)}
+                        >
+                            <MenuItem component={Link} to="/journal" onClick={() => setJournalAnchorEl(null)}>
+                                Actualités
+                            </MenuItem>
+                            <MenuItem component={Link} to="/journal/categories" onClick={() => setJournalAnchorEl(null)}>
+                                Catégories
+                            </MenuItem>
+                            <MenuItem component={Link} to="/journal/editor" onClick={() => setJournalAnchorEl(null)}>
+                                Rédiger un article
+                            </MenuItem>
+                            {userIsAdmin && (
+                                <MenuItem component={Link} to="/journal/manage" onClick={() => setJournalAnchorEl(null)}>
+                                    Gérer les articles
+                                </MenuItem>
+                            )}
+                        </Menu>
+                        
                         <Button color="inherit" component={Link} to="/messages">
                             Messages
                         </Button>
                     </>
+                )}
+                
+                {/* Public journal access - accessible even when not logged in */}
+                {!token && (
+                    <Button color="inherit" component={Link} to="/journal">
+                        Journal
+                    </Button>
                 )}
             </Box>
             
@@ -143,6 +180,23 @@ const Header: React.FC = () => {
                     <ListItem button component={Link} to="/create-event" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Créer un événement" />
                     </ListItem>
+                    {/* Journal menu items - NEW */}
+                    <ListItem button component={Link} to="/journal" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Journal - Actualités" />
+                    </ListItem>
+                    <ListItem button component={Link} to="/journal/categories" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Journal - Catégories" />
+                    </ListItem>
+                    {token && (
+                        <ListItem button component={Link} to="/journal/new" onClick={() => setDrawerOpen(false)}>
+                            <ListItemText primary="Rédiger un article" />
+                        </ListItem>
+                    )}
+                    {userIsAdmin && (
+                        <ListItem button component={Link} to="/journal/manage" onClick={() => setDrawerOpen(false)}>
+                            <ListItemText primary="Gérer les articles" />
+                        </ListItem>
+                    )}
                     <ListItem button component={Link} to="/messages" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Messages" />
                     </ListItem>
@@ -157,6 +211,10 @@ const Header: React.FC = () => {
                 </>
             ) : (
                 <>
+                    {/* Public journal access in mobile menu */}
+                    <ListItem button component={Link} to="/journal" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Journal" />
+                    </ListItem>
                     <ListItem button component={Link} to="/login" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Connexion" />
                     </ListItem>
