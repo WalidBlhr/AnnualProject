@@ -33,6 +33,7 @@ import JournalHome from './pages/Journal/JournalHome';
 import ArticleEditor from './pages/Journal/ArticleEditor';
 import ArticleDetail from './pages/Journal/ArticleDetail';
 import Categories from './pages/Journal/Categories';
+import { Box } from '@mui/material';
 
 const App: React.FC = () => {
     return (
@@ -40,64 +41,68 @@ const App: React.FC = () => {
             <Router>
                 <AuthProvider>
                     <SocketProvider>
-                        <Header />
-                        <Routes>
-                            <Route path="/" element={<Home />} />
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/signup" element={<Signup />} />
-                            <Route path="/trocs" element={<TrocOffersList />} />
-                            <Route path="/trocs/:id" element={<TrocOfferDetail />} />
-                            <Route path="/messages/:userId" element={<Conversation />} />
-                            <Route path="/messages" element={<Messages />} />
-                            <Route path="/services" element={<ServicesList />} />
-                            <Route path="/services/:id" element={<ServiceDetail />} />
-                            <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
-                            <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
-                            <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
-                            <Route path="/new-message" element={<NewMessage />} />
-                            <Route 
-                                path="/admin" 
-                                element={
-                                    <AdminRoute>
-                                        <AdminDashboard />
-                                    </AdminRoute>
-                                } 
-                            />
-                            <Route path="/admin/users" element={
-                                <AdminRoute>
-                                    <AdminUsers />
-                                </AdminRoute>
-                            } />
-                            <Route 
-                                path="/admin/events" 
-                                element={
-                                    <AdminRoute>
-                                        <AdminEvents />
-                                    </AdminRoute>
-                                } 
-                            />
-                            <Route 
-                                path="/admin/messages" 
-                                element={
-                                    <AdminRoute>
-                                        <AdminMessages />
-                                    </AdminRoute>
-                                } 
-                            />
-                            <Route path="/absences" element={
-                                <ProtectedRoute>
-                                    <Absences />
-                                </ProtectedRoute>
-                            } />
-                            <Route path="/community-events" element={<ProtectedRoute><CommunityEvents /></ProtectedRoute>} />
-                            <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
-                            <Route path="/journal" element={<ProtectedRoute><JournalHome /></ProtectedRoute>} />
-                            <Route path="/journal/editor/:id?" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
-                            <Route path="/journal/editor" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
-                            <Route path="/journal/article/:id" element={<ProtectedRoute><ArticleDetail /></ProtectedRoute>} />
-                            <Route path="/journal/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
-                        </Routes>
-                        <Footer />
+                        <Box sx={{display: 'flex', flexDirection: 'column', minHeight: '100vh'}}>
+                            <Header />
+                            <Box sx={{flex: 1}}>
+                                <Routes>
+                                    <Route path="/" element={<Home />} />
+                                    <Route path="/login" element={<Login />} />
+                                    <Route path="/signup" element={<Signup />} />
+                                    <Route path="/trocs" element={<TrocOffersList />} />
+                                    <Route path="/trocs/:id" element={<TrocOfferDetail />} />
+                                    <Route path="/messages/:userId" element={<Conversation />} />
+                                    <Route path="/messages" element={<Messages />} />
+                                    <Route path="/services" element={<ServicesList />} />
+                                    <Route path="/services/:id" element={<ServiceDetail />} />
+                                    <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
+                                    <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
+                                    <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
+                                    <Route path="/new-message" element={<NewMessage />} />
+                                    <Route 
+                                        path="/admin" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminDashboard />
+                                            </AdminRoute>
+                                        } 
+                                    />
+                                    <Route path="/admin/users" element={
+                                        <AdminRoute>
+                                            <AdminUsers />
+                                        </AdminRoute>
+                                    } />
+                                    <Route 
+                                        path="/admin/events" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminEvents />
+                                            </AdminRoute>
+                                        } 
+                                    />
+                                    <Route 
+                                        path="/admin/messages" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminMessages />
+                                            </AdminRoute>
+                                        } 
+                                    />
+                                    <Route path="/absences" element={
+                                        <ProtectedRoute>
+                                            <Absences />
+                                        </ProtectedRoute>
+                                    } />
+                                    <Route path="/community-events" element={<ProtectedRoute><CommunityEvents /></ProtectedRoute>} />
+                                    <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
+                                    <Route path="/journal" element={<ProtectedRoute><JournalHome /></ProtectedRoute>} />
+                                    <Route path="/journal/editor/:id?" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+                                    <Route path="/journal/editor" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
+                                    <Route path="/journal/article/:id" element={<ProtectedRoute><ArticleDetail /></ProtectedRoute>} />
+                                    <Route path="/journal/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+                                </Routes>
+                            </Box>
+                            <Footer />
+                        </Box>
                     </SocketProvider>
                 </AuthProvider>
             </Router>
