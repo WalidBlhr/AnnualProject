@@ -146,6 +146,7 @@ const ServicesList: React.FC = () => {
       </Box>
 
       <Box mb={4}>
+        <Typography variant="h6" mb={1}>Recherche</Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
@@ -153,6 +154,7 @@ const ServicesList: React.FC = () => {
               <Select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                label="Type de service"
               >
                 <MenuItem value="all">Tous les types</MenuItem>
                 {Object.entries(SERVICE_TYPES).map(([value, label]) => (
@@ -167,6 +169,7 @@ const ServicesList: React.FC = () => {
               <Select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                label="Statut"
               >
                 <MenuItem value="all">Tous les statuts</MenuItem>
                 <MenuItem value="available">Disponible</MenuItem>
