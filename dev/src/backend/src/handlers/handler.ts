@@ -1,5 +1,5 @@
 import { Application, Request, Response } from "express";
-import { createUser, login } from "./auth";
+import { createUser, login, logout } from "./auth";
 import { authMiddleware, isOwnerOrAdmin, isAdmin } from "../middleware/auth";
 import { upload } from '../config/multer';
 
@@ -92,6 +92,23 @@ export const initHandlers = (app: Application) => {
    *         description: Erreur interne
    */
   app.post("/auth/login", login);
+
+  /**
+   * @openapi
+   * /auth/logout:
+   *   post:
+   *     tags:
+   *       - Auth
+   *     summary: Se déconnecter (logout)
+   *     responses:
+   *       200:
+   *         description: Renvoie le nombre de token supprimé
+   *       401:
+   *         description: L'utilisateur n'est pas connecté
+   *       500:
+   *         description: Erreur interne
+   */
+  app.delete("/auth/logout", authMiddleware, logout);
   
   // Ajoutez la route de statut utilisateur AVANT les routes avec paramètres variables
   /**

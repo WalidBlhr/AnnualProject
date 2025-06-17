@@ -2,7 +2,7 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";
-import { ListUsersValidation, UserIdsQueryValidation, UserIdValidation, UserUpdateValidation } from "./validators/user";
+import { ListUsersValidation, UserIdValidation, UserUpdateValidation } from "./validators/user";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { Token } from "../db/models/token";
 

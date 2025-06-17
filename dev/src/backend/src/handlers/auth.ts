@@ -4,7 +4,7 @@ import { generateValidationErrorMessage } from "./validators/generate-validation
 import { compare, hash } from "bcryptjs";
 import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";
-import { QueryFailedError } from "typeorm";
+import { DeleteResult, QueryFailedError } from "typeorm";
 import { sign } from "jsonwebtoken";
 import { Token } from "../db/models/token";
 
@@ -55,7 +55,7 @@ export const login = async (req: Request, res: Response) => {
 
         const loginRequest = validation.value
         const userRepository = AppDataSource.getRepository(User)
-        const user = await userRepository.findOneBy({
+        const user : User | null = await userRepository.findOneBy({
             email: loginRequest.email
         })
         if(user === null) {
@@ -69,16 +69,36 @@ export const login = async (req: Request, res: Response) => {
             return
         }
 
-        const secret = "valuerandom"
-        const token = sign({ userId: user.id, email: user.email, role: user.role}, secret, {expiresIn: '1h'})
+        const payload = {
+            userId: user.id,
+            email: user.email,
+            role: user.role,
+            firstname: user.firstname,
+            lastname: user.lastname,
+            createdAt: user.createdAt,
+        };
+        const secret = "valuerandom";
+        const token = sign(payload, secret, {expiresIn: '1h'});
 
         const tokenRepository = AppDataSource.getRepository(Token)
         const tokenCreated = await tokenRepository.save({token, user})
-        res.status(201).send({token: (await tokenCreated).token})
+        res.status(201).send({token: (tokenCreated).token})
     } catch(error) {
         if (error instanceof Error) {
             console.log(error.message)
         }
         res.status(500).send({"message": "internal error"})
+    }
+}
+
+export const logout = async (req: Request, res: Response) => {
+    const tokenRepository = AppDataSource.getRepository(Token);
+
+    try {
+        const delRes : DeleteResult = await tokenRepository.delete({user: {id: (req as any).user.userId}});
+        res.status(200).send(delRes);
+    } catch (error) {
+        console.log(error);
+        res.status(500).send({"message": "internal error"});
     }
 }

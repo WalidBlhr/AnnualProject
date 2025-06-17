@@ -8,6 +8,7 @@ import { isAdmin } from '../services/auth';
 import logo from '../assets/logo.svg';
 import MenuIcon from '@mui/icons-material/Menu';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import axios from 'axios';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -21,7 +22,20 @@ const Header: React.FC = () => {
     const [servicesAnchorEl, setServicesAnchorEl] = useState<null | HTMLElement>(null);
     const [journalAnchorEl, setJournalAnchorEl] = useState<null | HTMLElement>(null);
 
-    const handleLogout = () => {
+    const handleLogout = async () => {
+        try {
+            await axios.delete(
+                'http://localhost:3000/auth/logout',
+                {
+                    headers: {
+                        Authorization: 'Bearer ' + localStorage.getItem('token')
+                    },
+                }
+            );
+            console.log("Disconnected");
+        } catch (error) {
+            console.log(error);
+        }
         localStorage.removeItem('token');
         navigate('/login');
         window.location.reload();
