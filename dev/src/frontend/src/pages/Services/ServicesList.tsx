@@ -27,15 +27,16 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { Service, SERVICE_TYPES, SERVICE_STATUS } from '../../types/Service';
 import jwtDecode from 'jwt-decode';
+import { TimePicker } from '@mui/x-date-pickers';
 
 const DAYS_OF_WEEK = [
-  'monday',
-  'tuesday',
-  'wednesday',
-  'thursday',
-  'friday',
-  'saturday',
-  'sunday'
+  'Lundi',
+  'Mardi',
+  'Mercredi',
+  'Jeudi',
+  'Vendredi',
+  'Samedi',
+  'Dimanche',
 ];
 
 const ServicesList: React.FC = () => {
@@ -58,9 +59,9 @@ const ServicesList: React.FC = () => {
       days: [] as string[],
       time_slots: [{
         start: '09:00',
-        end: '17:00'
-      }]
-    }
+        end: '17:00',
+      }],
+    },
   });
 
   const [filters, setFilters] = useState({
@@ -116,7 +117,7 @@ const ServicesList: React.FC = () => {
       fetchServices();
       showAlert('Service créé avec succès', 'success');
     } catch (error) {
-      showAlert('Erreur lors de la création du service', 'error');
+      showAlert('Erreur lors de la création du service: ' + error, 'error');
     }
   };
 
@@ -146,6 +147,7 @@ const ServicesList: React.FC = () => {
       </Box>
 
       <Box mb={4}>
+        <Typography variant="h6" mb={1}>Recherche</Typography>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={4}>
             <FormControl fullWidth>
@@ -153,6 +155,7 @@ const ServicesList: React.FC = () => {
               <Select
                 value={filters.type}
                 onChange={(e) => setFilters({ ...filters, type: e.target.value })}
+                label="Type de service"
               >
                 <MenuItem value="all">Tous les types</MenuItem>
                 {Object.entries(SERVICE_TYPES).map(([value, label]) => (
@@ -167,6 +170,7 @@ const ServicesList: React.FC = () => {
               <Select
                 value={filters.status}
                 onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                label="Statut"
               >
                 <MenuItem value="all">Tous les statuts</MenuItem>
                 <MenuItem value="available">Disponible</MenuItem>
@@ -247,6 +251,7 @@ const ServicesList: React.FC = () => {
                 label="Titre"
                 value={newService.title}
                 onChange={(e) => setNewService({ ...newService, title: e.target.value })}
+                required
               />
             </Grid>
 
@@ -258,15 +263,18 @@ const ServicesList: React.FC = () => {
                 label="Description"
                 value={newService.description}
                 onChange={(e) => setNewService({ ...newService, description: e.target.value })}
+                required
               />
             </Grid>
 
             <Grid item xs={12}>
               <FormControl fullWidth>
-                <InputLabel>Type de service</InputLabel>
+                <InputLabel>Type de service*</InputLabel>
                 <Select
                   value={newService.type}
                   onChange={(e) => setNewService({ ...newService, type: e.target.value as any })}
+                  label="Type de service"
+                  required
                 >
                   {Object.entries(SERVICE_TYPES).map(([value, label]) => (
                     <MenuItem key={value} value={value}>{label}</MenuItem>
@@ -279,6 +287,7 @@ const ServicesList: React.FC = () => {
               <TextField
                 fullWidth
                 label="Date de début"
+                required
                 type="datetime-local"
                 value={newService.date_start}
                 onChange={(e) => setNewService({ ...newService, date_start: e.target.value })}
@@ -292,6 +301,7 @@ const ServicesList: React.FC = () => {
               <TextField
                 fullWidth
                 label="Date de fin"
+                required
                 type="datetime-local"
                 value={newService.date_end}
                 onChange={(e) => setNewService({ ...newService, date_end: e.target.value })}
@@ -302,7 +312,7 @@ const ServicesList: React.FC = () => {
             </Grid>
 
             <Grid item xs={12}>
-              <Typography variant="subtitle1">Disponibilités</Typography>
+              <Typography variant="subtitle1">Disponibilités *</Typography>
               <FormGroup row>
                 {DAYS_OF_WEEK.map((day) => (
                   <FormControlLabel

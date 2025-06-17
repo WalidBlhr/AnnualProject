@@ -61,7 +61,7 @@ export const createServiceValidation = Joi.object<CreateServiceRequest>({
   date_end: Joi.date().min(Joi.ref('date_start')).required(),
   availability: Joi.object({
     days: Joi.array().items(
-      Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
+      Joi.string().valid('Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche')
     ).required(),
     time_slots: Joi.array().items(
       Joi.object({
@@ -104,7 +104,7 @@ export const updateServiceValidation = Joi.object<UpdateServiceRequest>({
   date_end: Joi.date().min(Joi.ref('date_start')),
   availability: Joi.object({
     days: Joi.array().items(
-      Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
+      Joi.string().valid('Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche')
     ),
     time_slots: Joi.array().items(
       Joi.object({
@@ -127,7 +127,7 @@ export interface BookServiceRequest {
 // Ajoutez cette validation
 export const bookServiceValidation = Joi.object<BookServiceRequest>({
   id: Joi.number().required(),
-  day: Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday').required(),
+  day: Joi.string().valid('Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche').required(),
   timeSlot: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
   note: Joi.string()
 }).options({ abortEarly: false });

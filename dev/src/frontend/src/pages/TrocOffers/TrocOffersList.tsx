@@ -206,7 +206,7 @@ const TrocOffersList: React.FC = () => {
       </Box>
 
       <Grid container spacing={3}>
-        {filteredTrocOffers.map((trocOffer) => (
+        {filteredTrocOffers.map((trocOffer : TrocOffer) => (
           <Grid item xs={12} md={6} lg={4} key={trocOffer.id}>
             <Card>
               {trocOffer.image_url && (
@@ -247,7 +247,7 @@ const TrocOffersList: React.FC = () => {
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small" color="primary">
+                <Button size="small" color="primary" onClick={() => navigate(`/messages/${trocOffer.user.id}`)}>
                   Contacter
                 </Button>
                 <Button size="small" onClick={() => navigate(`/trocs/${trocOffer.id}`)}>
