@@ -246,7 +246,10 @@ const Absences: React.FC = () => {
   };
 
   const handleCreateOrUpdateAbsence = async () => {
-    if (!startDate || !endDate || !userId) return;
+    if (!startDate || !endDate || selectedContacts.length === 0) {
+      showAlert("Date de début, de fin ou contact manquant.", "error");
+      return;
+    }
     
     try {
       const token = localStorage.getItem('token');
@@ -255,8 +258,9 @@ const Absences: React.FC = () => {
       const absenceData = {
         start_date: startDate.format('YYYY-MM-DD'),
         end_date: endDate.format('YYYY-MM-DD'),
+        userId,
         notes,
-        trusted_contact_ids: selectedContacts
+        trusted_contact_ids: selectedContacts,
       };
       
       if (editingAbsence) {
@@ -667,6 +671,7 @@ const Absences: React.FC = () => {
                 label="Date de début"
                 value={startDate}
                 onChange={(newValue) => setStartDate(newValue)}
+                format="DD-MM-YYYY"
               />
               
               <DatePicker
@@ -674,6 +679,7 @@ const Absences: React.FC = () => {
                 value={endDate}
                 onChange={(newValue) => setEndDate(newValue)}
                 minDate={startDate || undefined}
+                format="DD-MM-YYYY"
               />
               
               <TextField
