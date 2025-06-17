@@ -1,5 +1,5 @@
 import { Application, Request, Response } from "express";
-import { createUser, login, logout } from "./auth";
+import { createUser, login, logout, refresh } from "./auth";
 import { authMiddleware, isOwnerOrAdmin, isAdmin } from "../middleware/auth";
 import { upload } from '../config/multer';
 
@@ -109,6 +109,33 @@ export const initHandlers = (app: Application) => {
    *         description: Erreur interne
    */
   app.delete("/auth/logout", authMiddleware, logout);
+
+  /**
+   * @openapi
+   * /auth/refresh:
+   *   post:
+   *     tags:
+   *       - Auth
+   *     summary: Rafraîchir le token d'accès (refresh)
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/RefreshRequest'
+   *     responses:
+   *       200:
+   *         description: Renvoie le nouveau token d'accès et le refresh token (potentiellement un nouveau).
+   *       400:
+   *         description: La requête ne contient pas de propriété refresh_token.
+   *       401:
+   *         description: Le refresh_token est invalide.
+   *       404:
+   *         description: L'utilisateur propriétaire du refresh token n'existe plus.
+   *       500:
+   *         description: Erreur interne
+   */
+  app.post("/auth/refresh", refresh);
   
   // Ajoutez la route de statut utilisateur AVANT les routes avec paramètres variables
   /**

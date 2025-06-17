@@ -5,8 +5,11 @@ import { compare, hash } from "bcryptjs";
 import { AppDataSource } from "../db/database";
 import { User } from "../db/models/user";
 import { DeleteResult, QueryFailedError } from "typeorm";
-import { sign } from "jsonwebtoken";
+import { JsonWebTokenError, JwtPayload, NotBeforeError, sign, TokenExpiredError } from "jsonwebtoken";
+import jwt from "jsonwebtoken";
 import { Token } from "../db/models/token";
+import { ACCESS_TOKEN_DURATION, REFRESH_TOKEN_DURATION, TOKEN_SECRET } from "../constants";
+import { refreshValidation } from "./validators/auth/refresh-token";
 
 export const createUser = async(req: Request, res: Response) => {
     try{
@@ -42,7 +45,7 @@ export const createUser = async(req: Request, res: Response) => {
         }
         res.status(500).send({"message": "internal error"})
     }
-}
+};
 
 export const login = async (req: Request, res: Response) => {
 
@@ -69,27 +72,20 @@ export const login = async (req: Request, res: Response) => {
             return
         }
 
-        const payload = {
-            userId: user.id,
-            email: user.email,
-            role: user.role,
-            firstname: user.firstname,
-            lastname: user.lastname,
-            createdAt: user.createdAt,
-        };
-        const secret = "valuerandom";
-        const token = sign(payload, secret, {expiresIn: '1h'});
+        const accessTokenCreated = await createAccessToken(user);
+        const refreshTokenCreated = await createRefreshToken(user);
 
-        const tokenRepository = AppDataSource.getRepository(Token)
-        const tokenCreated = await tokenRepository.save({token, user})
-        res.status(201).send({token: (tokenCreated).token})
+        res.status(201).send({
+            token: accessTokenCreated.token,
+            refresh_token: refreshTokenCreated.token,
+        });
     } catch(error) {
         if (error instanceof Error) {
-            console.log(error.message)
+            console.log(error.message);
         }
-        res.status(500).send({"message": "internal error"})
+        res.status(500).send({"message": "internal error"});
     }
-}
+};
 
 export const logout = async (req: Request, res: Response) => {
     const tokenRepository = AppDataSource.getRepository(Token);
@@ -101,4 +97,117 @@ export const logout = async (req: Request, res: Response) => {
         console.log(error);
         res.status(500).send({"message": "internal error"});
     }
+};
+
+export const refresh = async (req: Request, res: Response) => {
+    const validation = refreshValidation.validate(req.body);
+    if (validation.error) {
+        res.status(400).send(generateValidationErrorMessage(validation.error.details));
+        return;
+    }
+
+    let [type, refreshToken] = validation.value.refresh_token.split(' ') ?? []
+    if (type !== 'Bearer') {
+        res.status(401).send({error: "Refresh token invalide."});
+        return;
+    }
+
+    let refreshPayload : RefreshTokenPayload;
+    let user : User | null;
+    try {
+        const tokenRepository = AppDataSource.getRepository(Token);
+        const token = await tokenRepository.findOneBy({token: refreshToken});
+        if (!token) {
+            res.status(404).send({error: "Refresh token invalide."});
+            return;
+        }
+
+        refreshPayload = jwt.verify(refreshToken, TOKEN_SECRET) as RefreshTokenPayload;
+        const userRepository = AppDataSource.getRepository(User);
+        user = await userRepository.findOneBy({id: refreshPayload.userId});
+        if (!user) {
+            res.status(404).send({error: "Utilisateur introuvable."});
+            return;
+        }
+    } catch (error) {
+        if (error instanceof TokenExpiredError
+            || error instanceof JsonWebTokenError
+            || error instanceof NotBeforeError) {
+            res.status(401).send({error: "Refresh token invalide."});
+        } else {
+            res.status(500).send({error: "Internal error."});
+        }
+        return;
+    }
+
+    const accessToken = await createAccessToken(user);
+
+    // If the refresh token is about to expire we refresh it too
+    if (refreshPayload.exp && checkRefreshTokenExp(refreshPayload.exp)) {
+        refreshToken = (await createRefreshToken(user)).token;
+    }
+
+    res.status(201).send({
+        access_token: accessToken.token,
+        refresh_token: refreshToken,
+    });
+};
+
+async function createAccessToken(user: User) {
+    const payload = {
+        userId: user.id,
+        email: user.email,
+        role: user.role,
+        firstname: user.firstname,
+        lastname: user.lastname,
+        createdAt: user.createdAt,
+    };
+    const accessToken = sign(
+        payload,
+        TOKEN_SECRET,
+        {expiresIn: ACCESS_TOKEN_DURATION}
+    );
+
+    const tokenRepository = AppDataSource.getRepository(Token);
+    return await tokenRepository.save({
+        token: accessToken,
+        user,
+        type: "access",
+    });
+}
+
+async function createRefreshToken(user: User) {
+    const refreshToken = sign(
+        {userId: user.id},
+        TOKEN_SECRET,
+        {expiresIn: REFRESH_TOKEN_DURATION}
+    );
+    
+    const tokenRepository = AppDataSource.getRepository(Token);
+    return await tokenRepository.save({
+        token: refreshToken,
+        user,
+        type: "refresh",
+    });
+}
+
+// exp est un timestamp
+// Retourne vrai si exp est aujourd'hui mais que son heure n'est pas passée
+function checkRefreshTokenExp(exp: number) : boolean {
+    const now = new Date();
+    const target = new Date(exp);
+
+    const sameDay =
+        now.getFullYear() === target.getFullYear() &&
+        now.getMonth() === target.getMonth() &&
+        now.getDate() === target.getDate();
+
+    const beforeTime = now.getTime() < target.getTime();
+
+    return sameDay && beforeTime;
+}
+
+interface RefreshTokenPayload{
+    userId: number;
+    exp?: number;
 }

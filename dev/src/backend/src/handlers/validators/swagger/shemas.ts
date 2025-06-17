@@ -38,6 +38,13 @@
  *           type: string
  *         password:
  *           type: string
+ *     RefreshRequest:
+ *       type: object
+ *       required:
+ *         - refresh_token
+ *       properties:
+ *         refresh_token:
+ *           type: string
  *     UpdateUserSchema:
  *       type: object
  *       properties:

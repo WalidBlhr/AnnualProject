@@ -27,9 +27,8 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
             return
         }
         const token = bearerSplit[1];
-
         const tokenRepo = AppDataSource.getRepository(Token)
-        const tokenFound = tokenRepo.findOne({ where: { token } })
+        const tokenFound = await tokenRepo.findOne({ where: { token } })
         if (tokenFound === null) {
             res.status(403).send({ "message": "Access Forbidden" })
             return
