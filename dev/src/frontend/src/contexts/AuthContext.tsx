@@ -1,8 +1,9 @@
 import axios from 'axios';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { API_URL } from '../const';
 import jwtDecode from 'jwt-decode';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -40,6 +41,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState<AuthContextType['user']>(null);
+    const location = useLocation();
+    const navigate = useNavigate();
 
     const login = async (email: string, password: string) => {
         try {
@@ -52,15 +55,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.setItem("token", accessToken);
             setIsAuthenticated(true);
 
-            const decodedAccessToken = jwtDecode<DecodedToken>(accessToken);
-            setUser({
-                userId: decodedAccessToken.userId,
-                email: decodedAccessToken.email,
-                firstname: decodedAccessToken.firstname,
-                lastname: decodedAccessToken.lastname,
-                role: decodedAccessToken.role,
-                createdAt: new Date(decodedAccessToken.createdAt),
-            });
+            loadAccessTokenInfo(accessToken);
         } catch (e) {
             localStorage.removeItem("token");
             setIsAuthenticated(false);
@@ -91,7 +86,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
     };
 
+    const loadAccessTokenInfo = (accessToken : string) : void => {
+        const decodedAccessToken = jwtDecode<DecodedToken>(accessToken);
+        setUser({
+            userId: decodedAccessToken.userId,
+            email: decodedAccessToken.email,
+            firstname: decodedAccessToken.firstname,
+            lastname: decodedAccessToken.lastname,
+            role: decodedAccessToken.role,
+            createdAt: new Date(decodedAccessToken.createdAt),
+        });
+    }
+
     const isAdmin = () : boolean => user !== null && user.role === 1;
+
+    useEffect(() => {
+        const accessToken = localStorage.getItem("token");
+        if(!accessToken) return;
+
+        const decoded = jwtDecode<DecodedToken>(accessToken);
+        const now = Date.now() / 1000;
+
+        if (decoded.exp < now) {
+            logout().then(() => {});
+            navigate('/login');
+            window.location.reload();
+        } else if (user === null) {
+            loadAccessTokenInfo(accessToken);
+        }
+    }, [location.pathname]);
 
     return (
         <AuthContext.Provider value={{ isAuthenticated, user, login, logout, isAdmin }}>
