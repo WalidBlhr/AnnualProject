@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect} from 'react';
 import {
   Container,
   Typography,
@@ -17,11 +17,12 @@ import {
   DialogContent,
   DialogActions,
   Snackbar,
-  Alert
+  Alert,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
-import { isAdmin } from '../../services/auth';
+import {useAuth} from '../../contexts/AuthContext';
+import { API_URL } from '../../const';
 
 interface Category {
   id: string;
@@ -36,7 +37,7 @@ const Categories = () => {
   const [alert, setAlert] = useState({ open: false, message: '', severity: 'success' as 'success' | 'error' });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
-  const userIsAdmin = isAdmin();
+  const userIsAdmin : boolean = useAuth().isAdmin();
     
   useEffect(() => {
     fetchCategories();
@@ -65,12 +66,12 @@ const Categories = () => {
       if (!token) throw new Error('Non authentifié');
       
       await axios.post(
-        'http://localhost:3000/journal/categories',
+        API_URL + "/journal/categories",
         newCategory,
         {
           headers: {
-            Authorization: `Bearer ${token}`
-          }
+            Authorization: `Bearer ${token}`,
+          },
         }
       );
       
@@ -176,7 +177,7 @@ const Categories = () => {
         ) : (
           <List>
             {categories.map((category, index) => (
-              <React.Fragment key={category.id}>
+              <React.Fragment key={"f" + category.id}>
                 <ListItem>
                   <ListItemText 
                     primary={category.name} 
@@ -194,7 +195,7 @@ const Categories = () => {
                     </ListItemSecondaryAction>
                   )}
                 </ListItem>
-                {index < categories.length - 1 && <Divider />}
+                {index < categories.length - 1 && <Divider key={"d" + category.id} />}
               </React.Fragment>
             ))}
           </List>

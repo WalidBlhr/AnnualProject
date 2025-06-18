@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-import { useAuth } from './AuthContext';
+import React, {createContext, useContext, useEffect, useState} from 'react';
+import {io, Socket} from 'socket.io-client';
+import {useAuth} from './AuthContext';
 import axios from 'axios';
+import {API_URL} from '../const';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -32,7 +33,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       // Appel à notre nouvel endpoint
       const response = await axios.get(
-        `http://localhost:3000/api/user-status?userId=${userIds[0]}`, // N.B.: on ne traite qu'un utilisateur à la fois
+        `${API_URL}/api/user-status?userId=${userIds[0]}`, // N.B.: on ne traite qu'un utilisateur à la fois
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -60,7 +61,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     // Créer la connexion socket seulement si l'utilisateur est authentifié
     if (isAuthenticated && token) {
-      const newSocket = io('http://localhost:3000', {
+      const newSocket = io(API_URL, {
         auth: {
           token
         }

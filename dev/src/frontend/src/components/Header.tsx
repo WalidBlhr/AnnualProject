@@ -1,20 +1,20 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import { 
     AppBar, Toolbar, Button, Box, Menu, MenuItem, IconButton,
-    useMediaQuery, useTheme, Drawer, List, ListItem, ListItemText
+    useMediaQuery, useTheme, Drawer, List, ListItem, ListItemText,
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
-import { isAdmin } from '../services/auth';
+import {Link, useNavigate} from 'react-router-dom';
 import logo from '../assets/logo.svg';
 import MenuIcon from '@mui/icons-material/Menu';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import axios from 'axios';
+import {useAuth} from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
-    const userIsAdmin = isAdmin();
+    const userIsAdmin = useAuth().isAdmin();
     const theme = useTheme();
+    const {logout} = useAuth();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     
     const [drawerOpen, setDrawerOpen] = useState(false);
@@ -23,20 +23,7 @@ const Header: React.FC = () => {
     const [journalAnchorEl, setJournalAnchorEl] = useState<null | HTMLElement>(null);
 
     const handleLogout = async () => {
-        try {
-            await axios.delete(
-                'http://localhost:3000/auth/logout',
-                {
-                    headers: {
-                        Authorization: 'Bearer ' + localStorage.getItem('token')
-                    },
-                }
-            );
-            console.log("Disconnected");
-        } catch (error) {
-            console.log(error);
-        }
-        localStorage.removeItem('token');
+        await logout();
         navigate('/login');
         window.location.reload();
     };

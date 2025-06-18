@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { 
     Container, 
     Typography, 
@@ -10,24 +10,13 @@ import {
     CardMedia,
     Paper,
     Stack,
-    Divider
 } from '@mui/material';
-import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { getUser } from '../services/auth';
+import {useAuth} from '../contexts/AuthContext';
+import {useNavigate} from 'react-router-dom';
 import neighborhoodImage from '../assets/neighborhood.png';
 import trocImage from '../assets/troc.png';
 import eventsImage from '../assets/events.png';
 import helpImage from '../assets/help.png';
-import axios from 'axios';
-
-interface UserDetails {
-    firstname: string;
-    lastname: string;
-    email: string;
-    role: number;
-    createdAt: string;
-}
 
 // Définition des cartes de services
 const serviceCards = [
@@ -56,28 +45,8 @@ const serviceCards = [
 
 const Home: React.FC = () => {
     const navigate = useNavigate();
-    const [user, setUser] = useState<UserDetails | null>(null);
-    const decodedToken = getUser();
+    const {user} = useAuth();
     console.log("User data:", user); // Ajoutez ce log pour débugger
-
-    useEffect(() => {
-        const fetchUserDetails = async () => {
-            if (decodedToken?.userId) {
-                try {
-                    const response = await axios.get<UserDetails>(`http://localhost:3000/users/${decodedToken.userId}`, {
-                        headers: {
-                            Authorization: `Bearer ${localStorage.getItem('token')}`
-                        }
-                    });
-                    setUser(response.data);
-                } catch (error) {
-                    console.error('Error fetching user details:', error);
-                }
-            }
-        };
-
-        fetchUserDetails();
-    }, [decodedToken?.userId]);
     
     return (
         <Box sx={{ 

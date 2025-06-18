@@ -1,13 +1,13 @@
 import React from 'react';
-import { Navigate } from 'react-router-dom';
-import { isAdmin } from '../services/auth';
+import {Navigate} from 'react-router-dom';
+import {useAuth} from '../contexts/AuthContext';
 
 interface AdminRouteProps {
     children: React.ReactNode;
-}
+};
 
 const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
-    if (!isAdmin()) {
+    if (!useAuth().isAdmin()) {
         return <Navigate to="/login" replace />;
     }
 
