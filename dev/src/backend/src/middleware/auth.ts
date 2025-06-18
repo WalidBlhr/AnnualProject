@@ -30,12 +30,17 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         const tokenRepo = AppDataSource.getRepository(Token)
         const tokenFound = await tokenRepo.findOne({ where: { token } })
         if (tokenFound === null) {
+            console.log("not in db");
             res.status(403).send({ "message": "Access Forbidden" })
             return
         }
 
-        verify(token, "valuerandom", (err, user) => {
+        // Ignore l'expiration si requete pour logout
+        const ignoreExpiration = req.path === "/auth/logout";
+
+        verify(token, "valuerandom", {ignoreExpiration}, (err, user) => {
             if (err) {
+                console.log("expiré");
                 res.status(403).send({ "message": "Access Forbidden" })
                 return
             }
