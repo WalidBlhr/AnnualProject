@@ -33,6 +33,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {useAuth} from '../../contexts/AuthContext';
 import {Article} from '../../types/Articles';
+import DOMPurify from 'dompurify';
 
 interface RelatedArticle {
   _id: string;
@@ -245,9 +246,14 @@ const ArticleDetail = () => {
       
       {/* Article content */}
       <Box sx={{ mb: 4 }}>
-        <Typography variant="body1" paragraph>
-          {article.content}
-        </Typography>
+        <Typography
+          variant="body1"
+          paragraph
+          component="div"
+          dangerouslySetInnerHTML={{
+            __html: DOMPurify.sanitize(article.content),
+          }}
+        />
       </Box>
       
       {/* Article tags */}
