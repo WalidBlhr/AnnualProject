@@ -1,27 +1,6 @@
-import { Request, Response } from "express";
-import { Article, IArticle } from "../db/models/article";
-import Joi from "joi";
-import { User } from "../db/models/user";
-import { AppDataSource } from "../db/database";
-import { upload } from "../config/multer";
-
-// Validation schemas
-const CreateArticleValidation = Joi.object({
-  title: Joi.string().required(),
-  content: Joi.string().required(),
-  category: Joi.string().required(),
-  isPublic: Joi.boolean().default(true),
-  imageUrl: Joi.string().allow(null, '')
-});
-
-const UpdateArticleValidation = Joi.object({
-  title: Joi.string(),
-  content: Joi.string(),
-  category: Joi.string(),
-  status: Joi.string().valid('draft', 'published', 'archived'),
-  isPublic: Joi.boolean(),
-  imageUrl: Joi.string().allow(null, '')
-});
+import {Request, Response} from "express";
+import {Article} from "../db/models/article";
+import {CreateArticleValidation, UpdateArticleValidation} from "./validators/article";
 
 // Create article handler
 export const createArticleHandler = async (req: Request, res: Response) => {
@@ -32,12 +11,8 @@ export const createArticleHandler = async (req: Request, res: Response) => {
     }
 
     const { title, content, category, isPublic, imageUrl } = validation.value;
-    const userId = (req as any).decoded.userId;
+    const user = (req as any).user;
 
-    // Get user from PostgreSQL to include authorName
-    const userRepository = AppDataSource.getRepository(User);
-    const user = await userRepository.findOneBy({ id: userId });
-    
     if (!user) {
       return res.status(404).send({ message: "User not found" });
     }
@@ -45,8 +20,8 @@ export const createArticleHandler = async (req: Request, res: Response) => {
     const article = new Article({
       title,
       content,
-      author: userId,
-      authorName: `${user.first_name} ${user.last_name}`,
+      author: user.userId,
+      authorName: `${user.firstname} ${user.lastname}`,
       category,
       isPublic: isPublic !== undefined ? isPublic : true,
       imageUrl

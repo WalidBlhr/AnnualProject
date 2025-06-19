@@ -23,7 +23,7 @@ import {
   DialogContentText,
   DialogTitle,
 } from '@mui/material';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import {Link, useNavigate, useParams} from 'react-router-dom';
 import axios from 'axios';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import PersonIcon from '@mui/icons-material/Person';
@@ -32,27 +32,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {useAuth} from '../../contexts/AuthContext';
-
-interface Article {
-  _id: string;
-  title: string;
-  content: string;
-  summary: string;
-  image_url?: string;
-  author: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-  category: string;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-  status: 'draft' | 'published' | 'archived';
-  visibility: 'public' | 'restricted';
-  featured: boolean;
-  comments: any[];
-}
+import {Article} from '../../types/Articles';
 
 interface RelatedArticle {
   _id: string;
@@ -60,7 +40,7 @@ interface RelatedArticle {
   summary: string;
   image_url?: string;
   category: string;
-  created_at: string;
+  createdAt: string;
 }
 
 const ArticleDetail = () => {
@@ -227,14 +207,14 @@ const ArticleDetail = () => {
               <PersonIcon />
             </Avatar>
             <Typography variant="body2">
-              {article.author.firstname} {article.author.lastname}
+              {article.authorName}
             </Typography>
           </Box>
           
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <DateRangeIcon sx={{ mr: 1, color: 'text.secondary' }} />
             <Typography variant="body2" color="text.secondary">
-              {formatDate(article.created_at)}
+              {formatDate(article.createdAt)}
             </Typography>
           </Box>
           
@@ -349,7 +329,7 @@ const ArticleDetail = () => {
                       {relatedArticle.title}
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
-                      {formatDate(relatedArticle.created_at)}
+                      {formatDate(relatedArticle.createdAt)}
                     </Typography>
                   </CardContent>
                   <CardActions>

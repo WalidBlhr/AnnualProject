@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, {useEffect, useState} from 'react';
 import { 
   Container, 
   Typography, 
@@ -10,7 +10,6 @@ import {
   CardActions,
   Button,
   Chip,
-  Divider,
   Paper,
   TextField,
   InputAdornment,
@@ -18,41 +17,20 @@ import {
   Tabs,
   Tab
 } from '@mui/material';
-import { Link, useNavigate } from 'react-router-dom';
+import {Link, useNavigate} from 'react-router-dom';
 import axios from 'axios';
 import SearchIcon from '@mui/icons-material/Search';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
-import LocalOfferIcon from '@mui/icons-material/LocalOffer';
 import jwtDecode from 'jwt-decode';
-
-interface Article {
-  _id: string;
-  title: string;
-  summary: string;
-  content: string;
-  image_url?: string;
-  author: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-  category: string;
-  tags: string[];
-  created_at: string;
-  updated_at: string;
-  status: 'draft' | 'published' | 'archived';
-  visibility: 'public' | 'restricted';
-  featured: boolean;
-  comments: any[];
-}
+import { Article, ArticleCategory } from '../../types/Articles';
 
 const JournalHome: React.FC = () => {
   const navigate = useNavigate();
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
   const [recentArticles, setRecentArticles] = useState<Article[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<ArticleCategory[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -64,9 +42,9 @@ const JournalHome: React.FC = () => {
 
   useEffect(() => {
     fetchFeaturedArticles();
-    fetchRecentArticles();
+    //fetchRecentArticles();
     fetchCategories();
-    fetchTags();
+    //fetchTags();
   }, []);
 
   const fetchFeaturedArticles = async () => {
@@ -75,13 +53,14 @@ const JournalHome: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       } : {};
 
-      const { data } = await axios.get<{ data: Article[] }>('http://localhost:3000/journal-articles', { 
+      const { data } = await axios.get<{ data: Article[] }>('http://localhost:3000/journal/articles', { 
         ...config,
         params: {
           featured: true,
           limit: 3
         } 
       });
+      console.log(data.data)
       setFeaturedArticles(data.data);
     } catch (error) {
       console.error('Erreur lors de la récupération des articles à la une:', error);
@@ -94,7 +73,7 @@ const JournalHome: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       } : {};
 
-      const { data } = await axios.get<{ data: Article[] }>('http://localhost:3000/journal-articles', { 
+      const { data } = await axios.get<{ data: Article[] }>('http://localhost:3000/journal/articles', { 
         ...config,
         params: {
           limit: 6,
@@ -108,9 +87,10 @@ const JournalHome: React.FC = () => {
   };
 
   const fetchCategories = async () => {
+    
     try {
-      const { data } = await axios.get<string[]>('http://localhost:3000/journal-categories');
-      setCategories(data);
+      const res = await axios.get<ArticleCategory[]>('http://localhost:3000/journal/categories');
+      setCategories(res.data); // TODO Retyper les catégories
     } catch (error) {
       console.error('Erreur lors de la récupération des catégories:', error);
     }
@@ -172,8 +152,10 @@ const JournalHome: React.FC = () => {
                 </InputAdornment>
               ),
             }}
-            onKeyPress={(e) => {
-              if (e.key === 'Enter') handleSearch();
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                handleSearch();
+              }
             }}
           />
         </Box>
@@ -221,7 +203,7 @@ const JournalHome: React.FC = () => {
                     <Box sx={{ display: 'flex', mb: 2, alignItems: 'center' }}>
                       <DateRangeIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {formatDate(article.created_at)}
+                        {formatDate(article.createdAt)}
                       </Typography>
                     </Box>
                     <Typography variant="body2" color="text.secondary" paragraph>
@@ -260,8 +242,8 @@ const JournalHome: React.FC = () => {
             scrollButtons="auto"
           >
             <Tab label="Tous les articles" />
-            {categories.map((category, index) => (
-              <Tab key={category} label={category} />
+            {categories.map((category) => (
+              <Tab key={category.name} label={category.name} />
             ))}
           </Tabs>
         </Paper>
@@ -298,7 +280,7 @@ const JournalHome: React.FC = () => {
                     <Box sx={{ display: 'flex', mb: 2, alignItems: 'center' }}>
                       <DateRangeIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {formatDate(article.created_at)}
+                        {formatDate(article.createdAt)}
                       </Typography>
                     </Box>
                     <Typography variant="body2" paragraph>
