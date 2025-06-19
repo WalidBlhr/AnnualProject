@@ -140,15 +140,27 @@ export const refresh = async (req: Request, res: Response) => {
         return;
     }
 
+    // Delete previous access tokens
+    const tokenRepository = AppDataSource.getRepository(Token);
+    await tokenRepository.delete({
+            type: "access",
+            user: {id: user.id},
+        });
+
     const accessToken = await createAccessToken(user);
+
 
     // If the refresh token is about to expire we refresh it too
     if (refreshPayload.exp && checkRefreshTokenExp(refreshPayload.exp)) {
+        await tokenRepository.delete({
+            type: "refresh",
+            user: {id: user.id},
+        });
         refreshToken = (await createRefreshToken(user)).token;
     }
 
     res.status(201).send({
-        access_token: accessToken.token,
+        token: accessToken.token,
         refresh_token: refreshToken,
     });
 };
