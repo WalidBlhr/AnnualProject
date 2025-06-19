@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import {useEffect, useState} from 'react';
 import { 
   Container, 
   Typography, 
@@ -16,7 +16,6 @@ import {
   CardMedia,
   CardContent,
   CardActions,
-  IconButton,
   Alert,
   Dialog,
   DialogActions,
@@ -26,14 +25,13 @@ import {
 } from '@mui/material';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
-import jwtDecode from 'jwt-decode';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { getUser } from '../../services/auth';
+import {useAuth} from '../../contexts/AuthContext';
 
 interface Article {
   _id: string;
@@ -74,7 +72,7 @@ const ArticleDetail = () => {
   const [error, setError] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   
-  const user = getUser();
+  const {user} = useAuth();
   const isAuthor = user && article && user.userId === article.author.id;
   
   useEffect(() => {

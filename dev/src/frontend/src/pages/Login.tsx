@@ -1,23 +1,26 @@
-import React, { useState } from 'react';
-import { TextField, Button, Container, Typography, Alert } from '@mui/material';
-import { login } from '../services/auth';
-import { useNavigate } from 'react-router-dom';
-import { io } from "socket.io-client";
+import React, {useState} from 'react';
+import {TextField, Button, Container, Typography, Alert} from '@mui/material';
+import {useNavigate} from 'react-router-dom';
+import {io} from "socket.io-client";
+import {useAuth} from '../contexts/AuthContext';
+import {API_URL} from '../const';
 
 const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const {login} = useAuth();
 
     const handleLogin = async (event: React.FormEvent) => {
         event.preventDefault();
         setError('');
         
         try {
-            const { token } = await login(email, password);
-
-            const socket = io('http://localhost:3000', {
+            await login(email, password);
+            const token = localStorage.getItem("token");
+            
+            const socket = io(API_URL, {
                 auth: { token },
                 autoConnect: true,
                 reconnection: true,
