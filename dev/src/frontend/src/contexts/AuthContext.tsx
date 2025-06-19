@@ -155,7 +155,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         checkToken();
     }, [location.pathname]);
 
-
     if (isAuthChecking) {
         return <div>Chargement...</div>;
     }
