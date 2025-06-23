@@ -171,18 +171,22 @@ const ArticleEditor: React.FC = () => {
           imageUrl: ''
         });
       }
-      
+  
       // Navigate to journal home after a short delay
       setTimeout(() => {
         navigate('/journal');
       }, 1500);
-    } catch (error) {
-      console.error('Error saving article:', error);
-      setAlert({
-        open: true,
-        message: 'Erreur lors de l\'enregistrement de l\'article',
-        severity: 'error'
-      });
+    } catch (error: any) {
+      const showAlert = (message: string, severity: 'success' | 'error') => {
+        setAlert({ open: true, message, severity });
+      };
+      const errorMessage = error.response?.data?.error || 'Erreur lors de la mise à jour de l\'article';
+      showAlert(errorMessage, 'error');
+      // setAlert({
+      //   open: true,
+      //   message: 'Erreur lors de l\'enregistrement de l\'article',
+      //   severity: 'error'
+      // });
     } finally {
       setLoading(false);
     }
@@ -329,3 +333,7 @@ const ArticleEditor: React.FC = () => {
 };
 
 export default ArticleEditor;
+
+function showAlert(errorMessage: any, arg1: string) {
+  throw new Error('Function not implemented.');
+}
