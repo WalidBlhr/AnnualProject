@@ -1,39 +1,43 @@
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import AdminDashboard from './pages/Admin/AdminDashboard';
-import AdminRoute from './components/AdminRoute';
+import { Box } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
+import React from 'react';
+import { Route, BrowserRouter as Router, Routes } from 'react-router-dom';
+import AdminRoute from './components/AdminRoute';
+import Footer from './components/Footer';
+import Header from './components/Header';
+import ProtectedRoute from './components/ProtectedRoute';
 import theme from './components/ui/theme';
-import './services/axios';
-import TrocOffersList from './pages/TrocOffers/TrocOffersList';
-import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
-import Conversation from './pages/Messages/Conversation';
-import Messages from './pages/Messages/Messages';
-import AdminUsers from './pages/Admin/AdminUsers';
+import { AuthProvider } from './contexts/AuthContext';
+import { SocketProvider } from './contexts/SocketContext';
+import Absences from './pages/Absences/Absences';
+import AdminArticles from './pages/Admin/AdminArticles';
+import AdminCategories from './pages/Admin/AdminCategories';
+import AdminDashboard from './pages/Admin/AdminDashboard';
 import AdminEvents from './pages/Admin/AdminEvents';
 import AdminMessages from './pages/Admin/AdminMessages';
-import { AuthProvider } from './contexts/AuthContext';
-import ServicesList from './pages/Services/ServicesList';
-import ServiceDetail from './pages/Services/ServiceDetail';
-import Events from './pages/Events/Events';
-import EventDetail from './pages/Events/EventDetail';
-import MyEvents from './pages/Events/MyEvents';
-import Absences from './pages/Absences/Absences';
-import ProtectedRoute from './components/ProtectedRoute';
-import { SocketProvider } from './contexts/SocketContext';
-import NewMessage from './pages/Messages/NewMessage';
+import AdminServices from './pages/Admin/AdminServices';
+import AdminTrocs from './pages/Admin/AdminTrocs';
+import AdminUsers from './pages/Admin/AdminUsers';
 import CommunityEvents from './pages/Events/CommunityEvents';
 import CreateEvent from './pages/Events/CreateEvent';
-import JournalHome from './pages/Journal/JournalHome';
-import ArticleEditor from './pages/Journal/ArticleEditor';
+import EventDetail from './pages/Events/EventDetail';
+import Events from './pages/Events/Events';
+import MyEvents from './pages/Events/MyEvents';
+import Home from './pages/Home';
 import ArticleDetail from './pages/Journal/ArticleDetail';
+import ArticleEditor from './pages/Journal/ArticleEditor';
 import Categories from './pages/Journal/Categories';
-import { Box } from '@mui/material';
+import JournalHome from './pages/Journal/JournalHome';
+import Login from './pages/Login';
+import Conversation from './pages/Messages/Conversation';
+import Messages from './pages/Messages/Messages';
+import NewMessage from './pages/Messages/NewMessage';
+import ServiceDetail from './pages/Services/ServiceDetail';
+import ServicesList from './pages/Services/ServicesList';
+import Signup from './pages/Signup';
+import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
+import TrocOffersList from './pages/TrocOffers/TrocOffersList';
+import './services/axios';
 
 const App: React.FC = () => {
     return (
@@ -99,6 +103,38 @@ const App: React.FC = () => {
                                     <Route path="/journal/editor" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
                                     <Route path="/journal/article/:id" element={<ProtectedRoute><ArticleDetail /></ProtectedRoute>} />
                                     <Route path="/journal/categories" element={<ProtectedRoute><Categories /></ProtectedRoute>} />
+                                    <Route 
+                                        path="/admin/trocs" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminTrocs />
+                                            </AdminRoute>
+                                        } 
+                                    />
+                                    <Route 
+                                        path="/admin/services" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminServices />
+                                            </AdminRoute>
+                                        } 
+                                    />
+                                    <Route 
+                                        path="/admin/articles" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminArticles />
+                                            </AdminRoute>
+                                        } 
+                                    />
+                                    <Route 
+                                        path="/admin/categories" 
+                                        element={
+                                            <AdminRoute>
+                                                <AdminCategories />
+                                            </AdminRoute>
+                                        } 
+                                    />
                                 </Routes>
                             </Box>
                             <Footer />

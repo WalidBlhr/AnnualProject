@@ -1,20 +1,21 @@
-import React from 'react';
-import { 
-    Container, 
-    Card, 
-    CardContent, 
-    Typography, 
+import ArticleIcon from '@mui/icons-material/Article';
+import CategoryIcon from '@mui/icons-material/Category';
+import EventIcon from '@mui/icons-material/Event';
+import HandymanIcon from '@mui/icons-material/Handyman';
+import MessageIcon from '@mui/icons-material/Message';
+import PeopleIcon from '@mui/icons-material/People';
+import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import {
+    Box,
+    Card,
     CardActionArea,
-    Box
+    CardContent,
+    Container,
+    Typography
 } from '@mui/material';
 import Grid from '@mui/material/Grid';
+import React from 'react';
 import { Link } from 'react-router-dom';
-import PeopleIcon from '@mui/icons-material/People';
-import EventIcon from '@mui/icons-material/Event';
-import MessageIcon from '@mui/icons-material/Message';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
-import HandymanIcon from '@mui/icons-material/Handyman';
-import ArticleIcon from '@mui/icons-material/Article';
 
 const AdminDashboard: React.FC = () => {
     const adminModules = [
@@ -24,6 +25,7 @@ const AdminDashboard: React.FC = () => {
         { title: 'Trocs', icon: <SwapHorizIcon sx={{ fontSize: 40 }}/>, path: '/admin/trocs', description: 'Gérer les offres de troc' },
         { title: 'Services', icon: <HandymanIcon sx={{ fontSize: 40 }}/>, path: '/admin/services', description: 'Gérer les services' },
         { title: 'Articles', icon: <ArticleIcon sx={{ fontSize: 40 }}/>, path: '/admin/articles', description: 'Gérer le journal' },
+        { title: 'Catégories', icon: <CategoryIcon sx={{ fontSize: 40 }}/>, path: '/admin/categories', description: 'Gérer les catégories d\'articles' },
     ];
 
     return (
