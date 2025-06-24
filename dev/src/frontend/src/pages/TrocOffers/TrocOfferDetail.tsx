@@ -17,6 +17,7 @@ import {
 import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import { STATUS_LABELS, STATUS_COLORS, TrocOfferStatus } from '../../types/trocOffer';
+import { API_URL } from '../../const';
 
 interface TrocOffer {
   id: number;
@@ -48,7 +49,7 @@ const TrocOfferDetail: React.FC = () => {
 
   const fetchTrocOfferDetails = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:3000/trocoffers/${id}`, {
+      const { data } = await axios.get(`${API_URL}/trocoffers/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -65,7 +66,7 @@ const TrocOfferDetail: React.FC = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/trocoffers/${id}`, {
+      await axios.delete(`${API_URL}/trocoffers/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -92,7 +93,7 @@ const TrocOfferDetail: React.FC = () => {
   const handleStatusChange = async (newStatus: TrocOfferStatus) => {
     try {
       await axios.put(
-        `http://localhost:3000/trocoffers/${id}`,
+        `${API_URL}/trocoffers/${id}`,
         { status: newStatus },
         {
           headers: {

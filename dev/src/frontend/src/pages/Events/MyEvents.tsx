@@ -21,6 +21,7 @@ import EventIcon from '@mui/icons-material/Event';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GroupIcon from '@mui/icons-material/Group';
 import jwtDecode from 'jwt-decode';
+import { API_URL } from '../../const';
 
 interface Event {
   id: number;
@@ -84,7 +85,7 @@ const MyEvents = () => {
 
       // Récupérer tous les événements d'abord
       const { data: eventsData } = await axios.get<{ data: Event[] }>(
-        `http://localhost:3000/events`,
+        `${API_URL}/events`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -95,7 +96,7 @@ const MyEvents = () => {
       // Ensuite récupérer les participations
       try {
         const { data: participationsData } = await axios.get<ParticipationResponse>(
-          `http://localhost:3000/event-participants`,
+          `${API_URL}/event-participants`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
@@ -128,7 +129,7 @@ const MyEvents = () => {
   const handleCancelParticipation = async (participationId: number) => {
     try {
       await axios.delete(
-        `http://localhost:3000/event-participants/${participationId}`,
+        `${API_URL}/event-participants/${participationId}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,

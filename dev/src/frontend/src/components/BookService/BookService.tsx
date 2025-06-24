@@ -14,6 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import axios from 'axios';
+import { API_URL } from '../../const';
 
 interface BookServiceProps {
   serviceId: number;
@@ -39,7 +40,7 @@ const BookService: React.FC<BookServiceProps> = ({
   const handleSubmit = async () => {
     try {
       await axios.post(
-        `http://localhost:3000/services/${serviceId}/book`,
+        `${API_URL}/services/${serviceId}/book`,
         {
           day: selectedDay,
           timeSlot: selectedTimeSlot,

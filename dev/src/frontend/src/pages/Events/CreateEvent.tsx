@@ -19,6 +19,7 @@ import {
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import jwtDecode from 'jwt-decode';
+import { API_URL } from '../../const';
 
 const CreateEvent = () => {
   const [formData, setFormData] = useState({
@@ -82,7 +83,7 @@ const CreateEvent = () => {
       };
       
       await axios.post(
-        'http://localhost:3000/events',
+        API_URL + '/events',
         eventData,
         {
           headers: {

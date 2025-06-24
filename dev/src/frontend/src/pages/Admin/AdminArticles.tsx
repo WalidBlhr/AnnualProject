@@ -22,6 +22,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { API_URL } from '../../const';
 
 interface Article {
   _id: string;
@@ -52,7 +53,7 @@ const AdminArticles: React.FC = () => {
 
   const fetchArticles = async () => {
     try {
-      let url = `http://localhost:3000/journal/articles?page=${page + 1}&limit=${rowsPerPage}`;
+      let url = `${API_URL}/journal/articles?page=${page + 1}&limit=${rowsPerPage}`;
       if (filterPublic !== 'all') url += `&isPublic=${filterPublic}`;
       const { data } = await axios.get(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -77,7 +78,7 @@ const AdminArticles: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!editingArticle) return;
     try {
-      await axios.put(`http://localhost:3000/journal/articles/${editingArticle._id}`, editFormData, {
+      await axios.put(`${API_URL}/journal/articles/${editingArticle._id}`, editFormData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Article modifié avec succès', 'success');
@@ -91,7 +92,7 @@ const AdminArticles: React.FC = () => {
   const handleDeleteArticle = async (articleId: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cet article ?')) return;
     try {
-      await axios.delete(`http://localhost:3000/journal/articles/${articleId}`, {
+      await axios.delete(`${API_URL}/journal/articles/${articleId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Article supprimé avec succès', 'success');
@@ -141,7 +142,7 @@ const AdminArticles: React.FC = () => {
                     checked={article.isPublic}
                     onChange={async (e) => {
                       try {
-                        await axios.put(`http://localhost:3000/journal/articles/${article._id}`, { ...article, isPublic: e.target.checked }, {
+                        await axios.put(`${API_URL}/journal/articles/${article._id}`, { ...article, isPublic: e.target.checked }, {
                           headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
                         });
                         fetchArticles();

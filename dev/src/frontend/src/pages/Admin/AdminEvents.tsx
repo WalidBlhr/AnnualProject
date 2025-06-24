@@ -23,6 +23,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
+import { API_URL } from '../../const';
 
 interface Event {
   id: number;
@@ -95,7 +96,7 @@ const AdminEvents: React.FC = () => {
   const fetchEvents = async () => {
     try {
       const { data } = await axios.get<EventsResponse>(
-        `http://localhost:3000/events?page=${page + 1}&limit=${rowsPerPage}`,
+        `${API_URL}/events?page=${page + 1}&limit=${rowsPerPage}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -128,7 +129,7 @@ const AdminEvents: React.FC = () => {
 
     try {
       await axios.put(
-        `http://localhost:3000/events/${editingEvent.id}`,
+        `${API_URL}/events/${editingEvent.id}`,
         editFormData,
         {
           headers: {
@@ -154,7 +155,7 @@ const AdminEvents: React.FC = () => {
       return;
 
     try {
-      await axios.delete(`http://localhost:3000/events/${eventId}`, {
+      await axios.delete(`${API_URL}/events/${eventId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -174,7 +175,7 @@ const AdminEvents: React.FC = () => {
   const handleCreateSubmit = async () => {
     try {
       await axios.post(
-        'http://localhost:3000/events',
+        API_URL + '/events',
         createFormData,
         {
           headers: {

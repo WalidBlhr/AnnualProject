@@ -24,6 +24,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import axios from 'axios';
+import { API_URL } from '../../const';
 
 interface Message {
   id: number;
@@ -67,7 +68,7 @@ const AdminMessages: React.FC = () => {
   const fetchMessages = async () => {
     try {
       const { data } = await axios.get<MessagesResponse>(
-        `http://localhost:3000/messages?page=${page + 1}&limit=${rowsPerPage}`,
+        `${API_URL}/messages?page=${page + 1}&limit=${rowsPerPage}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -91,7 +92,7 @@ const AdminMessages: React.FC = () => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce message ?')) return;
 
     try {
-      await axios.delete(`http://localhost:3000/messages/${messageId}`, {
+      await axios.delete(`${API_URL}/messages/${messageId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },

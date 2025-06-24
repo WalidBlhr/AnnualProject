@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { API_URL } from '../../const';
 
 interface TrocOffer {
   id: number;
@@ -59,7 +60,7 @@ const AdminTrocs: React.FC = () => {
 
   const fetchTrocs = async () => {
     try {
-      let url = `http://localhost:3000/trocoffers?page=${page + 1}&limit=${rowsPerPage}`;
+      let url = `${API_URL}/trocoffers?page=${page + 1}&limit=${rowsPerPage}`;
       if (filterStatus !== 'all') url += `&status=${filterStatus}`;
       if (filterType !== 'all') url += `&type=${filterType}`;
       const { data } = await axios.get(url, {
@@ -86,7 +87,7 @@ const AdminTrocs: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!editingTroc) return;
     try {
-      await axios.put(`http://localhost:3000/trocoffers/${editingTroc.id}`, editFormData, {
+      await axios.put(`${API_URL}/trocoffers/${editingTroc.id}`, editFormData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Offre de troc modifiée avec succès', 'success');
@@ -100,7 +101,7 @@ const AdminTrocs: React.FC = () => {
   const handleDeleteTroc = async (trocId: number) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette offre de troc ?')) return;
     try {
-      await axios.delete(`http://localhost:3000/trocoffers/${trocId}`, {
+      await axios.delete(`${API_URL}/trocoffers/${trocId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Offre de troc supprimée avec succès', 'success');

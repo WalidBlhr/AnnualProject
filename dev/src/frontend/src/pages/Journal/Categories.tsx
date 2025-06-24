@@ -45,7 +45,7 @@ const Categories = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get<Category[]>('http://localhost:3000/journal/categories');
+      const { data } = await axios.get<Category[]>(API_URL + '/journal/categories');
       setCategories(data);
     } catch (error) {
       showAlert('Erreur lors du chargement des catégories', 'error');
@@ -92,7 +92,7 @@ const Categories = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('Non authentifié');
       
-      await axios.delete(`http://localhost:3000/journal/categories/${categoryToDelete}`, {
+      await axios.delete(`${API_URL}/journal/categories/${categoryToDelete}`, {
         headers: {
           Authorization: `Bearer ${token}`
         }

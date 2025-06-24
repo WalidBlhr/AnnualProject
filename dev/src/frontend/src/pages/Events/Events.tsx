@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import EventIcon from '@mui/icons-material/Event';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GroupIcon from '@mui/icons-material/Group';
+import { API_URL } from '../../const';
 
 interface Event {
   id: number;
@@ -49,7 +50,7 @@ const Events = () => {
   const fetchEvents = async () => {
     try {
       const { data } = await axios.get<EventsResponse>(
-        `http://localhost:3000/events?page=${page}&limit=6`,
+        `${API_URL}/events?page=${page}&limit=6`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,

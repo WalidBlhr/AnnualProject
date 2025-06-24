@@ -8,6 +8,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
+import { API_URL } from '../../const';
 
 // Category interface
 interface Category {
@@ -52,7 +53,7 @@ const ArticleEditor: React.FC = () => {
     // Charger les catégories au chargement du composant
     const fetchCategories = async () => {
       try {
-        const { data } = await axios.get<Category[]>('http://localhost:3000/journal/categories');
+        const { data } = await axios.get<Category[]>(API_URL + '/journal/categories');
         setCategories(data);
       } catch (error) {
         console.error('Erreur lors du chargement des catégories:', error);
@@ -81,7 +82,7 @@ const ArticleEditor: React.FC = () => {
       }
       
       const response = await axios.get<ArticleResponse>(
-        `http://localhost:3000/journal/articles/${id}`,
+        `${API_URL}/journal/articles/${id}`,
         { headers }
       );
       
@@ -131,7 +132,7 @@ const ArticleEditor: React.FC = () => {
       
       if (isEditMode) {
         await axios.put(
-          `http://localhost:3000/journal/articles/${id}`,
+          `${API_URL}/journal/articles/${id}`,
           article,
           {
             headers: {
@@ -147,7 +148,7 @@ const ArticleEditor: React.FC = () => {
         });
       } else {
         await axios.post(
-          'http://localhost:3000/journal/articles',
+          API_URL + '/journal/articles',
           article,
           {
             headers: {

@@ -18,6 +18,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { API_URL } from '../../const';
 
 interface Category {
   _id: string;
@@ -40,7 +41,7 @@ const AdminCategories: React.FC = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/journal/categories', {
+      const { data } = await axios.get(API_URL + '/journal/categories', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setCategories(data);
@@ -58,7 +59,7 @@ const AdminCategories: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!editingCategory) return;
     try {
-      await axios.put(`http://localhost:3000/journal/categories/${editingCategory._id}`, editFormData, {
+      await axios.put(`${API_URL}/journal/categories/${editingCategory._id}`, editFormData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Catégorie modifiée avec succès', 'success');
@@ -72,7 +73,7 @@ const AdminCategories: React.FC = () => {
   const handleDeleteCategory = async (categoryId: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette catégorie ?')) return;
     try {
-      await axios.delete(`http://localhost:3000/journal/categories/${categoryId}`, {
+      await axios.delete(`${API_URL}/journal/categories/${categoryId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Catégorie supprimée avec succès', 'success');
@@ -84,7 +85,7 @@ const AdminCategories: React.FC = () => {
 
   const handleAddSubmit = async () => {
     try {
-      await axios.post('http://localhost:3000/journal/categories', addFormData, {
+      await axios.post(API_URL + '/journal/categories', addFormData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Catégorie ajoutée avec succès', 'success');

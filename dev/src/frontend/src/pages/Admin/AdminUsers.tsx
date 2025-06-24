@@ -23,6 +23,7 @@ import {
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
+import { API_URL } from '../../const';
 
 interface User {
   id: number;
@@ -72,7 +73,7 @@ const AdminUsers: React.FC = () => {
   const fetchUsers = async () => {
     try {
       const { data } = await axios.get<UsersResponse>(
-        `http://localhost:3000/users?page=${page + 1}&limit=${rowsPerPage}`,
+        `${API_URL}/users?page=${page + 1}&limit=${rowsPerPage}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -102,7 +103,7 @@ const AdminUsers: React.FC = () => {
 
     try {
       await axios.put(
-        `http://localhost:3000/users/${editingUser.id}`,
+        `${API_URL}/users/${editingUser.id}`,
         editFormData,
         {
           headers: {
@@ -125,7 +126,7 @@ const AdminUsers: React.FC = () => {
       return;
 
     try {
-      await axios.delete(`http://localhost:3000/users/${userId}`, {
+      await axios.delete(`${API_URL}users/${userId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },

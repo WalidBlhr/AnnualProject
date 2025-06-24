@@ -18,6 +18,7 @@ import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import { Service, SERVICE_TYPES, SERVICE_STATUS } from '../../types/Service';
 import BookService from '../../components/BookService/BookService';
+import { API_URL } from '../../const';
 
 const ServiceDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -41,7 +42,7 @@ const ServiceDetail: React.FC = () => {
 
   const fetchServiceDetails = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:3000/services/${id}`, {
+      const { data } = await axios.get(`${API_URL}/services/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -66,7 +67,7 @@ const ServiceDetail: React.FC = () => {
   const handleStatusChange = async (newStatus: string) => {
     try {
       await axios.put(
-        `http://localhost:3000/services/${id}`,
+        `${API_URL}/services/${id}`,
         { status: newStatus },
         {
           headers: {
@@ -87,7 +88,7 @@ const ServiceDetail: React.FC = () => {
     }
 
     try {
-      await axios.delete(`http://localhost:3000/services/${id}`, {
+      await axios.delete(`${API_URL}/services/${id}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -102,7 +103,7 @@ const ServiceDetail: React.FC = () => {
   const handleCancelBooking = async () => {
     try {
       await axios.post(
-        `http://localhost:3000/services/${id}/cancel`,
+        `${API_URL}/services/${id}/cancel`,
         {},
         {
           headers: {

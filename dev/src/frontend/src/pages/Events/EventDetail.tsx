@@ -33,6 +33,7 @@ import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
+import { API_URL } from '../../const';
 
 // Types définis selon la structure de l'API
 interface Event {
@@ -111,7 +112,7 @@ const EventDetail = () => {
       if (isParticipant && participantId) {
         // Mettre à jour une participation existante
         await axios.put(
-          `http://localhost:3000/event-participants/${participantId}`,
+          `${API_URL}/event-participants/${participantId}`,
           {
             status_participation: 'pending',
             // Note est un commentaire optionnel
@@ -128,7 +129,7 @@ const EventDetail = () => {
       } else {
         // Créer une nouvelle participation avec la structure exacte attendue par l'API
         const response = await axios.post<{ id: number }>(
-          'http://localhost:3000/event-participants',
+          '${API_URL}/event-participants',
           {
             userId: decoded.userId,
             eventId: Number(id),
@@ -185,7 +186,7 @@ const EventDetail = () => {
     try {
       // 1. Récupérer les détails de l'événement
       const eventResponse = await axios.get<Event>(
-        `http://localhost:3000/events/${id}`,
+        `${API_URL}/events/${id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -197,7 +198,7 @@ const EventDetail = () => {
       
       // 2. Récupérer spécifiquement les participants pour cet événement
       const participantsResponse = await axios.get<ApiResponse<Participant>>(
-        `http://localhost:3000/event-participants?eventId=${id}`,
+        `${API_URL}/event-participants?eventId=${id}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -249,7 +250,7 @@ const EventDetail = () => {
     try {
       // Utiliser l'endpoint DELETE pour supprimer la participation
       await axios.delete(
-        `http://localhost:3000/event-participants/${participantId}`,
+        `${API_URL}/event-participants/${participantId}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,

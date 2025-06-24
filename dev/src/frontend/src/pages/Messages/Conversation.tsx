@@ -25,6 +25,7 @@ import jwtDecode from 'jwt-decode';
 import SendIcon from '@mui/icons-material/Send';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSocket } from '../../contexts/SocketContext';
+import { API_URL } from '../../const';
 
 // Types existants ou à ajouter si nécessaire
 interface Message {
@@ -112,7 +113,7 @@ const Conversation = () => {
 
   const fetchUserDetails = async () => {
     try {
-      const { data } = await axios.get(`http://localhost:3000/users/${userId}`, {
+      const { data } = await axios.get(`${API_URL}/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -128,7 +129,7 @@ const Conversation = () => {
       setIsLoading(true);
       const token = localStorage.getItem('token');
       const decoded = jwtDecode<{ userId: number }>(token!);
-      const { data } = await axios.get(`http://localhost:3000/messages`, {
+      const { data } = await axios.get(`${API_URL}/messages`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -166,7 +167,7 @@ const Conversation = () => {
     try {
       const token = localStorage.getItem('token');
       await axios.put(
-        `http://localhost:3000/messages/${messageId}`,
+        `${API_URL}/messages/${messageId}`,
         { status: 'read' },
         {
           headers: {
@@ -196,7 +197,7 @@ const Conversation = () => {
       };
 
       const response = await axios.post(
-        'http://localhost:3000/messages',
+        API_URL + '/messages',
         messageData,
         {
           headers: {

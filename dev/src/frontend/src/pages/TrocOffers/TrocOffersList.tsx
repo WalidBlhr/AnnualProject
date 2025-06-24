@@ -28,6 +28,7 @@ import jwtDecode from 'jwt-decode'; // Ajoutez cet import
 import { STATUS_LABELS, STATUS_COLORS, TrocOfferStatus } from '../../types/trocOffer';
 import { styled } from '@mui/material/styles';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { API_URL } from '../../const';
 
 interface TrocOffer {
   id: number;
@@ -88,7 +89,7 @@ const TrocOffersList: React.FC = () => {
 
   const fetchTrocOffers = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/trocoffers', {
+      const { data } = await axios.get(API_URL + '/trocoffers', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -126,7 +127,7 @@ const TrocOffersList: React.FC = () => {
         formData.append('image', selectedImage);
       }
 
-      await axios.post('http://localhost:3000/trocoffers', formData, {
+      await axios.post(API_URL + '/trocoffers', formData, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'multipart/form-data',

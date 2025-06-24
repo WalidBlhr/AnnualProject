@@ -34,6 +34,7 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {useAuth} from '../../contexts/AuthContext';
 import {Article} from '../../types/Articles';
 import DOMPurify from 'dompurify';
+import { API_URL } from '../../const';
 
 interface RelatedArticle {
   _id: string;
@@ -70,7 +71,7 @@ const ArticleDetail = () => {
         headers: { Authorization: `Bearer ${token}` }
       } : {};
       
-      const { data } = await axios.get<Article>(`http://localhost:3000/journal/articles/${id}`, config);
+      const { data } = await axios.get<Article>(`${API_URL}/journal/articles/${id}`, config);
       setArticle(data);
       
       // Fetch related articles
@@ -91,7 +92,7 @@ const ArticleDetail = () => {
       } : {};
       
       const { data } = await axios.get<{ data: RelatedArticle[] }>(
-        'http://localhost:3000/journal/articles', 
+        API_URL + '/journal/articles', 
         {
           ...config,
           params: {
@@ -113,7 +114,7 @@ const ArticleDetail = () => {
       const token = localStorage.getItem('token');
       if (!token || !isAuthor) return;
       
-      await axios.delete(`http://localhost:3000/journal/articles/${id}`, {
+      await axios.delete(`${API_URL}/journal/articles/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

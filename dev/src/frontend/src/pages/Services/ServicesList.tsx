@@ -28,6 +28,7 @@ import axios from 'axios';
 import { Service, SERVICE_TYPES, SERVICE_STATUS } from '../../types/Service';
 import jwtDecode from 'jwt-decode';
 import { TimePicker } from '@mui/x-date-pickers';
+import { API_URL } from '../../const';
 
 const DAYS_OF_WEEK = [
   'Lundi',
@@ -79,7 +80,7 @@ const ServicesList: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-      const { data } = await axios.get('http://localhost:3000/services', {
+      const { data } = await axios.get(API_URL + '/services', {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`
         }
@@ -101,7 +102,7 @@ const ServicesList: React.FC = () => {
       const decoded = jwtDecode<{ userId: number }>(token);
 
       await axios.post(
-        'http://localhost:3000/services',
+        API_URL + '/services',
         {
           ...newService,
           provider_id: decoded.userId

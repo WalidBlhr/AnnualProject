@@ -25,6 +25,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
 import jwtDecode from 'jwt-decode';
 import { Article, ArticleCategory } from '../../types/Articles';
+import { API_URL } from '../../const';
 
 const JournalHome: React.FC = () => {
   const navigate = useNavigate();
@@ -53,7 +54,7 @@ const JournalHome: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       } : {};
 
-      const { data } = await axios.get<{ data: Article[] }>('http://localhost:3000/journal/articles', { 
+      const { data } = await axios.get<{ data: Article[] }>(API_URL + '/journal/articles', { 
         ...config,
         params: {
           featured: true,
@@ -73,7 +74,7 @@ const JournalHome: React.FC = () => {
         headers: { Authorization: `Bearer ${token}` }
       } : {};
 
-      const { data } = await axios.get<{ data: Article[] }>('http://localhost:3000/journal/articles', { 
+      const { data } = await axios.get<{ data: Article[] }>(API_URL + '/journal/articles', { 
         ...config,
         params: {
           limit: 6,
@@ -89,7 +90,7 @@ const JournalHome: React.FC = () => {
   const fetchCategories = async () => {
     
     try {
-      const res = await axios.get<ArticleCategory[]>('http://localhost:3000/journal/categories');
+      const res = await axios.get<ArticleCategory[]>(API_URL + '/journal/categories');
       setCategories(res.data); // TODO Retyper les catégories
     } catch (error) {
       console.error('Erreur lors de la récupération des catégories:', error);
@@ -98,7 +99,7 @@ const JournalHome: React.FC = () => {
 
   const fetchTags = async () => {
     try {
-      const { data } = await axios.get<string[]>('http://localhost:3000/journal-tags');
+      const { data } = await axios.get<string[]>(API_URL + '/journal-tags');
       setTags(data);
     } catch (error) {
       console.error('Erreur lors de la récupération des tags:', error);

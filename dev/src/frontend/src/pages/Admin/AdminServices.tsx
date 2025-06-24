@@ -21,6 +21,7 @@ import {
 } from '@mui/material';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { API_URL } from '../../const';
 
 interface Service {
   id: number;
@@ -60,7 +61,7 @@ const AdminServices: React.FC = () => {
 
   const fetchServices = async () => {
     try {
-      let url = `http://localhost:3000/services?page=${page + 1}&limit=${rowsPerPage}`;
+      let url = `${API_URL}/services?page=${page + 1}&limit=${rowsPerPage}`;
       if (filterStatus !== 'all') url += `&status=${filterStatus}`;
       if (filterType !== 'all') url += `&type=${filterType}`;
       const { data } = await axios.get(url, {
@@ -87,7 +88,7 @@ const AdminServices: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!editingService) return;
     try {
-      await axios.put(`http://localhost:3000/services/${editingService.id}`, editFormData, {
+      await axios.put(`${API_URL}/services/${editingService.id}`, editFormData, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Service modifié avec succès', 'success');
@@ -101,7 +102,7 @@ const AdminServices: React.FC = () => {
   const handleDeleteService = async (serviceId: number) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce service ?')) return;
     try {
-      await axios.delete(`http://localhost:3000/services/${serviceId}`, {
+      await axios.delete(`${API_URL}/services/${serviceId}`, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Service supprimé avec succès', 'success');

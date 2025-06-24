@@ -42,6 +42,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import PendingIcon from '@mui/icons-material/Pending';
 import { useNavigate } from 'react-router-dom';
+import { API_URL } from '../../const';
 
 // Types
 interface User {
@@ -128,7 +129,7 @@ const Absences: React.FC = () => {
 
       const decoded = jwtDecode<{ userId: number }>(token);
       const response = await axios.get<AbsencesResponse>(
-        `http://localhost:3000/absences?userId=${decoded.userId}`,
+        `${API_URL}/absences?userId=${decoded.userId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -150,7 +151,7 @@ const Absences: React.FC = () => {
       
       // Récupérer toutes les absences
       const response = await axios.get<AbsencesResponse>(
-        'http://localhost:3000/absences',
+        API_URL + '/absences',
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -176,7 +177,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       const response = await axios.get<User[]>(
-        `http://localhost:3000/users/${userId}/trusted-contacts`,
+        `${API_URL}/users/${userId}/trusted-contacts`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -203,7 +204,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       const response = await axios.get<UsersResponse>(
-        'http://localhost:3000/users',
+        API_URL + '/users',
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -266,7 +267,7 @@ const Absences: React.FC = () => {
       if (editingAbsence) {
         // Update existing absence
         await axios.put(
-          `http://localhost:3000/absences/${editingAbsence.id}`,
+          `${API_URL}/absences/${editingAbsence.id}`,
           absenceData,
           {
             headers: {
@@ -278,7 +279,7 @@ const Absences: React.FC = () => {
       } else {
         // Create new absence
         await axios.post(
-          'http://localhost:3000/absences',
+          API_URL + '/absences',
           absenceData,
           {
             headers: {
@@ -306,7 +307,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       await axios.delete(
-        `http://localhost:3000/absences/${id}`,
+        `${API_URL}/absences/${id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -326,7 +327,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       await axios.put(
-        `http://localhost:3000/absences/${absenceId}`,
+        `${API_URL}/absences/${absenceId}`,
         { status: newStatus },
         {
           headers: {
@@ -349,7 +350,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       await axios.post(
-        'http://localhost:3000/trusted-contacts',
+        API_URL + '/trusted-contacts',
         {
           userId,
           trustedUserId: selectedNewContact
@@ -380,7 +381,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       await axios.delete(
-        `http://localhost:3000/trusted-contacts/${userId}/${trustedUserId}`,
+        `${API_URL}/trusted-contacts/${userId}/${trustedUserId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,

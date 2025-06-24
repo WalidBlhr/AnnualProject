@@ -21,6 +21,7 @@ import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSocket } from '../../contexts/SocketContext';
+import { API_URL } from '../../const';
 
 const Messages = () => {
   const navigate = useNavigate();
@@ -87,7 +88,7 @@ const Messages = () => {
       }
 
       const decoded = jwtDecode<{ userId: number }>(token);
-      const { data } = await axios.get('http://localhost:3000/messages', {
+      const { data } = await axios.get(API_URL + '/messages', {
         headers: {
           Authorization: `Bearer ${token}`,
         },

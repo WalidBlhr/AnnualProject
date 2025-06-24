@@ -28,6 +28,7 @@ import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
 import DeleteIcon from '@mui/icons-material/Delete';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
+import { API_URL } from '../../const';
 
 interface Event {
   id: number;
@@ -70,7 +71,7 @@ const CommunityEvents = () => {
 
   const fetchEvents = async () => {
     try {
-      let url = `http://localhost:3000/events?page=${page}&limit=6&type=community`;
+      let url = `${API_URL}/events?page=${page}&limit=6&type=community`;
       
       if (category) {
         url += `&category=${category}`;

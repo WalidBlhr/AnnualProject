@@ -19,6 +19,7 @@ import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSocket } from '../../contexts/SocketContext';
+import { API_URL } from '../../const';
 
 interface User {
   id: number;
@@ -50,7 +51,7 @@ const NewMessage = () => {
       const token = localStorage.getItem('token');
       const decoded = token ? jwtDecode<{ userId: number }>(token) : { userId: 0 };
       
-      const { data } = await axios.get('http://localhost:3000/users', {
+      const { data } = await axios.get(API_URL + '/users', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -77,7 +78,7 @@ const NewMessage = () => {
       const decoded = token ? jwtDecode<{ userId: number }>(token) : { userId: 0 };
       
       await axios.post(
-        'http://localhost:3000/messages',
+        API_URL + '/messages',
         {
           content: messageContent,
           date_sent: new Date().toISOString(),
