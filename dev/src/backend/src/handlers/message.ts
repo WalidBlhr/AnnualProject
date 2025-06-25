@@ -92,7 +92,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
         'receiver.firstname',
         'receiver.lastname'
       ])
-      .orderBy('message.date_sent', 'DESC');
+      .orderBy('message.date_sent', 'ASC');
 
     // Si senderId et receiverId sont fournis, filtrer les messages
     if (req.query.senderId && req.query.receiverId) {

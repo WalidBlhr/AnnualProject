@@ -26,9 +26,10 @@ import SendIcon from '@mui/icons-material/Send';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSocket } from '../../contexts/SocketContext';
 import { API_URL } from '../../const';
+import { MessageElement } from './MessageElement';
 
 // Types existants ou à ajouter si nécessaire
-interface Message {
+export interface Message {
   id: number;
   content: string;
   date_sent: string;
@@ -278,63 +279,9 @@ const Conversation = () => {
             </Box>
           ) : (
             <List>
-              {messages.map((message) => {
-                const token = localStorage.getItem('token');
-                const decoded = token ? jwtDecode<{ userId: number }>(token) : { userId: 0 };
-                const isOwnMessage = message.sender.id === decoded.userId;
-                
-                return (
-                  <ListItem key={message.id} sx={{ 
-                    justifyContent: isOwnMessage ? 'flex-end' : 'flex-start',
-                    mb: 1
-                  }}>
-                    <Box sx={{ 
-                      display: 'flex', 
-                      flexDirection: isOwnMessage ? 'row-reverse' : 'row',
-                      alignItems: 'flex-end',
-                      maxWidth: '80%'
-                    }}>
-                      {!isOwnMessage && (
-                        <Avatar sx={{ mr: 1 }}>
-                          {message.sender.firstname.charAt(0)}
-                        </Avatar>
-                      )}
-                      
-                      <Paper sx={{ 
-                        p: 2, 
-                        bgcolor: isOwnMessage ? 'primary.light' : 'grey.100', 
-                        color: isOwnMessage ? 'white' : 'inherit',
-                        borderRadius: 2,
-                        ml: isOwnMessage ? 1 : 0,
-                        mr: isOwnMessage ? 0 : 1
-                      }}>
-                        <Typography 
-                          variant="body1" 
-                          component="div" // Changement ici: utiliser div au lieu de p
-                        >
-                          {message.content}
-                        </Typography>
-                        <Typography 
-                          variant="caption" 
-                          component="div" // Changement ici: utiliser div au lieu de p
-                          sx={{ 
-                            textAlign: 'right',
-                            mt: 0.5
-                          }}
-                        >
-                          {new Date(message.date_sent).toLocaleTimeString()}
-                        </Typography>
-                      </Paper>
-                      
-                      {isOwnMessage && (
-                        <Avatar sx={{ ml: 1 }}>
-                          {decoded.userId ? localStorage.getItem('firstname')?.charAt(0) : 'Y'}
-                        </Avatar>
-                      )}
-                    </Box>
-                  </ListItem>
-                );
-              })}
+              {messages.map((message : Message) =>
+                <MessageElement message={message} key={message.id}/>
+              )}
               <div ref={messagesEndRef} />
             </List>
           )}
