@@ -1,9 +1,9 @@
 import axios from 'axios';
-import { createContext, useContext, useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
-import { ACCESS_TOKEN_STORAGE_KEY, API_URL, REFRESH_TOKEN_STORAGE_KEY } from '../const';
+import {createContext, useContext, useEffect, useState} from 'react';
+import type {ReactNode} from 'react';
+import {ACCESS_TOKEN_STORAGE_KEY, API_URL, REFRESH_TOKEN_STORAGE_KEY} from '../const';
 import jwtDecode from 'jwt-decode';
-import { useLocation, useNavigate } from 'react-router-dom';
+import {useLocation, useNavigate} from 'react-router-dom';
 
 interface AuthContextType {
     isAuthenticated: boolean;
@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY);
             throw e;
         }
-    }
+    };
 
     const loadAccessTokenInfo = (accessToken : string) : void => {
         const decodedAccessToken = jwtDecode<DecodedToken>(accessToken);
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             role: decodedAccessToken.role,
             createdAt: new Date(decodedAccessToken.createdAt),
         });
-    }
+    };
 
     const isAdmin = () : boolean => user !== null && user.role === 1;
 
@@ -129,6 +129,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const accessToken = localStorage.getItem("token");
             if (!accessToken) {
                 setIsAuthChecking(false);
+                setIsAuthenticated(false);
                 return;
             }
 
@@ -140,6 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     await refresh();
                 } else if (user === null) {
                     loadAccessTokenInfo(accessToken);
+                    setIsAuthenticated(true);
                 }
             } catch (e) {
                 console.log(e);

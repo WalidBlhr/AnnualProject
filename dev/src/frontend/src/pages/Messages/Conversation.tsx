@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import {useState, useEffect, useRef} from 'react';
 import { 
   Container, 
   Typography, 
@@ -6,27 +6,23 @@ import {
   Paper, 
   TextField, 
   Button, 
-  List, 
-  ListItem, 
-  ListItemText,
-  Avatar,
+  List,
   Snackbar,
   Alert,
   Divider,
   CircularProgress,
   IconButton,
-  Badge,
   Tooltip,
-  Chip
+  Chip,
 } from '@mui/material';
-import { useParams, useNavigate } from 'react-router-dom';
+import {useParams, useNavigate} from 'react-router-dom';
 import axios from 'axios';
-import jwtDecode from 'jwt-decode';
 import SendIcon from '@mui/icons-material/Send';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import { useSocket } from '../../contexts/SocketContext';
-import { API_URL } from '../../const';
-import { MessageElement } from './MessageElement';
+import {useSocket} from '../../contexts/SocketContext';
+import {API_URL} from '../../const';
+import {MessageElement} from './MessageElement';
+import {useAuth} from '../../contexts/AuthContext';
 
 // Types existants ou à ajouter si nécessaire
 export interface Message {
@@ -44,19 +40,20 @@ export interface Message {
     firstname: string;
     lastname: string;
   };
-}
+};
 
 interface User {
   firstname: string;
   lastname: string;
-}
+};
 
 const Conversation = () => {
   const { userId, trocId } = useParams<{ userId: string, trocId?: string }>();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { socket, isOnline, fetchUserStatuses } = useSocket();
-  
+  const {user} = useAuth();
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [otherUser, setOtherUser] = useState<User | null>(null);
@@ -67,15 +64,16 @@ const Conversation = () => {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
+  const scrollDown = () => messagesEndRef.current?.scrollIntoView({behavior: "smooth"});
+
   useEffect(() => {
     fetchMessages();
     fetchUserDetails();
-
-    // Scroll to bottom when messages change
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
   }, [userId]);
+
+  useEffect(() => {
+    scrollDown();
+  }, [messages]);
 
   // Listen for new messages via socket
   useEffect(() => {
@@ -84,28 +82,23 @@ const Conversation = () => {
         // Vérifier si le message appartient à cette conversation
         const token = localStorage.getItem('token');
         if (token) {
-          const decoded = jwtDecode<{ userId: number }>(token);
+          //const decoded = jwtDecode<{ userId: number }>(token);
           if (
-            (message.sender.id === parseInt(userId) && message.receiver.id === decoded.userId) ||
-            (message.sender.id === decoded.userId && message.receiver.id === parseInt(userId))
+            (message.sender.id === parseInt(userId) && message.receiver.id === (user?.userId ?? 0)) ||
+            (message.sender.id === (user?.userId ?? 0) && message.receiver.id === parseInt(userId))
           ) {
             setMessages(prev => [...prev, message]);
-            
+
             // Marquer le message comme lu si l'utilisateur est le destinataire
-            if (message.receiver.id === decoded.userId && message.status === 'unread') {
+            if (message.receiver.id === (user?.userId ?? 0) && message.status === 'unread') {
               markMessageAsRead(message.id);
-            }
-            
-            // Scroll to bottom on new message
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
             }
           }
         }
       };
-      
+
       socket.on('receive_message', handleReceiveMessage);
-      
+
       return () => {
         socket.off('receive_message', handleReceiveMessage);
       };
@@ -129,34 +122,31 @@ const Conversation = () => {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('token');
-      const decoded = jwtDecode<{ userId: number }>(token!);
       const { data } = await axios.get(`${API_URL}/messages`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
         params: {
-          senderId: decoded.userId,
-          receiverId: userId
-        }
+          senderId: (user?.userId ?? 0),
+          receiverId: userId,
+        },
       });
       setMessages(data.data);
-      
+
       // Marquer tous les messages non lus comme lus
       const unreadMessages = data.data.filter(
-        (msg: Message) => msg.status === 'unread' && msg.receiver.id === decoded.userId
+        (msg: Message) => msg.status === 'unread' && msg.receiver.id === (user?.userId ?? 0)
       );
-      
+
       for (const msg of unreadMessages) {
         await markMessageAsRead(msg.id);
       }
-      
+
       setIsLoading(false);
-      
+
       // Scroll to bottom after loading messages
       setTimeout(() => {
-        if (messagesEndRef.current) {
-          messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-        }
+        scrollDown();
       }, 100);
     } catch (error) {
       showAlert('Erreur lors du chargement des messages', 'error');
@@ -183,21 +173,19 @@ const Conversation = () => {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
-    
+
     try {
       const token = localStorage.getItem('token');
-      const decoded = jwtDecode<{ userId: number }>(token!);
-      
+
       const messageData = {
         content: newMessage,
         date_sent: new Date().toISOString(),
-        senderId: decoded.userId,
+        senderId: (user?.userId ?? 0),
         receiverId: Number(userId),
         status: 'unread',
-        ...(trocId && { trocOfferId: Number(trocId) })
       };
 
-      const response = await axios.post(
+      const response = await axios.post<Message>(
         API_URL + '/messages',
         messageData,
         {
@@ -206,14 +194,14 @@ const Conversation = () => {
           },
         }
       );
-      
+
       // Émettre le message via socket
       if (socket) {
         socket.emit('new_message', response.data);
       }
-      
+
+      setMessages(prev => [...prev, response.data]);
       setNewMessage('');
-      fetchMessages();
       showAlert('Message envoyé', 'success');
     } catch (error) {
       showAlert('Erreur lors de l\'envoi du message', 'error');
@@ -252,7 +240,7 @@ const Conversation = () => {
               Conversation avec {otherUser.firstname} {otherUser.lastname}
               {trocId && ' (via une offre de troc)'}
             </Typography>
-            
+
             <Tooltip title={isOnline(parseInt(userId!)) ? "En ligne" : "Hors ligne"}>
               <Chip 
                 icon={<FiberManualRecordIcon sx={{ fontSize: 16 }} />} 
@@ -267,9 +255,9 @@ const Conversation = () => {
             Retour
           </Button>
         </Box>
-        
+
         <Divider />
-        
+
         <Box sx={{ flexGrow: 1, overflow: 'auto', mb: 2, p: 2 }}>
           {messages.length === 0 ? (
             <Box sx={{ textAlign: 'center', mt: 2 }}>
@@ -286,9 +274,9 @@ const Conversation = () => {
             </List>
           )}
         </Box>
-        
+
         <Divider />
-        
+
         <Box sx={{ mt: 2, display: 'flex', alignItems: 'center' }}>
           <TextField
             fullWidth
@@ -296,7 +284,7 @@ const Conversation = () => {
             placeholder="Votre message..."
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => {
+            onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 handleSendMessage();
@@ -315,7 +303,7 @@ const Conversation = () => {
           </IconButton>
         </Box>
       </Paper>
-      
+
       <Snackbar
         open={alert.open}
         autoHideDuration={6000}

@@ -9,7 +9,7 @@ interface SocketContextType {
   onlineUsers: number[];
   isOnline: (userId: number) => boolean;
   fetchUserStatuses: (userIds: number[]) => Promise<void>;
-}
+};
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
@@ -29,7 +29,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Fonction pour charger le statut initial d'un ou plusieurs utilisateurs
   const fetchUserStatuses = async (userIds: number[]) => {
     if (!token) return;
-    
+
     try {
       // Appel à notre nouvel endpoint
       const response = await axios.get(
@@ -40,7 +40,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           },
         }
       );
-      
+
       // Si l'utilisateur est en ligne, l'ajouter à notre liste
       if (response.data.status === 'online') {
         setOnlineUsers(prev => {
@@ -50,7 +50,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           return prev;
         });
       }
-      
+
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération du statut:', error);
@@ -60,6 +60,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   useEffect(() => {
     // Créer la connexion socket seulement si l'utilisateur est authentifié
+    console.log("Socket context : ", isAuthenticated, token);
     if (isAuthenticated && token) {
       const newSocket = io(API_URL, {
         auth: {
