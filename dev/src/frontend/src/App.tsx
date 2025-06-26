@@ -54,6 +54,7 @@ const App: React.FC = () => {
                                     <Route path="/signup" element={<Signup />} />
                                     <Route path="/trocs" element={<TrocOffersList />} />
                                     <Route path="/trocs/:id" element={<TrocOfferDetail />} />
+                                    <Route path="trocs/:trocId/messages/:userId" element={<Conversation />} />
                                     <Route path="/messages/:userId" element={<Conversation />} />
                                     <Route path="/messages" element={<Messages />} />
                                     <Route path="/services" element={<ServicesList />} />

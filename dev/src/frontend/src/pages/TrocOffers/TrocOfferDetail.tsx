@@ -216,7 +216,7 @@ const TrocOfferDetail: React.FC = () => {
                 <Button 
                   variant="contained" 
                   color="primary"
-                  onClick={() => navigate(`/messages/${trocOffer.user.id}`)}
+                  onClick={() => navigate(`/trocs/${trocOffer.id}/messages/${trocOffer.user.id}`)}
                 >
                   Contacter le propriétaire
                 </Button>

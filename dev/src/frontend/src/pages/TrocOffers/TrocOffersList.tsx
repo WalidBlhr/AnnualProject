@@ -248,7 +248,7 @@ const TrocOffersList: React.FC = () => {
                 </Typography>
               </CardContent>
               <CardActions>
-                <Button size="small" color="primary" onClick={() => navigate(`/messages/${trocOffer.user.id}`)}>
+                <Button size="small" color="primary" onClick={() => navigate(`/trocs/${trocOffer.id}/messages/${trocOffer.user.id}`)}>
                   Contacter
                 </Button>
                 <Button size="small" onClick={() => navigate(`/trocs/${trocOffer.id}`)}>
