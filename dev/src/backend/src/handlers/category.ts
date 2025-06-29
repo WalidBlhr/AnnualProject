@@ -41,8 +41,25 @@ export const createCategoryHandler = async (req: Request, res: Response) => {
 // Get all categories
 export const listCategoriesHandler = async (_req: Request, res: Response) => {
   try {
-    const categories = await Category.find().sort({ name: 1 });
-    res.status(200).send(categories);
+    const {page = 1, limit = 10} = _req.query;
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+
+    const categories = await Category.find()
+      .sort({ name: 1 })
+      .skip((pageNum - 1) * limitNum)
+      .limit(limitNum);
+
+    const total = await Category.countDocuments();
+
+    res.status(200).send({
+      data: categories,
+      page: pageNum,
+      page_size: limitNum,
+      total_count: total,
+      total_pages: Math.ceil(total / limitNum),
+    });
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal server error" });

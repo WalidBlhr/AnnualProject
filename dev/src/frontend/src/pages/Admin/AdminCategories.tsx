@@ -12,7 +12,7 @@ import {
     IconButton,
     Paper,
     Snackbar,
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+    Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow,
     TextField,
     Typography
 } from '@mui/material';
@@ -26,25 +26,37 @@ interface Category {
   description?: string;
 }
 
+interface CategoriesResponse {
+  data: Category[];
+  page: number;
+  page_size: number;
+  total_count: number;
+  total_pages: number;
+};
+
 const AdminCategories: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
+  const [totalCategories, setTotalCategories] = useState<number>(0);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({ name: '', description: '' });
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [addFormData, setAddFormData] = useState({ name: '', description: '' });
   const [alert, setAlert] = useState<{ open: boolean; message: string; severity: 'success' | 'error'; }>({ open: false, message: '', severity: 'success' });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [page, rowsPerPage]);
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get(API_URL + '/journal/categories', {
+      const { data } = await axios.get<CategoriesResponse>(API_URL + '/journal/categories', {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
-      setCategories(data);
+      setCategories(data.data);
+      setTotalCategories(data.total_count);
     } catch (error) {
       showAlert('Erreur lors du chargement des catégories', 'error');
     }
@@ -97,6 +109,13 @@ const AdminCategories: React.FC = () => {
     }
   };
 
+  const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
+  };
+
   const showAlert = (message: string, severity: 'success' | 'error') => setAlert({ open: true, message, severity });
 
   return (
@@ -129,6 +148,15 @@ const AdminCategories: React.FC = () => {
             ))}
           </TableBody>
         </Table>
+        <TablePagination
+          rowsPerPageOptions={[5, 10, 25]}
+          component="div"
+          count={totalCategories}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
       </TableContainer>
       {/* Dialog édition */}
       <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>

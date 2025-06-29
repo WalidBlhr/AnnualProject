@@ -68,7 +68,7 @@ const AdminServices: React.FC = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setServices(data.data);
-      setTotalServices(data.total);
+      setTotalServices(data.total_count);
     } catch (error) {
       showAlert('Erreur lors du chargement des services', 'error');
     }

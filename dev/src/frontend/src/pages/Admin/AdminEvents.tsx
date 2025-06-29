@@ -56,7 +56,10 @@ interface CreateEventData {
 
 interface EventsResponse {
   data: Event[];
-  total: number;
+  page_size: number;
+  page: number;
+  total_count: number;
+  total_pages: number;
 }
 
 const AdminEvents: React.FC = () => {
@@ -104,7 +107,7 @@ const AdminEvents: React.FC = () => {
         },
       );
       setEvents(data.data);
-      setTotalEvents(data.total);
+      setTotalEvents(data.total_count);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erreur lors du chargement des événements';
       showAlert(errorMessage, 'error');

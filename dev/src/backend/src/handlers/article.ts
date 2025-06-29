@@ -72,9 +72,9 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
     res.status(200).send({
       data: articles,
       page: pageNum,
-      limit: limitNum,
-      total,
-      totalPages: Math.ceil(total / limitNum)
+      page_size: limitNum,
+      total_count: total,
+      total_pages: Math.ceil(total / limitNum),
     });
   } catch (error) {
     console.error(error);

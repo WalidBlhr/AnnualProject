@@ -43,7 +43,10 @@ interface EditUserData {
 
 interface UsersResponse {
   data: User[];
-  total: number;
+  page_size: number;
+  page: number;
+  total_count: number;
+  total_pages: number;
 }
 
 const AdminUsers: React.FC = () => {
@@ -81,7 +84,7 @@ const AdminUsers: React.FC = () => {
         },
       );
       setUsers(data.data);
-      setTotalUsers(data.total);
+      setTotalUsers(data.total_count);
     } catch (error) {
       showAlert('Erreur lors du chargement des utilisateurs', 'error');
     }

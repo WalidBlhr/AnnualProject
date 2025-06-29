@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  TextField,
   Alert,
   Snackbar,
   TablePagination,
@@ -45,7 +44,7 @@ interface Message {
 
 interface MessagesResponse {
   data: Message[];
-  total: number;
+  total_count: number;
 }
 
 const AdminMessages: React.FC = () => {
@@ -76,7 +75,7 @@ const AdminMessages: React.FC = () => {
         },
       );
       setMessages(data.data);
-      setTotalMessages(data.total);
+      setTotalMessages(data.total_count);
     } catch (error: any) {
       const errorMessage = error.response?.data?.message || 'Erreur lors du chargement des messages';
       showAlert(errorMessage, 'error');

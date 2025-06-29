@@ -113,11 +113,18 @@ export const listMessageHandler = async (req: Request, res: Response) => {
       );
     }
 
+    query.skip((validation.value.page - 1) * validation.value.limit);
+    query.take(validation.value.limit);
+
     const [messages, totalCount] = await query.getManyAndCount();
+    const totalPages = Math.ceil(totalCount / validation.value.limit);
 
     res.send({
       data: messages,
-      total_count: totalCount
+      page_size: validation.value.limit,
+      page: validation.value.page,
+      total_count: totalCount,
+      total_pages: totalPages,
     });
   } catch (error) {
     console.error(error);

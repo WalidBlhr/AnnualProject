@@ -30,12 +30,12 @@ const AdminDashboard: React.FC = () => {
 
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" gutterBottom component="h1">
+            <Typography variant="h3" gutterBottom component="h3" marginBottom={5}>
                 Administration
             </Typography>
             <Grid container spacing={3}>
                 {adminModules.map((module) => (
-                    <Grid key={module.title}>
+                    <Grid key={module.title} margin={2} minWidth={201}>
                         <Card 
                             sx={{ 
                                 height: '100%',

@@ -32,6 +32,14 @@ interface Article {
   createdAt: string;
 }
 
+interface ArticlesResponse {
+  data: Article[];
+  page: number;
+  page_size: number;
+  total_count: number;
+  total_pages: number;
+};
+
 const AdminArticles: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [totalArticles, setTotalArticles] = useState<number>(0);
@@ -55,11 +63,11 @@ const AdminArticles: React.FC = () => {
     try {
       let url = `${API_URL}/journal/articles?page=${page + 1}&limit=${rowsPerPage}`;
       if (filterPublic !== 'all') url += `&isPublic=${filterPublic}`;
-      const { data } = await axios.get(url, {
+      const { data } = await axios.get<ArticlesResponse>(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setArticles(data.data);
-      setTotalArticles(data.total);
+      setTotalArticles(data.total_count);
     } catch (error) {
       showAlert('Erreur lors du chargement des articles', 'error');
     }

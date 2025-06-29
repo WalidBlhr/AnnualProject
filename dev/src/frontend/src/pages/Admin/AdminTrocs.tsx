@@ -67,7 +67,7 @@ const AdminTrocs: React.FC = () => {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       setTrocs(data.data);
-      setTotalTrocs(data.total);
+      setTotalTrocs(data.total_count);
     } catch (error) {
       showAlert('Erreur lors du chargement des offres de troc', 'error');
     }
