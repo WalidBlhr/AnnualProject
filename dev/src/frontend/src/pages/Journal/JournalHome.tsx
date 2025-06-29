@@ -24,14 +24,15 @@ import DateRangeIcon from '@mui/icons-material/DateRange';
 import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
 import jwtDecode from 'jwt-decode';
-import { Article, ArticleCategory } from '../../types/Articles';
+import { Article } from '../../types/Articles';
 import { API_URL } from '../../const';
+import { CategoriesResponse, Category } from '../Admin/AdminCategories';
 
 const JournalHome: React.FC = () => {
   const navigate = useNavigate();
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
   const [recentArticles, setRecentArticles] = useState<Article[]>([]);
-  const [categories, setCategories] = useState<ArticleCategory[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -90,8 +91,8 @@ const JournalHome: React.FC = () => {
   const fetchCategories = async () => {
     
     try {
-      const res = await axios.get<ArticleCategory[]>(API_URL + '/journal/categories');
-      setCategories(res.data); // TODO Retyper les catégories
+      const res = await axios.get<CategoriesResponse>(API_URL + '/journal/categories');
+      setCategories(res.data.data); // TODO Retyper les catégories
     } catch (error) {
       console.error('Erreur lors de la récupération des catégories:', error);
     }

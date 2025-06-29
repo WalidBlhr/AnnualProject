@@ -9,6 +9,7 @@ import axios from 'axios';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 import { API_URL } from '../../const';
+import { CategoriesResponse } from '../Admin/AdminCategories';
 
 // Category interface
 interface Category {
@@ -53,8 +54,8 @@ const ArticleEditor: React.FC = () => {
     // Charger les catégories au chargement du composant
     const fetchCategories = async () => {
       try {
-        const { data } = await axios.get<Category[]>(API_URL + '/journal/categories');
-        setCategories(data);
+        const { data } = await axios.get<CategoriesResponse>(API_URL + '/journal/categories');
+        setCategories(data.data);
       } catch (error) {
         console.error('Erreur lors du chargement des catégories:', error);
       }

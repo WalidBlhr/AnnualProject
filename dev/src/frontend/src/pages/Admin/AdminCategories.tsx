@@ -20,13 +20,13 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../../const';
 
-interface Category {
+export interface Category {
   _id: string;
   name: string;
   description?: string;
 }
 
-interface CategoriesResponse {
+export interface CategoriesResponse {
   data: Category[];
   page: number;
   page_size: number;

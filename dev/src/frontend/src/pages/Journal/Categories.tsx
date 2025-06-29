@@ -23,12 +23,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 import {useAuth} from '../../contexts/AuthContext';
 import { API_URL } from '../../const';
-
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-}
+import { CategoriesResponse, Category } from '../Admin/AdminCategories';
 
 const Categories = () => {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -45,8 +40,8 @@ const Categories = () => {
 
   const fetchCategories = async () => {
     try {
-      const { data } = await axios.get<Category[]>(API_URL + '/journal/categories');
-      setCategories(data);
+      const { data } = await axios.get<CategoriesResponse>(API_URL + '/journal/categories');
+      setCategories(data.data);
     } catch (error) {
       showAlert('Erreur lors du chargement des catégories', 'error');
     }
@@ -177,7 +172,7 @@ const Categories = () => {
         ) : (
           <List>
             {categories.map((category, index) => (
-              <React.Fragment key={"f" + category.id}>
+              <React.Fragment key={"f" + category._id}>
                 <ListItem>
                   <ListItemText 
                     primary={category.name} 
@@ -188,14 +183,14 @@ const Categories = () => {
                       <IconButton 
                         edge="end" 
                         aria-label="delete" 
-                        onClick={() => confirmDeleteCategory(category.id)}
+                        onClick={() => confirmDeleteCategory(category._id)}
                       >
                         <DeleteIcon color="error" />
                       </IconButton>
                     </ListItemSecondaryAction>
                   )}
                 </ListItem>
-                {index < categories.length - 1 && <Divider key={"d" + category.id} />}
+                {index < categories.length - 1 && <Divider key={"d" + category._id} />}
               </React.Fragment>
             ))}
           </List>
