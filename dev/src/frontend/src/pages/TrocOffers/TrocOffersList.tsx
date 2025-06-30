@@ -213,7 +213,7 @@ const TrocOffersList: React.FC = () => {
               {trocOffer.image_url && (
                 <Box sx={{ position: 'relative', pt: '56.25%' }}> {/* 16:9 aspect ratio */}
                   <img
-                    src={trocOffer.image_url}
+                    src={API_URL + trocOffer.image_url}
                     alt={trocOffer.title}
                     style={{
                       position: 'absolute',

@@ -28,7 +28,7 @@ export const createTrocOfferHandler = async (req: Request, res: Response) => {
     }
 
     // Ajoutez l'URL de l'image si elle existe avec le port correct
-    const imageUrl = req.file ? `http://localhost:3000/uploads/troc-images/${req.file.filename}` : null;
+    const imageUrl = req.file ? `/uploads/troc-images/${req.file.filename}` : null;
 
     // Créer le TrocOffer avec l'utilisateur et l'image
     const trocOffer = trocOfferRepository.create({ 

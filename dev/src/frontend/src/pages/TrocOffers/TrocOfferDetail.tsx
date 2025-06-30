@@ -164,7 +164,7 @@ const TrocOfferDetail: React.FC = () => {
                 }}
               >
                 <img
-                  src={trocOffer.image_url}
+                  src={API_URL + trocOffer.image_url}
                   alt={trocOffer.title}
                   style={{
                     maxWidth: '100%',
