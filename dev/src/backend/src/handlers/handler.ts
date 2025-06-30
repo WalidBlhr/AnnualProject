@@ -25,6 +25,7 @@ import { createEventHandler, deleteEventHandler, detailedEventHandler, listEvent
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
 import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
 import { bookServiceHandler, cancelServiceBookingHandler, createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
+import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler } from "./user";
 
@@ -1290,4 +1291,8 @@ export const initHandlers = (app: Application) => {
   app.put("/journal/categories/:id", authMiddleware, isAdmin, (req, res, next) => {
     updateCategoryHandler(req, res).catch(next);
   });
+
+  app.post('/tictactoe', authMiddleware, createTicTacToeGame);
+  app.get('/tictactoe', authMiddleware, getTicTacToeGame);
+  app.put('/tictactoe/:id/move', authMiddleware, playTicTacToeMove);
 }

@@ -3,14 +3,21 @@ import {
     Alert,
     Box,
     Button,
+    CircularProgress,
     Container,
+    FormControl,
     Grid,
+    InputLabel,
+    MenuItem,
     Paper,
+    Select,
     Typography,
     useMediaQuery,
     useTheme
 } from '@mui/material';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { createTicTacToeGame, fetchAllUsers, getTicTacToeGame, playTicTacToeMove } from '../../services/api';
 
 type Player = 'X' | 'O' | null;
 
@@ -21,9 +28,64 @@ const TicTacToe: React.FC = () => {
     const [winner, setWinner] = useState<Player>(null);
     const [xScore, setXScore] = useState<number>(0);
     const [oScore, setOScore] = useState<number>(0);
+    const [users, setUsers] = useState<any[]>([]);
+    const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
+    const [opponentId, setOpponentId] = useState<number | null>(null);
+    const [game, setGame] = useState<any>(null);
+    const [loadingGame, setLoadingGame] = useState<boolean>(false);
+    const [error, setError] = useState<string | null>(null);
+    const { user } = useAuth();
     
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+
+    useEffect(() => {
+        const fetchUsersList = async () => {
+            setLoadingUsers(true);
+            try {
+                const allUsers = await fetchAllUsers();
+                setUsers(allUsers.filter((u: any) => u.id !== user?.userId));
+            } catch (e) {
+                setUsers([]);
+            } finally {
+                setLoadingUsers(false);
+            }
+        };
+        fetchUsersList();
+    }, [user]);
+
+    useEffect(() => {
+        if (!opponentId) {
+            setGame(null);
+            setError(null);
+            return;
+        }
+        const fetchOrCreateGame = async () => {
+            setLoadingGame(true);
+            setError(null);
+            try {
+                let g;
+                try {
+                    g = await getTicTacToeGame(opponentId);
+                } catch (err: any) {
+                    if (err.response && err.response.status === 404) {
+                        g = await createTicTacToeGame(opponentId);
+                    } else if (err.response && err.response.data && err.response.data.game) {
+                        g = err.response.data.game;
+                    } else {
+                        throw err;
+                    }
+                }
+                setGame(g);
+            } catch (e: any) {
+                setError('Impossible de charger ou créer la partie.');
+                setGame(null);
+            } finally {
+                setLoadingGame(false);
+            }
+        };
+        fetchOrCreateGame();
+    }, [opponentId]);
 
     const calculateWinner = (squares: Player[]): Player => {
         const lines = [
@@ -40,48 +102,51 @@ const TicTacToe: React.FC = () => {
         return null;
     };
 
-    const handleClick = (index: number) => {
-        if (board[index] || gameOver) return;
-
-        const newBoard = board.slice();
-        newBoard[index] = xIsNext ? 'X' : 'O';
-        setBoard(newBoard);
-        setXIsNext(!xIsNext);
-
-        const newWinner = calculateWinner(newBoard);
-        if (newWinner) {
-            setWinner(newWinner);
-            setGameOver(true);
-            if (newWinner === 'X') {
-                setXScore(prev => prev + 1);
-            } else {
-                setOScore(prev => prev + 1);
-            }
-        } else if (newBoard.every(square => square !== null)) {
-            setGameOver(true);
+    const handlePlay = async (index: number) => {
+        if (!game || game.status !== 'active') return;
+        if (game.board[index] !== '') return;
+        const isPlayerX = user?.userId === game.playerXId;
+        const isPlayerO = user?.userId === game.playerOId;
+        if ((game.nextPlayer === 'X' && !isPlayerX) || (game.nextPlayer === 'O' && !isPlayerO)) return;
+        setLoadingGame(true);
+        setError(null);
+        try {
+            const updated = await playTicTacToeMove(game.id, index);
+            setGame(updated);
+        } catch (e: any) {
+            setError('Erreur lors du coup.');
+        } finally {
+            setLoadingGame(false);
         }
     };
 
-    const resetGame = () => {
-        setBoard(Array(9).fill(null));
-        setXIsNext(true);
-        setGameOver(false);
-        setWinner(null);
-    };
-
-    const resetScores = () => {
-        setXScore(0);
-        setOScore(0);
-        resetGame();
+    const handleNewGame = async () => {
+        if (!opponentId) return;
+        setGame(null);
+        setError(null);
+        setLoadingGame(true);
+        try {
+            const g = await createTicTacToeGame(opponentId);
+            setGame(g);
+        } catch (e: any) {
+            setError('Impossible de créer une nouvelle partie.');
+        } finally {
+            setLoadingGame(false);
+        }
     };
 
     const getStatus = () => {
-        if (winner) {
-            return `Joueur ${winner} a gagné !`;
-        } else if (gameOver) {
-            return 'Match nul !';
+        if (!game) return '';
+        if (game.status === 'finished') {
+            if (game.winner === 'draw') return 'Match nul !';
+            return `Joueur ${game.winner} a gagné !`;
+        }
+        const isPlayerX = user?.userId === game.playerXId;
+        const isPlayerO = user?.userId === game.playerOId;
+        if ((game.nextPlayer === 'X' && isPlayerX) || (game.nextPlayer === 'O' && isPlayerO)) {
+            return 'À vous de jouer !';
         } else {
-            return `Prochain joueur : ${xIsNext ? 'X' : 'O'}`;
+            return "En attente de l'adversaire...";
         }
     };
 
@@ -94,29 +159,29 @@ const TicTacToe: React.FC = () => {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: board[index] || gameOver ? 'default' : 'pointer',
-                backgroundColor: board[index] ? 
-                    (board[index] === 'X' ? 'primary.light' : 'secondary.light') : 
+                cursor: !game || game.status !== 'active' || game.board[index] !== '' || loadingGame ? 'default' : 'pointer',
+                backgroundColor: game && game.board[index] ? 
+                    (game.board[index] === 'X' ? 'primary.light' : 'secondary.light') : 
                     'background.paper',
                 transition: 'all 0.3s ease',
                 '&:hover': {
-                    backgroundColor: board[index] || gameOver ? 
-                        (board[index] === 'X' ? 'primary.light' : 'secondary.light') : 
+                    backgroundColor: game && game.board[index] ? 
+                        (game.board[index] === 'X' ? 'primary.light' : 'secondary.light') : 
                         'action.hover',
-                    transform: board[index] || gameOver ? 'none' : 'scale(1.05)',
+                    transform: game && game.board[index] ? 'none' : 'scale(1.05)',
                 }
             }}
-            onClick={() => handleClick(index)}
+            onClick={() => handlePlay(index)}
         >
             <Typography
                 variant={isMobile ? 'h4' : 'h3'}
                 sx={{
                     fontWeight: 'bold',
-                    color: board[index] === 'X' ? 'primary.main' : 'secondary.main',
+                    color: game && game.board[index] === 'X' ? 'primary.main' : 'secondary.main',
                     textShadow: '2px 2px 4px rgba(0,0,0,0.2)'
                 }}
             >
-                {board[index]}
+                {game ? game.board[index] : ''}
             </Typography>
         </Paper>
     );
@@ -128,60 +193,94 @@ const TicTacToe: React.FC = () => {
                     <EmojiEvents sx={{ mr: 1, color: 'primary.main' }} />
                     Morpion
                 </Typography>
-                
-                {/* Score Board */}
-                <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'center', 
-                    gap: 4, 
-                    mb: 3,
-                    flexWrap: 'wrap'
-                }}>
-                    <Paper elevation={2} sx={{ p: 2, minWidth: '120px' }}>
-                        <Typography variant="h6" color="primary.main">Joueur X</Typography>
-                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{xScore}</Typography>
-                    </Paper>
-                    <Paper elevation={2} sx={{ p: 2, minWidth: '120px' }}>
-                        <Typography variant="h6" color="secondary.main">Joueur O</Typography>
-                        <Typography variant="h4" sx={{ fontWeight: 'bold' }}>{oScore}</Typography>
-                    </Paper>
+
+                {/* Sélection de l'adversaire */}
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
+                    <FormControl sx={{ minWidth: 220 }}>
+                        <InputLabel id="opponent-label">Défier un utilisateur</InputLabel>
+                        <Select
+                            labelId="opponent-label"
+                            value={opponentId ?? ''}
+                            label="Défier un utilisateur"
+                            onChange={e => setOpponentId(Number(e.target.value))}
+                            disabled={loadingUsers || loadingGame}
+                        >
+                            <MenuItem value=""><em>Choisir...</em></MenuItem>
+                            {loadingUsers ? (
+                                <MenuItem value="" disabled>
+                                    <CircularProgress size={20} /> Chargement...
+                                </MenuItem>
+                            ) : (
+                                users.map(u => (
+                                    <MenuItem key={u.id} value={u.id}>
+                                        {u.firstname} {u.lastname} ({u.email})
+                                    </MenuItem>
+                                ))
+                            )}
+                        </Select>
+                    </FormControl>
                 </Box>
 
-                {/* Game Status */}
-                <Alert 
-                    severity={winner ? 'success' : gameOver ? 'info' : 'info'}
-                    sx={{ mb: 3, fontWeight: 'bold' }}
-                >
-                    {getStatus()}
-                </Alert>
+                {/* Affichage des joueurs */}
+                {opponentId && (
+                    <Box sx={{ mb: 2, display: 'flex', justifyContent: 'center', gap: 4 }}>
+                        <Paper elevation={2} sx={{ p: 2, minWidth: '120px', background: '#e3f2fd' }}>
+                            <Typography variant="h6" color="primary.main">Vous ({game && user?.userId === game.playerXId ? 'X' : 'O'})</Typography>
+                            <Typography variant="body1">{user?.firstname} {user?.lastname}</Typography>
+                        </Paper>
+                        <Paper elevation={2} sx={{ p: 2, minWidth: '120px', background: '#fff3e0' }}>
+                            <Typography variant="h6" color="secondary.main">Adversaire ({game && user?.userId === game.playerXId ? 'O' : 'X'})</Typography>
+                            <Typography variant="body1">
+                                {users.find(u => u.id === opponentId)?.firstname} {users.find(u => u.id === opponentId)?.lastname}
+                            </Typography>
+                        </Paper>
+                    </Box>
+                )}
+
+                {/* Statut et erreurs */}
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+                {loadingGame && <Box sx={{ mb: 2 }}><CircularProgress /></Box>}
+                {game && (
+                    <Alert 
+                        severity={game.status === 'finished' ? (game.winner === 'draw' ? 'info' : 'success') : 'info'}
+                        sx={{ mb: 3, fontWeight: 'bold' }}
+                    >
+                        {getStatus()}
+                    </Alert>
+                )}
 
                 {/* Game Board */}
-                <Grid container spacing={1} sx={{ justifyContent: 'center', mb: 3 }}>
-                    {Array(9).fill(null).map((_, index) => (
-                        <Grid item key={index}>
-                            {renderSquare(index)}
-                        </Grid>
-                    ))}
-                </Grid>
+                {game && (
+                    <Grid container spacing={1} sx={{ justifyContent: 'center', mb: 3, width: isMobile ? 246 : 306, margin: '0 auto' }}>
+                        {[0, 1, 2].map(row => (
+                            <Grid container item key={row} spacing={1} justifyContent="center">
+                                {[0, 1, 2].map(col => {
+                                    const index = row * 3 + col;
+                                    return (
+                                        <Grid item key={index}>
+                                            {renderSquare(index)}
+                                        </Grid>
+                                    );
+                                })}
+                            </Grid>
+                        ))}
+                    </Grid>
+                )}
 
                 {/* Action Buttons */}
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-                    <Button
-                        variant="contained"
-                        startIcon={<RestartAlt />}
-                        onClick={resetGame}
-                        size="large"
-                    >
-                        Nouvelle Partie
-                    </Button>
-                    <Button
-                        variant="outlined"
-                        onClick={resetScores}
-                        size="large"
-                    >
-                        Reset Scores
-                    </Button>
-                </Box>
+                {game && (
+                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<RestartAlt />}
+                            onClick={handleNewGame}
+                            size="large"
+                            disabled={loadingGame}
+                        >
+                            Nouvelle Partie
+                        </Button>
+                    </Box>
+                )}
             </Box>
         </Container>
     );
