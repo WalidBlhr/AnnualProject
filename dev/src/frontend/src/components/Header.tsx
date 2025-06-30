@@ -1,13 +1,20 @@
-import React, {useState} from 'react';
-import { 
-    AppBar, Toolbar, Button, Box, Menu, MenuItem, IconButton,
-    useMediaQuery, useTheme, Drawer, List, ListItem, ListItemText,
-} from '@mui/material';
-import {Link, useNavigate} from 'react-router-dom';
-import logo from '../assets/logo.svg';
-import MenuIcon from '@mui/icons-material/Menu';
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import {useAuth} from '../contexts/AuthContext';
+import MenuIcon from '@mui/icons-material/Menu';
+import {
+    AppBar,
+    Box,
+    Button,
+    Drawer,
+    IconButton,
+    List, ListItem, ListItemText,
+    Menu, MenuItem,
+    Toolbar,
+    useMediaQuery, useTheme,
+} from '@mui/material';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import logo from '../assets/logo.svg';
+import { useAuth } from '../contexts/AuthContext';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
@@ -118,14 +125,23 @@ const Header: React.FC = () => {
                         <Button color="inherit" component={Link} to="/messages">
                             Messages
                         </Button>
+                        
+                        <Button color="inherit" component={Link} to="/mini-games">
+                            Mini Jeux
+                        </Button>
                     </>
                 )}
                 
                 {/* Public journal access - accessible even when not logged in */}
                 {!token && (
-                    <Button color="inherit" component={Link} to="/journal">
-                        Journal
-                    </Button>
+                    <>
+                        <Button color="inherit" component={Link} to="/journal">
+                            Journal
+                        </Button>
+                        <Button color="inherit" component={Link} to="/mini-games">
+                            Mini Jeux
+                        </Button>
+                    </>
                 )}
             </Box>
             
@@ -201,6 +217,9 @@ const Header: React.FC = () => {
                     <ListItem button component={Link} to="/messages" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Messages" />
                     </ListItem>
+                    <ListItem button component={Link} to="/mini-games" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Mini Jeux" />
+                    </ListItem>
                     {userIsAdmin && (
                         <ListItem button component={Link} to="/admin" onClick={() => setDrawerOpen(false)}>
                             <ListItemText primary="Administration" />
@@ -215,6 +234,9 @@ const Header: React.FC = () => {
                     {/* Public journal access in mobile menu */}
                     <ListItem button component={Link} to="/journal" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Journal" />
+                    </ListItem>
+                    <ListItem button component={Link} to="/mini-games" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Mini Jeux" />
                     </ListItem>
                     <ListItem button component={Link} to="/login" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Connexion" />
