@@ -90,7 +90,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: quartissimo-frontend
     ports:
-      - "80:3000"
+      - "8182:3000"
     depends_on:
       - backend
     environment:
