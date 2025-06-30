@@ -32,6 +32,7 @@ import Login from './pages/Login';
 import Conversation from './pages/Messages/Conversation';
 import Messages from './pages/Messages/Messages';
 import NewMessage from './pages/Messages/NewMessage';
+import MiniGames from './pages/MiniGames/MiniGames';
 import ServiceDetail from './pages/Services/ServiceDetail';
 import ServicesList from './pages/Services/ServicesList';
 import Signup from './pages/Signup';
@@ -63,6 +64,7 @@ const App: React.FC = () => {
                                     <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
                                     <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
                                     <Route path="/new-message" element={<NewMessage />} />
+                                    <Route path="/mini-games" element={<MiniGames />} />
                                     <Route 
                                         path="/admin" 
                                         element={
