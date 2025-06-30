@@ -70,3 +70,4 @@ services:
 volumes:
   postgres_data:
   mongo_data:
+

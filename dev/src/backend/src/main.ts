@@ -23,14 +23,14 @@ const app = async () => {
     // Configurer Socket.io avec gestion CORS
     const io = new Server(server, {
         cors: {
-            origin: 'http://localhost',
+            origin: '*',
             methods: ['GET', 'POST'],
             credentials: true
         }
     });
 
     app.use(cors({
-        origin: 'http://localhost',
+        origin: '*',
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization']
@@ -158,8 +158,8 @@ const app = async () => {
     });
 
     // Remplacez app.listen par server.listen
-    server.listen(port, () => {
-        console.log(`Server running on http://localhost:${port}`);
+    server.listen(port, "0.0.0.0", () => {
+        console.log(`Server running on http://localhost:${port}`)
         swaggerDocs(app, port);
 
         // Planifier la vérification des statuts des événements (toutes les heures)
