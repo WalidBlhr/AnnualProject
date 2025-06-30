@@ -1,16 +1,16 @@
-import express from "express"
 import cors from "cors"
-import {initHandlers} from "./handlers/handler"
-import {AppDataSource} from "./db/database"
-import {swaggerDocs} from "./handlers/swagger/swagger"
-import path from 'path';
-import {checkEventStatus} from './jobs/eventStatusChecker';
-import {createServer} from 'http';
-import {Server} from 'socket.io';
-import jwt from 'jsonwebtoken';
-import {User} from "./db/models/user";
-import {connectMongoDB} from "./db/mongodb"; // Import MongoDB connection
-import {Message} from "./db/models/message"
+import express from "express"
+import { createServer } from 'http'
+import jwt from 'jsonwebtoken'
+import path from 'path'
+import { Server } from 'socket.io'
+import { AppDataSource } from "./db/database"
+import { Message } from "./db/models/message"
+import { User } from "./db/models/user"
+import { connectMongoDB } from "./db/mongodb"; // Import MongoDB connection
+import { initHandlers } from "./handlers/handler"
+import { swaggerDocs } from "./handlers/swagger/swagger"
+import { checkEventStatus } from './jobs/eventStatusChecker'
 
 const app = async () => {
     const app = express()

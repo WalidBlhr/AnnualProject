@@ -1,32 +1,32 @@
 import { Application, Request, Response } from "express";
-import { createUser, login, logout, refresh } from "./auth";
-import { authMiddleware, isOwnerOrAdmin, isAdmin } from "../middleware/auth";
 import { upload } from '../config/multer';
+import { authMiddleware, isAdmin, isOwnerOrAdmin } from "../middleware/auth";
+import { createUser, login, logout, refresh } from "./auth";
 
-import { deleteUserHandler, detailedUserHandler, listUserHandler, updateUserHandler, getUserStatusHandler } from "./user";
-import { bookServiceHandler, createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, cancelServiceBookingHandler } from "./service";
-import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
-import { createMessageHandler, deleteMessageHandler, listMessageHandler, detailedMessageHandler, updateMessageHandler } from "./message";
+import {
+    addTrustedContactHandler,
+    createAbsenceHandler,
+    deleteAbsenceHandler,
+    detailedAbsenceHandler,
+    listAbsencesHandler,
+    listTrustedContactsHandler,
+    removeTrustedContactHandler,
+    updateAbsenceHandler
+} from "./absence";
+import {
+    createArticleHandler,
+    deleteArticleHandler,
+    getArticleHandler,
+    listArticlesHandler,
+    updateArticleHandler
+} from './article';
+import { createCategoryHandler, deleteCategoryHandler, listCategoriesHandler, updateCategoryHandler } from "./category";
 import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
-import {
-  createAbsenceHandler,
-  listAbsencesHandler,
-  detailedAbsenceHandler,
-  updateAbsenceHandler,
-  deleteAbsenceHandler,
-  addTrustedContactHandler,
-  removeTrustedContactHandler,
-  listTrustedContactsHandler
-} from "./absence";
-import { 
-    createArticleHandler, 
-    listArticlesHandler, 
-    getArticleHandler, 
-    updateArticleHandler, 
-    deleteArticleHandler 
-} from './article';
-import { createCategoryHandler, listCategoriesHandler, deleteCategoryHandler } from "./category";
+import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
+import { bookServiceHandler, cancelServiceBookingHandler, createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
+import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
+import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler } from "./user";
 
 export const initHandlers = (app: Application) => {
   // Commencez par les routes statiques
@@ -1256,5 +1256,38 @@ export const initHandlers = (app: Application) => {
    */
   app.delete("/journal/categories/:id", authMiddleware, isAdmin, (req, res, next) => {
     deleteCategoryHandler(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /journal/categories/{id}:
+   *   put:
+   *     tags:
+   *       - Journal
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Update a category
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: string
+   *         required: true
+   *     requestBody:
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               description:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Category updated successfully
+   */
+  app.put("/journal/categories/:id", authMiddleware, isAdmin, (req, res, next) => {
+    updateCategoryHandler(req, res).catch(next);
   });
 }

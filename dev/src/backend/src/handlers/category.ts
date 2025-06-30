@@ -1,9 +1,15 @@
 import { Request, Response } from "express";
-import { Category, ICategory } from "../db/models/category";
 import Joi from "joi";
+import { Category } from "../db/models/category";
 
 // Validation schemas
 const CreateCategoryValidation = Joi.object({
+  name: Joi.string().required(),
+  description: Joi.string().allow('', null)
+});
+
+// Validation pour la modification
+const UpdateCategoryValidation = Joi.object({
   name: Joi.string().required(),
   description: Joi.string().allow('', null)
 });
@@ -78,6 +84,29 @@ export const deleteCategoryHandler = async (req: Request, res: Response) => {
     
     await Category.findByIdAndDelete(id);
     res.status(200).send({ message: "Category deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+};
+
+// Update category handler
+export const updateCategoryHandler = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const validation = UpdateCategoryValidation.validate(req.body);
+    if (validation.error) {
+      return res.status(400).send({ message: validation.error.details[0].message });
+    }
+    const { name, description } = validation.value;
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).send({ message: "Category not found" });
+    }
+    category.name = name;
+    category.description = description;
+    await category.save();
+    res.status(200).send(category);
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: "Internal server error" });

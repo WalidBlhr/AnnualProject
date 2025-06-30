@@ -1,23 +1,23 @@
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import {
-    Alert,
-    Button,
-    Container,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    IconButton,
-    MenuItem,
-    Paper,
-    Select,
-    Snackbar,
-    Table, TableBody, TableCell, TableContainer, TableHead,
-    TablePagination,
-    TableRow,
-    TextField,
-    Typography
+  Alert,
+  Button,
+  Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  IconButton,
+  MenuItem,
+  Paper,
+  Select,
+  Snackbar,
+  Table, TableBody, TableCell, TableContainer, TableHead,
+  TablePagination,
+  TableRow,
+  TextField,
+  Typography
 } from '@mui/material';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
@@ -87,7 +87,13 @@ const AdminTrocs: React.FC = () => {
   const handleEditSubmit = async () => {
     if (!editingTroc) return;
     try {
-      await axios.put(`${API_URL}/trocoffers/${editingTroc.id}`, editFormData, {
+      const body = {
+        id: editingTroc.id,
+        title: editFormData.title,
+        description: editFormData.description,
+        status: editFormData.status,
+      };
+      await axios.put(`${API_URL}/trocoffers/${editingTroc.id}`, body, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
       showAlert('Offre de troc modifiée avec succès', 'success');
