@@ -27,19 +27,17 @@ export interface UserId {
 
 // UPDATE - PUT
 export interface UpdateUserRequest {
-    id: number
-    lastname: string
-    firstname: string
-    email: string
-    role: number
+    lastname?: string
+    firstname?: string
+    email?: string
+    role?: number
 }
 
 export const UserUpdateValidation = Joi.object<UpdateUserRequest>({
-    id: Joi.number().required(),
-    lastname: Joi.string().required().min(1).max(50),
-    firstname: Joi.string().required().min(1).max(50),
-    email: Joi.string().email().required(),
-    role: Joi.number().required().min(0).max(1),
+    lastname: Joi.string().optional().min(1).max(50),
+    firstname: Joi.string().optional().min(1).max(50),
+    email: Joi.string().email().optional(),
+    role: Joi.number().optional().min(0).max(1),
 })
 
 export const UserIdsQueryValidation = Joi.object({

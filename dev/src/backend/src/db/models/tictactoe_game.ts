@@ -14,13 +14,13 @@ export class TicTacToeGame {
     @Column('simple-array')
     board!: string[]; // 9 cases, valeurs: '', 'X', 'O'
 
-    @Column()
+    @Column({ type: 'varchar' })
     nextPlayer!: 'X' | 'O';
 
-    @Column({ default: 'active' })
+    @Column({ type: 'varchar', default: 'active' })
     status!: 'active' | 'finished';
 
-    @Column({ nullable: true })
+    @Column({ type: 'varchar', nullable: true })
     winner!: 'X' | 'O' | 'draw' | null;
 
     @CreateDateColumn()

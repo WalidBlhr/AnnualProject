@@ -1,7 +1,10 @@
 import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import MenuIcon from '@mui/icons-material/Menu';
+import PersonIcon from '@mui/icons-material/Person';
+import LogoutIcon from '@mui/icons-material/Logout';
 import {
     AppBar,
+    Avatar,
     Box,
     Button,
     Drawer,
@@ -20,14 +23,20 @@ const Header: React.FC = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
     const userIsAdmin = useAuth().isAdmin();
+    const { user, logout } = useAuth();
     const theme = useTheme();
-    const {logout} = useAuth();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [eventsAnchorEl, setEventsAnchorEl] = useState<null | HTMLElement>(null);
     const [servicesAnchorEl, setServicesAnchorEl] = useState<null | HTMLElement>(null);
     const [journalAnchorEl, setJournalAnchorEl] = useState<null | HTMLElement>(null);
+    const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
+
+    const getInitials = () => {
+        if (!user) return '?';
+        return `${user.firstname.charAt(0)}${user.lastname.charAt(0)}`.toUpperCase();
+    };
 
     const handleLogout = async () => {
         await logout();
@@ -153,9 +162,114 @@ const Header: React.FC = () => {
                                 Administration
                             </Button>
                         )}
-                        <Button color="inherit" onClick={handleLogout}>
-                            Déconnexion
-                        </Button>
+                        
+                        {/* Profile dropdown */}
+                        <IconButton
+                            onClick={(e) => setProfileAnchorEl(e.currentTarget)}
+                            sx={{ 
+                                ml: 2,
+                                p: 0,
+                                '&:hover': {
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
+                        >
+                            <Avatar
+                                sx={{
+                                    width: 40,
+                                    height: 40,
+                                    bgcolor: 'secondary.main',
+                                    fontSize: '1rem',
+                                    fontWeight: 'bold',
+                                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                                    transition: 'all 0.2s ease-in-out',
+                                    '&:hover': {
+                                        transform: 'scale(1.05)',
+                                        border: '2px solid rgba(255, 255, 255, 0.4)',
+                                    }
+                                }}
+                            >
+                                {getInitials()}
+                            </Avatar>
+                        </IconButton>
+                        <Menu
+                            anchorEl={profileAnchorEl}
+                            open={Boolean(profileAnchorEl)}
+                            onClose={() => setProfileAnchorEl(null)}
+                            anchorOrigin={{
+                                vertical: 'bottom',
+                                horizontal: 'right',
+                            }}
+                            transformOrigin={{
+                                vertical: 'top',
+                                horizontal: 'right',
+                            }}
+                            sx={{
+                                mt: 1,
+                                '& .MuiPaper-root': {
+                                    backgroundColor: 'background.paper',
+                                    borderRadius: '12px',
+                                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                                    border: '1px solid rgba(0, 0, 0, 0.05)',
+                                    minWidth: 200,
+                                },
+                            }}
+                        >
+                            {/* User info header */}
+                            <Box sx={{ px: 2, py: 1.5, borderBottom: '1px solid rgba(0, 0, 0, 0.08)' }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                    <Avatar
+                                        sx={{
+                                            width: 24,
+                                            height: 24,
+                                            bgcolor: 'secondary.main',
+                                            fontSize: '0.75rem',
+                                            mr: 1
+                                        }}
+                                    >
+                                        {getInitials()}
+                                    </Avatar>
+                                    <Box sx={{ fontSize: '0.875rem', fontWeight: 'medium', color: 'text.primary' }}>
+                                        {user?.firstname} {user?.lastname}
+                                    </Box>
+                                </Box>
+                                <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                    {user?.email}
+                                </Box>
+                            </Box>
+                            
+                            <MenuItem 
+                                component={Link} 
+                                to="/profile" 
+                                onClick={() => setProfileAnchorEl(null)}
+                                sx={{
+                                    py: 1.5,
+                                    px: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(233, 79, 55, 0.08)',
+                                    }
+                                }}
+                            >
+                                <PersonIcon sx={{ mr: 2, color: 'secondary.main' }} />
+                                Mon Profil
+                            </MenuItem>
+                            <MenuItem 
+                                onClick={() => { 
+                                    handleLogout(); 
+                                    setProfileAnchorEl(null); 
+                                }}
+                                sx={{
+                                    py: 1.5,
+                                    px: 2,
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(233, 79, 55, 0.08)',
+                                    }
+                                }}
+                            >
+                                <LogoutIcon sx={{ mr: 2, color: 'secondary.main' }} />
+                                Déconnexion
+                            </MenuItem>
+                        </Menu>
                     </>
                 ) : (
                     <>
@@ -225,6 +339,9 @@ const Header: React.FC = () => {
                             <ListItemText primary="Administration" />
                         </ListItem>
                     )}
+                    <ListItem button component={Link} to="/profile" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Mon Profil" />
+                    </ListItem>
                     <ListItem button onClick={() => { handleLogout(); setDrawerOpen(false); }}>
                         <ListItemText primary="Déconnexion" />
                     </ListItem>

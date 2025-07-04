@@ -82,35 +82,45 @@ export const detailedUserHandler = async (req: Request, res: Response) => {
 // UPDATE - PUT /users/:id
 export const updateUserHandler = async (req: Request, res: Response) => {
   try {
-        const validation = UserUpdateValidation.validate({ ...req.params, ...req.body })
-        if (validation.error) {
-            res.status(400).send(generateValidationErrorMessage(validation.error.details))
+        // Validation de l'ID depuis les paramètres
+        const idValidation = UserIdValidation.validate(req.params);
+        if (idValidation.error) {
+            res.status(400).send(generateValidationErrorMessage(idValidation.error.details))
             return
         }
 
-        const updateUser = validation.value
+        // Validation du body pour les champs à mettre à jour
+        const bodyValidation = UserUpdateValidation.validate(req.body);
+        if (bodyValidation.error) {
+            res.status(400).send(generateValidationErrorMessage(bodyValidation.error.details))
+            return
+        }
+
+        const userId = idValidation.value.id;
+        const updateData = bodyValidation.value;
+        
         const userRepository = AppDataSource.getRepository(User)
-        const userFound = await userRepository.findOneBy({ id: updateUser.id })
+        const userFound = await userRepository.findOneBy({ id: userId })
         if (userFound === null) {
-            res.status(404).send({ "error": `user ${updateUser.id} not found` })
+            res.status(404).send({ "error": `user ${userId} not found` })
             return
         }
 
-        if (updateUser.lastname) {
-            userFound.lastname = updateUser.lastname
+        // Mise à jour des champs seulement s'ils sont fournis
+        if (updateData.lastname !== undefined) {
+            userFound.lastname = updateData.lastname
         }
 
-        if (updateUser.firstname) {
-            userFound.firstname = updateUser.firstname
+        if (updateData.firstname !== undefined) {
+            userFound.firstname = updateData.firstname
         }
 
-        if (updateUser.email) {
-            userFound.email = updateUser.email
+        if (updateData.email !== undefined) {
+            userFound.email = updateData.email
         }
 
-        // Modification ici : vérifier si la propriété existe plutôt que sa valeur
-        if (updateUser.role !== undefined) {
-            userFound.role = updateUser.role
+        if (updateData.role !== undefined) {
+            userFound.role = updateData.role
         }   
 
         const userUpdate = await userRepository.save(userFound)
