@@ -18,12 +18,15 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import logo from '../assets/logo.svg';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
+import NotificationBell from './NotificationBell';
 
 const Header: React.FC = () => {
     const navigate = useNavigate();
     const token = localStorage.getItem('token');
     const userIsAdmin = useAuth().isAdmin();
     const { user, logout } = useAuth();
+    const { addNotification } = useNotifications();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     
@@ -36,6 +39,19 @@ const Header: React.FC = () => {
     const getInitials = () => {
         if (!user) return '?';
         return `${user.firstname.charAt(0)}${user.lastname.charAt(0)}`.toUpperCase();
+    };
+
+    // Fonction de test pour ajouter des notifications (temporaire)
+    const addTestNotification = () => {
+        const types = ['message', 'event', 'troc', 'service'] as const;
+        const randomType = types[Math.floor(Math.random() * types.length)];
+        
+        addNotification({
+            type: randomType,
+            title: `Test ${randomType}`,
+            message: `Ceci est une notification de test pour ${randomType}`,
+            isRead: false
+        });
     };
 
     const handleLogout = async () => {
@@ -158,10 +174,23 @@ const Header: React.FC = () => {
                 {token ? (
                     <>
                         {userIsAdmin && (
-                            <Button color="inherit" component={Link} to="/admin">
-                                Administration
-                            </Button>
+                            <>
+                                <Button color="inherit" component={Link} to="/admin">
+                                    Administration
+                                </Button>
+                                {/* Bouton de test temporaire pour les notifications */}
+                                <Button 
+                                    color="inherit" 
+                                    onClick={addTestNotification}
+                                    sx={{ fontSize: '0.8rem' }}
+                                >
+                                    Test Notif
+                                </Button>
+                            </>
                         )}
+                        
+                        {/* Notifications Bell */}
+                        <NotificationBell />
                         
                         {/* Profile dropdown */}
                         <IconButton

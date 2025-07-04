@@ -34,7 +34,7 @@ export const MessageIdValidation = Joi.object<MessageId>({
  */
 export interface CreateMessageRequest {
   content: string;
-  date_sent: Date;
+  date_sent: string; // ISO string depuis le frontend
   senderId: number;   // liaison vers l'user (sender)
   receiverId: number; // liaison vers l'user (receiver)
   status: string;     // "lu", "non_lu", ou autre
@@ -42,7 +42,7 @@ export interface CreateMessageRequest {
 
 export const createMessageValidation = Joi.object<CreateMessageRequest>({
   content: Joi.string().required(),
-  date_sent: Joi.date().required(),
+  date_sent: Joi.string().isoDate().required(), // Accepter les strings ISO
   senderId: Joi.number().required(),
   receiverId: Joi.number().required(),
   status: Joi.string().valid("lu", "non_lu", "read", "unread").default("non_lu"),

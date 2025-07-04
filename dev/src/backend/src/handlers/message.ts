@@ -19,19 +19,27 @@ interface DecodedToken {
  */
 export const createMessageHandler = async (req: Request, res: Response) => {
   try {
+      console.log('Données reçues pour créer un message:', req.body);
+      
       const validation = createMessageValidation.validate(req.body);
       if (validation.error) {
+          console.log('Erreur de validation:', validation.error.details);
           res.status(400).send(generateValidationErrorMessage(validation.error.details))
           return
       }
 
       const createMessageRequest = validation.value
+      console.log('Données validées:', createMessageRequest);
+      
       const messageRepository = AppDataSource.getRepository(Message)
       const userRepository = AppDataSource.getRepository(User)
 
       // Chercher l'expéditeur et le destinataire
       const sender = await userRepository.findOneBy({ id: createMessageRequest.senderId })
       const receiver = await userRepository.findOneBy({ id: createMessageRequest.receiverId })
+
+      console.log('Sender trouvé:', sender ? `${sender.firstname} ${sender.lastname}` : 'null');
+      console.log('Receiver trouvé:', receiver ? `${receiver.firstname} ${receiver.lastname}` : 'null');
 
       if (!sender || !receiver) {
           res.status(400).send({ "message": "Expéditeur ou destinataire non trouvé" })
@@ -41,11 +49,15 @@ export const createMessageHandler = async (req: Request, res: Response) => {
       // Créer le message avec les relations
       const message = messageRepository.create({ 
           ...createMessageRequest,
+          date_sent: new Date(createMessageRequest.date_sent), // Convertir explicitement
           sender: sender,
           receiver: receiver
       })
       
+      console.log('Message créé (avant save):', message);
+      
       const messageCreated = await messageRepository.save(message)
+      console.log('Message sauvegardé:', messageCreated);
 
       // Recharger le message avec toutes les relations pour la réponse
       const messageWithRelations = await messageRepository.findOne({
@@ -56,8 +68,11 @@ export const createMessageHandler = async (req: Request, res: Response) => {
           }
       })
 
+      console.log('Message avec relations:', messageWithRelations);
+      
       res.status(201).send(messageWithRelations)
   } catch (error) {
+      console.error('Erreur dans createMessageHandler:', error);
       if (error instanceof Error) {
           console.log(`Internal error: ${error.message}`)
       }

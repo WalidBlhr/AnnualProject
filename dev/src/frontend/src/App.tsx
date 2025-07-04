@@ -8,6 +8,7 @@ import Header from './components/Header';
 import ProtectedRoute from './components/ProtectedRoute';
 import theme from './components/ui/theme';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import { SocketProvider } from './contexts/SocketContext';
 import Absences from './pages/Absences/Absences';
 import AdminArticles from './pages/Admin/AdminArticles';
@@ -46,7 +47,8 @@ const App: React.FC = () => {
         <ThemeProvider theme={theme}>
             <Router>
                 <AuthProvider>
-                    <SocketProvider>
+                    <NotificationProvider>
+                        <SocketProvider>
                         <Box sx={{display: 'flex', flexDirection: 'column', minHeight: '100vh'}}>
                             <Header />
                             <Box sx={{flex: 1}}>
@@ -145,6 +147,7 @@ const App: React.FC = () => {
                             <Footer />
                         </Box>
                     </SocketProvider>
+                    </NotificationProvider>
                 </AuthProvider>
             </Router>
         </ThemeProvider>
