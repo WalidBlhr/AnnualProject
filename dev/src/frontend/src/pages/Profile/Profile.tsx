@@ -81,13 +81,19 @@ const Profile: React.FC = () => {
     setLoading(true);
     try {
       const token = localStorage.getItem('token');
-      await axios.put(
+      console.log('Sending update request for user:', user.userId);
+      console.log('Data to send:', {
+        firstname: profileData.firstname,
+        lastname: profileData.lastname,
+        email: profileData.email
+      });
+      
+      const response = await axios.put(
         `${API_URL}/users/${user.userId}`,
         {
           firstname: profileData.firstname,
           lastname: profileData.lastname,
-          email: profileData.email,
-          role: user.role // On garde le rôle existant
+          email: profileData.email
         },
         {
           headers: {
@@ -95,6 +101,8 @@ const Profile: React.FC = () => {
           },
         }
       );
+      
+      console.log('Update response:', response.data);
       
       setAlert({
         open: true,
@@ -110,10 +118,11 @@ const Profile: React.FC = () => {
       }, 2000);
       
     } catch (error: any) {
-      console.error('Erreur lors de la mise à jour:', error.response?.data || error.message);
+      console.error('Erreur lors de la mise à jour:', error);
+      console.error('Error response:', error.response?.data);
       setAlert({
         open: true,
-        message: error.response?.data?.error || 'Erreur lors de la mise à jour du profil',
+        message: error.response?.data?.message || error.response?.data?.error || 'Erreur lors de la mise à jour du profil',
         severity: 'error'
       });
     } finally {
