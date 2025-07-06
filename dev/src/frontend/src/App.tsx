@@ -19,6 +19,8 @@ import AdminMessages from './pages/Admin/AdminMessages';
 import AdminServices from './pages/Admin/AdminServices';
 import AdminTrocs from './pages/Admin/AdminTrocs';
 import AdminUsers from './pages/Admin/AdminUsers';
+import ForgotPassword from './pages/Auth/ForgotPassword';
+import ResetPassword from './pages/Auth/ResetPassword';
 import CommunityEvents from './pages/Events/CommunityEvents';
 import CreateEvent from './pages/Events/CreateEvent';
 import EventDetail from './pages/Events/EventDetail';
@@ -56,6 +58,8 @@ const App: React.FC = () => {
                                     <Route path="/" element={<Home />} />
                                     <Route path="/login" element={<Login />} />
                                     <Route path="/signup" element={<Signup />} />
+                                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                                    <Route path="/reset-password" element={<ResetPassword />} />
                                     <Route path="/trocs" element={<TrocOffersList />} />
                                     <Route path="/trocs/:id" element={<TrocOfferDetail />} />
                                     <Route path="trocs/:trocId/messages/:userId" element={<Conversation />} />

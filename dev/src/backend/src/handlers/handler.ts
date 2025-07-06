@@ -2,6 +2,7 @@ import { Application, Request, Response } from "express";
 import { upload } from '../config/multer';
 import { authMiddleware, isAdmin, isOwnerOrAdmin } from "../middleware/auth";
 import { createUser, login, logout, refresh } from "./auth";
+import { forgotPasswordHandler, resetPasswordHandler, verifyResetTokenHandler } from "./password-reset";
 
 import {
     addTrustedContactHandler,
@@ -93,6 +94,90 @@ export const initHandlers = (app: Application) => {
    *         description: Erreur interne
    */
   app.post("/auth/login", login);
+
+  /**
+   * @openapi
+   * /auth/forgot-password:
+   *   post:
+   *     tags:
+   *       - Auth
+   *     summary: Demande de réinitialisation du mot de passe
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               email:
+   *                 type: string
+   *                 format: email
+   *             required:
+   *               - email
+   *     responses:
+   *       200:
+   *         description: Email de réinitialisation envoyé
+   *       400:
+   *         description: Email invalide
+   *       500:
+   *         description: Erreur interne
+   */
+  app.post("/auth/forgot-password", forgotPasswordHandler);
+
+  /**
+   * @openapi
+   * /auth/verify-reset-token/{token}:
+   *   get:
+   *     tags:
+   *       - Auth
+   *     summary: Vérifier la validité d'un token de réinitialisation
+   *     parameters:
+   *       - in: path
+   *         name: token
+   *         required: true
+   *         schema:
+   *           type: string
+   *     responses:
+   *       200:
+   *         description: Token valide
+   *       400:
+   *         description: Token invalide ou expiré
+   *       500:
+   *         description: Erreur interne
+   */
+  app.get("/auth/verify-reset-token/:token", verifyResetTokenHandler);
+
+  /**
+   * @openapi
+   * /auth/reset-password:
+   *   post:
+   *     tags:
+   *       - Auth
+   *     summary: Réinitialiser le mot de passe
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               token:
+   *                 type: string
+   *               password:
+   *                 type: string
+   *                 minLength: 6
+   *             required:
+   *               - token
+   *               - password
+   *     responses:
+   *       200:
+   *         description: Mot de passe réinitialisé avec succès
+   *       400:
+   *         description: Token invalide ou mot de passe invalide
+   *       500:
+   *         description: Erreur interne
+   */
+  app.post("/auth/reset-password", resetPasswordHandler);
 
   /**
    * @openapi

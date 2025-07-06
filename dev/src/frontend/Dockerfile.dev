@@ -7,17 +7,11 @@ RUN npm install
 
 COPY . .
 
-# Build the app for production
-RUN npm run build
-
-# Install serve to run the production build
-RUN npm install -g serve
-
 # Exposer le port pour le développement
 EXPOSE 3000
 
+# Activer le hot-reload
 ENV CHOKIDAR_USEPOLLING=true
 ENV WATCHPACK_POLLING=true
 
-# Run the production build with serve
-CMD ["serve", "-s", "build", "-l", "3000"]
+CMD ["npm", "start"]

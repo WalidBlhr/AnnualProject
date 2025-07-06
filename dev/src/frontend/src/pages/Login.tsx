@@ -1,6 +1,6 @@
 import React, {useState} from 'react';
-import {TextField, Button, Container, Typography, Alert} from '@mui/material';
-import {useNavigate} from 'react-router-dom';
+import {TextField, Button, Container, Typography, Alert, Box, Link} from '@mui/material';
+import {useNavigate, Link as RouterLink} from 'react-router-dom';
 import {io} from "socket.io-client";
 import {useAuth} from '../contexts/AuthContext';
 import {API_URL} from '../const';
@@ -75,6 +75,12 @@ const Login: React.FC = () => {
                 >
                     Se connecter
                 </Button>
+                
+                <Box sx={{ textAlign: 'center' }}>
+                    <Link component={RouterLink} to="/forgot-password" variant="body2">
+                        Mot de passe oublié ?
+                    </Link>
+                </Box>
             </form>
         </Container>
     );
