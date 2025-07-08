@@ -12,6 +12,7 @@ import {
     listAbsencesHandler,
     listTrustedContactsHandler,
     removeTrustedContactHandler,
+    respondToAbsenceHandler,
     updateAbsenceHandler
 } from "./absence";
 import {
@@ -1035,6 +1036,39 @@ export const initHandlers = (app: Application) => {
    *         description: Absence mise à jour
    */
   app.put("/absences/:id", authMiddleware, updateAbsenceHandler);
+
+  /**
+   * @openapi
+   * /absences/{id}/response:
+   *   put:
+   *     tags:
+   *       - Absences
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Répondre à une demande de surveillance
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: number
+   *         required: true
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               status:
+   *                 type: string
+   *                 enum: [accepted, refused]
+   *               response_notes:
+   *                 type: string
+   *     responses:
+   *       200:
+   *         description: Réponse enregistrée avec succès
+   */
+  app.put("/absences/:id/response", authMiddleware, respondToAbsenceHandler);
 
   /**
    * @openapi

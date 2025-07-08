@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { AppDataSource } from "../db/database";
 import { Absence } from "../db/models/absence";
+import { AbsenceResponse } from "../db/models/absence-response";
 import { User } from "../db/models/user";
 import { 
   AbsenceIdValidation, 
@@ -38,6 +39,7 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
     
     const userRepository = AppDataSource.getRepository(User);
     const absenceRepository = AppDataSource.getRepository(Absence);
+    const responseRepository = AppDataSource.getRepository(AbsenceResponse);
     const messageRepository = AppDataSource.getRepository(Message);
 
     // Vérifier que l'utilisateur existe
@@ -68,6 +70,7 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
       new Date(end_date),
       notes || '',
       'pending',
+      [],
       []
     );
 
@@ -75,9 +78,20 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
     if (trusted_contact_ids && trusted_contact_ids.length > 0) {
       const trustedUsers = await userRepository.findBy({ id: In(trusted_contact_ids) });
       absence.trusted_contacts = trustedUsers;
+    }
+    
+    const absenceCreated = await absenceRepository.save(absence);
+
+    // Créer les réponses individuelles pour chaque contact de confiance
+    if (trusted_contact_ids && trusted_contact_ids.length > 0) {
+      const trustedUsers = await userRepository.findBy({ id: In(trusted_contact_ids) });
       
-      // Envoyer une notification à chaque contact de confiance
       for (const trustedUser of trustedUsers) {
+        // Créer une réponse individuelle pour chaque contact
+        const response = new AbsenceResponse(absenceCreated, trustedUser, 'pending', '');
+        await responseRepository.save(response);
+
+        // Envoyer une notification à chaque contact de confiance
         const newMessage = messageRepository.create({
           content: `${user.firstname} ${user.lastname} vous a désigné comme contact de confiance pendant son absence du ${formatDate(start_date)} au ${formatDate(end_date)}.`,
           date_sent: new Date(),
@@ -89,12 +103,10 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
       }
     }
     
-    const absenceCreated = await absenceRepository.save(absence);
-    
     // Récupérer l'absence avec ses relations pour la réponse
     const absenceWithRelations = await absenceRepository.findOne({
       where: { id: absenceCreated.id },
-      relations: ['user', 'trusted_contacts']
+      relations: ['user', 'trusted_contacts', 'responses', 'responses.contact']
     });
     
     res.status(201).send(absenceWithRelations);
@@ -122,6 +134,8 @@ export const listAbsencesHandler = async (req: Request, res: Response) => {
     const query = AppDataSource.createQueryBuilder(Absence, 'absence')
       .leftJoinAndSelect('absence.user', 'user')
       .leftJoinAndSelect('absence.trusted_contacts', 'trusted_contacts')
+      .leftJoinAndSelect('absence.responses', 'responses')
+      .leftJoinAndSelect('responses.contact', 'contact')
       .select([
         'absence',
         'user.id',
@@ -129,7 +143,14 @@ export const listAbsencesHandler = async (req: Request, res: Response) => {
         'user.lastname',
         'trusted_contacts.id',
         'trusted_contacts.firstname',
-        'trusted_contacts.lastname'
+        'trusted_contacts.lastname',
+        'responses.id',
+        'responses.status',
+        'responses.responded_at',
+        'responses.response_notes',
+        'contact.id',
+        'contact.firstname',
+        'contact.lastname'
       ]);
 
     // Appliquer les filtres
@@ -183,7 +204,7 @@ export const detailedAbsenceHandler = async (req: Request, res: Response) => {
     const absenceRepository = AppDataSource.getRepository(Absence);
     const absence = await absenceRepository.findOne({
       where: { id: getAbsenceRequest.id },
-      relations: ['user', 'trusted_contacts']
+      relations: ['user', 'trusted_contacts', 'responses', 'responses.contact']
     });
     
     if (absence === null) {
@@ -197,6 +218,150 @@ export const detailedAbsenceHandler = async (req: Request, res: Response) => {
       console.log(`Internal error: ${error.message}`);
     }
     res.status(500).send({ message: "internal error" });
+  }
+};
+
+/**
+ * Fonction pour calculer le statut global d'une absence basé sur les réponses individuelles
+ */
+const calculateAbsenceStatus = (responses: AbsenceResponse[]): string => {
+  if (responses.length === 0) return 'pending';
+  
+  const acceptedCount = responses.filter(r => r.status === 'accepted').length;
+  const refusedCount = responses.filter(r => r.status === 'refused').length;
+  const pendingCount = responses.filter(r => r.status === 'pending').length;
+  
+  // Si au moins un contact a accepté, l'absence est acceptée
+  if (acceptedCount > 0) {
+    return 'accepted';
+  }
+  
+  // Si tous les contacts ont refusé, l'absence est refusée
+  if (refusedCount === responses.length) {
+    return 'canceled';
+  }
+  
+  // Sinon, elle reste en attente
+  return 'pending';
+};
+
+/**
+ * Répondre à une demande de surveillance (pour les contacts de confiance)
+ * PUT /absences/:id/response
+ */
+export const respondToAbsenceHandler = async (req: Request, res: Response) => {
+  try {
+    const absenceId = parseInt(req.params.id);
+    const { status, response_notes } = req.body;
+    
+    if (isNaN(absenceId)) {
+      res.status(400).send({ error: "ID d'absence invalide" });
+      return;
+    }
+    
+    if (!['accepted', 'refused'].includes(status)) {
+      res.status(400).send({ error: "Statut invalide. Doit être 'accepted' ou 'refused'" });
+      return;
+    }
+    
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      res.status(401).send({ error: 'Non authentifié' });
+      return;
+    }
+    
+    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    
+    const absenceRepository = AppDataSource.getRepository(Absence);
+    const responseRepository = AppDataSource.getRepository(AbsenceResponse);
+    const userRepository = AppDataSource.getRepository(User);
+    const messageRepository = AppDataSource.getRepository(Message);
+    
+    // Récupérer l'absence avec ses réponses
+    const absence = await absenceRepository.findOne({
+      where: { id: absenceId },
+      relations: ['user', 'trusted_contacts', 'responses', 'responses.contact']
+    });
+    
+    if (!absence) {
+      res.status(404).send({ error: "Absence non trouvée" });
+      return;
+    }
+    
+    // Vérifier que l'utilisateur est bien un contact de confiance
+    const isTrustedContact = absence.trusted_contacts.some(contact => contact.id === decoded.userId);
+    if (!isTrustedContact) {
+      res.status(403).send({ error: "Non autorisé à répondre à cette demande" });
+      return;
+    }
+    
+    // Chercher la réponse existante pour cet utilisateur
+    let userResponse = absence.responses.find(r => r.contact.id === decoded.userId);
+    
+    if (userResponse) {
+      // Mettre à jour la réponse existante
+      userResponse.status = status;
+      userResponse.response_notes = response_notes || '';
+      userResponse.responded_at = new Date();
+      await responseRepository.save(userResponse);
+    } else {
+      // Créer une nouvelle réponse
+      const contact = await userRepository.findOneBy({ id: decoded.userId });
+      if (!contact) {
+        res.status(404).send({ error: "Contact non trouvé" });
+        return;
+      }
+      
+      userResponse = new AbsenceResponse(absence, contact, status, response_notes || '');
+      await responseRepository.save(userResponse);
+    }
+    
+    // Récupérer toutes les réponses mises à jour
+    const updatedAbsence = await absenceRepository.findOne({
+      where: { id: absenceId },
+      relations: ['user', 'trusted_contacts', 'responses', 'responses.contact']
+    });
+    
+    if (!updatedAbsence) {
+      res.status(500).send({ error: "Erreur lors de la récupération de l'absence" });
+      return;
+    }
+    
+    // Calculer le nouveau statut global
+    const newGlobalStatus = calculateAbsenceStatus(updatedAbsence.responses);
+    
+    // Mettre à jour le statut global de l'absence si nécessaire
+    if (updatedAbsence.status !== newGlobalStatus) {
+      updatedAbsence.status = newGlobalStatus;
+      await absenceRepository.save(updatedAbsence);
+    }
+    
+    // Envoyer une notification à l'utilisateur propriétaire de l'absence
+    const contact = await userRepository.findOneBy({ id: decoded.userId });
+    if (contact) {
+      const statusMessage = status === 'accepted' ? 
+        'accepté de surveiller votre logement' : 
+        'refusé la demande de surveillance de logement';
+        
+      const newMessage = messageRepository.create({
+        content: `${contact.firstname} ${contact.lastname} a ${statusMessage} pendant votre absence du ${formatDate(updatedAbsence.start_date)} au ${formatDate(updatedAbsence.end_date)}.`,
+        date_sent: new Date(),
+        sender: contact,
+        receiver: updatedAbsence.user,
+        status: 'unread'
+      });
+      await messageRepository.save(newMessage);
+    }
+    
+    res.status(200).send({
+      message: `Réponse ${status === 'accepted' ? 'acceptée' : 'refusée'} avec succès`,
+      absence: updatedAbsence,
+      global_status: newGlobalStatus
+    });
+    
+  } catch (error) {
+    console.log(error);
+    res.status(500).send({ error: "Internal error" });
   }
 };
 
@@ -215,12 +380,12 @@ export const updateAbsenceHandler = async (req: Request, res: Response) => {
     const updateAbsence = validation.value;
     const absenceRepository = AppDataSource.getRepository(Absence);
     const userRepository = AppDataSource.getRepository(User);
-    const messageRepository = AppDataSource.getRepository(Message);
+    const responseRepository = AppDataSource.getRepository(AbsenceResponse);
     
     // Récupérer l'absence avec ses relations
     const absenceFound = await absenceRepository.findOne({
       where: { id: updateAbsence.id },
-      relations: ['user', 'trusted_contacts']
+      relations: ['user', 'trusted_contacts', 'responses', 'responses.contact']
     });
     
     if (absenceFound === null) {
@@ -236,18 +401,11 @@ export const updateAbsenceHandler = async (req: Request, res: Response) => {
     }
     
     const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    
+    // Seul le propriétaire de l'absence peut modifier les détails (dates, notes, contacts)
     if (decoded.userId !== absenceFound.user.id) {
-      // Vérifier si c'est un contact de confiance qui accepte/refuse
-      if (updateAbsence.status && ['accepted', 'canceled'].includes(updateAbsence.status)) {
-        const isTrustedContact = absenceFound.trusted_contacts.some(contact => contact.id === decoded.userId);
-        if (!isTrustedContact) {
-          res.status(403).send({ error: 'Non autorisé à modifier cette absence' });
-          return;
-        }
-      } else {
-        res.status(403).send({ error: 'Non autorisé à modifier cette absence' });
-        return;
-      }
+      res.status(403).send({ error: 'Non autorisé à modifier cette absence' });
+      return;
     }
 
     // Mettre à jour les dates si spécifiées
@@ -262,36 +420,38 @@ export const updateAbsenceHandler = async (req: Request, res: Response) => {
     }
     if (updateAbsence.status) {
       absenceFound.status = updateAbsence.status;
-      
-      // Si un contact de confiance accepte ou refuse, envoyer une notification
-      if (['accepted', 'canceled'].includes(updateAbsence.status) && decoded.userId !== absenceFound.user.id) {
-        const trustedUser = await userRepository.findOneBy({ id: decoded.userId });
-        if (trustedUser) {
-          const statusMessage = updateAbsence.status === 'accepted' ? 
-            'accepté de surveiller votre logement' : 
-            'refusé la demande de surveillance de logement';
-            
-          const newMessage = messageRepository.create({
-            content: `${trustedUser.firstname} ${trustedUser.lastname} a ${statusMessage} pendant votre absence du ${formatDate(absenceFound.start_date)} au ${formatDate(absenceFound.end_date)}.`,
-            date_sent: new Date(),
-            sender: trustedUser,
-            receiver: absenceFound.user,
-            status: 'unread'
-          });
-          await messageRepository.save(newMessage);
-        }
-      }
     }
     
     // Mettre à jour les contacts de confiance si spécifiés
     if (updateAbsence.trusted_contact_ids) {
       const trustedUsers = await userRepository.findBy({ id: In(updateAbsence.trusted_contact_ids) });
       absenceFound.trusted_contacts = trustedUsers;
+      
+      // Supprimer les anciennes réponses
+      if (absenceFound.responses && absenceFound.responses.length > 0) {
+        await responseRepository.remove(absenceFound.responses);
+      }
+      
+      // Créer de nouvelles réponses pour les nouveaux contacts
+      const newResponses = [];
+      for (const trustedUser of trustedUsers) {
+        const response = new AbsenceResponse(absenceFound, trustedUser, 'pending', '');
+        const savedResponse = await responseRepository.save(response);
+        newResponses.push(savedResponse);
+      }
+      absenceFound.responses = newResponses;
     }
 
     try {
       const absenceUpdated = await absenceRepository.save(absenceFound);
-      res.status(200).send(absenceUpdated);
+      
+      // Récupérer l'absence mise à jour avec toutes ses relations
+      const finalAbsence = await absenceRepository.findOne({
+        where: { id: absenceUpdated.id },
+        relations: ['user', 'trusted_contacts', 'responses', 'responses.contact']
+      });
+      
+      res.status(200).send(finalAbsence);
     } catch (error) {
       console.error("Erreur SQL:", error);
       if (error instanceof Error) {

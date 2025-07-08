@@ -53,6 +53,14 @@ interface User {
   email: string;
 }
 
+interface AbsenceResponse {
+  id: number;
+  status: string;
+  responded_at: string;
+  response_notes: string;
+  contact: User;
+}
+
 export interface Absence {
   id: number;
   user: User;
@@ -61,6 +69,7 @@ export interface Absence {
   notes: string;
   status: string;
   trusted_contacts: User[];
+  responses: AbsenceResponse[];
 }
 
 interface AbsencesResponse {
@@ -333,7 +342,7 @@ const Absences: React.FC = () => {
       if (!token) return;
 
       await axios.put(
-        `${API_URL}/absences/${absenceId}`,
+        `${API_URL}/absences/${absenceId}/response`,
         { status: newStatus },
         {
           headers: {
@@ -490,7 +499,32 @@ const Absences: React.FC = () => {
                       {absence.notes || "Aucune note"}
                     </Typography>
                     
-                    {absence.status === 'pending' && (
+                    {/* Affichage des réponses individuelles */}
+                    {absence.responses && absence.responses.length > 0 && (
+                      <Box sx={{ mt: 2 }}>
+                        <Typography variant="body2" sx={{ fontWeight: 'bold', mb: 1 }}>
+                          Réponses des contacts :
+                        </Typography>
+                        {absence.responses.map((response) => (
+                          <Box key={response.id} sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                            <Avatar sx={{ width: 24, height: 24, mr: 1, bgcolor: 'primary.main', fontSize: '12px' }}>
+                              {response.contact.firstname.charAt(0).toUpperCase()}
+                            </Avatar>
+                            <Typography variant="body2" sx={{ mr: 1 }}>
+                              {response.contact.firstname} {response.contact.lastname}:
+                            </Typography>
+                            <Chip 
+                              label={response.status === 'accepted' ? 'Accepté' : response.status === 'refused' ? 'Refusé' : 'En attente'} 
+                              color={response.status === 'accepted' ? 'success' : response.status === 'refused' ? 'error' : 'warning'}
+                              size="small"
+                            />
+                          </Box>
+                        ))}
+                      </Box>
+                    )}
+                    
+                    {/* Boutons pour l'utilisateur actuel si c'est sa demande */}
+                    {userId && absence.responses && absence.responses.some(r => r.contact.id === userId && r.status === 'pending') && (
                       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
                         <Button 
                           startIcon={<CheckCircleIcon />}
@@ -505,7 +539,7 @@ const Absences: React.FC = () => {
                           startIcon={<CancelIcon />}
                           variant="outlined" 
                           color="error"
-                          onClick={() => handleAbsenceStatusChange(absence.id, 'canceled')}
+                          onClick={() => handleAbsenceStatusChange(absence.id, 'refused')}
                         >
                           Refuser
                         </Button>
