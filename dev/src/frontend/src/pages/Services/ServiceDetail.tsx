@@ -274,15 +274,13 @@ const ServiceDetail: React.FC = () => {
       </Snackbar>
 
       <BookService
-        serviceId={parseInt(id!)}
+        service={service}
         open={bookingDialogOpen}
         onClose={() => setBookingDialogOpen(false)}
         onSuccess={() => {
           fetchServiceDetails();
           showAlert('Service réservé avec succès', 'success');
         }}
-        availableDays={service.availability.days}
-        timeSlots={service.availability.time_slots}
       />
     </Container>
   );

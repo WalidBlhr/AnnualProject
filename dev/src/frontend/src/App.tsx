@@ -39,6 +39,7 @@ import MiniGames from './pages/MiniGames/MiniGames';
 import Profile from './pages/Profile/Profile';
 import ServiceDetail from './pages/Services/ServiceDetail';
 import ServicesList from './pages/Services/ServicesList';
+import MyServices from './pages/Services/MyServices';
 import Signup from './pages/Signup';
 import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
 import TrocOffersList from './pages/TrocOffers/TrocOffersList';
@@ -66,6 +67,7 @@ const App: React.FC = () => {
                                     <Route path="/messages/:userId" element={<Conversation />} />
                                     <Route path="/messages" element={<Messages />} />
                                     <Route path="/services" element={<ServicesList />} />
+                                    <Route path="/my-services" element={<ProtectedRoute><MyServices /></ProtectedRoute>} />
                                     <Route path="/services/:id" element={<ServiceDetail />} />
                                     <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                                     <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
