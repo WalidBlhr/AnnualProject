@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -27,7 +27,9 @@ import {
   SelectChangeEvent,
   ListItemSecondaryAction,
   IconButton,
-  Tooltip
+  Tooltip,
+  Autocomplete,
+  Avatar
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -35,12 +37,10 @@ import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs, { Dayjs } from 'dayjs';
 import axios from 'axios';
 import jwtDecode from 'jwt-decode';
-import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import CancelIcon from '@mui/icons-material/Cancel';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
-import PendingIcon from '@mui/icons-material/Pending';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../const';
 import { AbsenceCard } from './AbsenceCard';
@@ -50,6 +50,7 @@ interface User {
   id: number;
   firstname: string;
   lastname: string;
+  email: string;
 }
 
 export interface Absence {
@@ -64,6 +65,14 @@ export interface Absence {
 
 interface AbsencesResponse {
   data: Absence[];
+  page_size: number;
+  page: number;
+  total_count: number;
+  total_pages: number;
+}
+
+interface UsersResponse {
+  data: User[];
   page_size: number;
   page: number;
   total_count: number;
@@ -103,27 +112,15 @@ const Absences: React.FC = () => {
   const [selectedContacts, setSelectedContacts] = useState<number[]>([]);
   const [availableUsers, setAvailableUsers] = useState<User[]>([]);
   const [isAddingContact, setIsAddingContact] = useState(false);
-  const [selectedNewContact, setSelectedNewContact] = useState<number>(0);
+  const [selectedNewContact, setSelectedNewContact] = useState<User | null>(null);
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    const decoded = jwtDecode<{ userId: number }>(token);
-    setUserId(decoded.userId);
-
-    fetchMyAbsences();
-    fetchRequestedAbsences();
-    fetchTrustedContacts(decoded.userId);
-    fetchAvailableUsers();
+  const showAlert = useCallback((message: string, severity: 'success' | 'error') => {
+    setAlert({ open: true, message, severity });
   }, []);
 
-  const fetchMyAbsences = async () => {
+  const fetchMyAbsences = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -141,9 +138,9 @@ const Absences: React.FC = () => {
     } catch (error) {
       showAlert('Erreur lors du chargement de vos absences', 'error');
     }
-  };
+  }, [showAlert]);
 
-  const fetchRequestedAbsences = async () => {
+  const fetchRequestedAbsences = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -170,9 +167,9 @@ const Absences: React.FC = () => {
     } catch (error) {
       showAlert('Erreur lors du chargement des demandes de surveillance', 'error');
     }
-  };
+  }, [showAlert]);
 
-  const fetchTrustedContacts = async (userId: number) => {
+  const fetchTrustedContacts = useCallback(async (userId: number) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -189,17 +186,9 @@ const Absences: React.FC = () => {
     } catch (error) {
       showAlert('Erreur lors du chargement de vos contacts de confiance', 'error');
     }
-  };
+  }, [showAlert]);
 
-  interface UsersResponse {
-    data: User[];
-    page_size: number;
-    page: number;
-    total_count: number;
-    total_pages: number;
-  }
-
-  const fetchAvailableUsers = async () => {
+  const fetchAvailableUsers = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) return;
@@ -220,7 +209,23 @@ const Absences: React.FC = () => {
     } catch (error) {
       showAlert('Erreur lors du chargement des utilisateurs', 'error');
     }
-  };
+  }, [showAlert]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      navigate('/login');
+      return;
+    }
+
+    const decoded = jwtDecode<{ userId: number }>(token);
+    setUserId(decoded.userId);
+
+    fetchMyAbsences();
+    fetchRequestedAbsences();
+    fetchTrustedContacts(decoded.userId);
+    fetchAvailableUsers();
+  }, [navigate, fetchMyAbsences, fetchRequestedAbsences, fetchTrustedContacts, fetchAvailableUsers]);
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
@@ -354,7 +359,7 @@ const Absences: React.FC = () => {
         API_URL + '/trusted-contacts',
         {
           userId,
-          trustedUserId: selectedNewContact
+          trustedUserId: selectedNewContact.id
         },
         {
           headers: {
@@ -364,7 +369,7 @@ const Absences: React.FC = () => {
       );
       showAlert('Contact de confiance ajouté avec succès', 'success');
       setIsAddingContact(false);
-      setSelectedNewContact(0);
+      setSelectedNewContact(null);
       fetchTrustedContacts(userId);
     } catch (error) {
       showAlert('Erreur lors de l\'ajout du contact de confiance', 'error');
@@ -398,14 +403,6 @@ const Absences: React.FC = () => {
 
   const handleContactSelectionChange = (event: SelectChangeEvent<number[]>) => {
     setSelectedContacts(event.target.value as number[]);
-  };
-
-  const handleNewContactChange = (event: SelectChangeEvent) => {
-    setSelectedNewContact(Number(event.target.value));
-  };
-
-  const showAlert = (message: string, severity: 'success' | 'error') => {
-    setAlert({ open: true, message, severity });
   };
 
   const formatDate = (dateString: string) => {
@@ -536,6 +533,12 @@ const Absences: React.FC = () => {
               Ajouter un contact
             </Button>
           </Box>
+
+          {availableNewContacts.length === 0 && !isAddingContact && (
+            <Alert severity="info" sx={{ mb: 2 }}>
+              Tous les utilisateurs disponibles sont déjà dans vos contacts de confiance.
+            </Alert>
+          )}
           
           {isAddingContact && (
             <Paper sx={{ p: 2, mb: 3 }}>
@@ -543,26 +546,63 @@ const Absences: React.FC = () => {
                 Ajouter un contact de confiance
               </Typography>
               
-              <FormControl fullWidth sx={{ mb: 2 }}>
-                <InputLabel id="new-contact-label">Sélectionner un utilisateur</InputLabel>
-                <Select
-                  labelId="new-contact-label"
-                  value={selectedNewContact.toString()}
-                  onChange={handleNewContactChange}
-                  label="Sélectionner un utilisateur"
-                >
-                  <MenuItem value={0} disabled>Choisir un utilisateur</MenuItem>
-                  {availableNewContacts.map((user) => (
-                    <MenuItem value={user.id} key={user.id}>
-                      {user.firstname} {user.lastname}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <Autocomplete
+                fullWidth
+                options={availableNewContacts}
+                getOptionLabel={(option) => `${option.firstname} ${option.lastname}`}
+                renderOption={(props, option) => (
+                  <Box component="li" {...props} sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main' }}>
+                      {option.firstname.charAt(0).toUpperCase()}
+                    </Avatar>
+                    <Box>
+                      <Typography variant="body1">
+                        {option.firstname} {option.lastname}
+                      </Typography>
+                      <Typography variant="body2" color="textSecondary">
+                        {option.email}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Rechercher un utilisateur"
+                    placeholder="Tapez le nom, prénom ou email..."
+                    variant="outlined"
+                    sx={{ mb: 2 }}
+                  />
+                )}
+                onChange={(event, newValue) => {
+                  setSelectedNewContact(newValue);
+                }}
+                onClose={() => {
+                  // Réinitialiser la sélection quand on ferme la dropdown
+                }}
+                filterOptions={(options, { inputValue }) => {
+                  const filterValue = inputValue.toLowerCase();
+                  return options.filter(
+                    (option) =>
+                      option.firstname.toLowerCase().includes(filterValue) ||
+                      option.lastname.toLowerCase().includes(filterValue) ||
+                      option.email.toLowerCase().includes(filterValue)
+                  );
+                }}
+                noOptionsText="Aucun utilisateur trouvé"
+                clearOnBlur
+                selectOnFocus
+                isOptionEqualToValue={(option, value) => option.id === value.id}
+                size="medium"
+                autoHighlight
+              />
               
               <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                 <Button 
-                  onClick={() => setIsAddingContact(false)} 
+                  onClick={() => {
+                    setIsAddingContact(false);
+                    setSelectedNewContact(null);
+                  }} 
                   sx={{ mr: 1 }}
                 >
                   Annuler
@@ -588,17 +628,23 @@ const Absences: React.FC = () => {
                 {trustedContacts.map((contact) => (
                   <React.Fragment key={contact.id}>
                     <ListItem>
+                      <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+                        {contact.firstname.charAt(0).toUpperCase()}
+                      </Avatar>
                       <ListItemText 
-                        primary={`${contact.firstname} ${contact.lastname}`} 
+                        primary={`${contact.firstname} ${contact.lastname}`}
+                        secondary={contact.email}
                       />
                       <ListItemSecondaryAction>
-                        <IconButton 
-                          edge="end" 
-                          color="error" 
-                          onClick={() => handleRemoveContact(contact.id)}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
+                        <Tooltip title="Retirer ce contact de confiance">
+                          <IconButton 
+                            edge="end" 
+                            color="error" 
+                            onClick={() => handleRemoveContact(contact.id)}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        </Tooltip>
                       </ListItemSecondaryAction>
                     </ListItem>
                     <Divider />
