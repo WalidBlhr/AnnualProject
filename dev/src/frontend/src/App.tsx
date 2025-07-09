@@ -23,6 +23,7 @@ import ForgotPassword from './pages/Auth/ForgotPassword';
 import ResetPassword from './pages/Auth/ResetPassword';
 import CommunityEvents from './pages/Events/CommunityEvents';
 import CreateEvent from './pages/Events/CreateEvent';
+import EditEvent from './pages/Events/EditEvent';
 import EventDetail from './pages/Events/EventDetail';
 import Events from './pages/Events/Events';
 import MyEvents from './pages/Events/MyEvents';
@@ -111,6 +112,7 @@ const App: React.FC = () => {
                                     } />
                                     <Route path="/community-events" element={<ProtectedRoute><CommunityEvents /></ProtectedRoute>} />
                                     <Route path="/create-event" element={<ProtectedRoute><CreateEvent /></ProtectedRoute>} />
+                                    <Route path="/events/:id/edit" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
                                     <Route path="/journal" element={<ProtectedRoute><JournalHome /></ProtectedRoute>} />
                                     <Route path="/journal/editor/:id?" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
                                     <Route path="/journal/editor" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />

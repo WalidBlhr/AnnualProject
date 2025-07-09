@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -14,21 +14,45 @@ import {
   Alert,
   FormControlLabel,
   Checkbox,
-  Paper
+  Paper,
+  CircularProgress
 } from '@mui/material';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import jwtDecode from 'jwt-decode';
 import { API_URL } from '../../const';
 
-const CreateEvent = () => {
+interface Event {
+  id: number;
+  name: string;
+  date: string;
+  location: string;
+  max_participants: number;
+  min_participants: number;
+  status: string;
+  type: string;
+  category?: string;
+  description?: string;
+  equipment_needed?: string;
+  creator: {
+    id: number;
+    firstname: string;
+    lastname: string;
+  };
+}
+
+const EditEvent = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  
   const [formData, setFormData] = useState({
     name: '',
     date: '',
     location: '',
     max_participants: 10,
     min_participants: 0,
-    status: 'draft', // Assurer que le statut est 'draft' comme attendu par le backend
+    status: 'draft',
     type: 'regular',
     category: '',
     description: '',
@@ -41,9 +65,75 @@ const CreateEvent = () => {
     message: '',
     severity: 'success' as 'success' | 'error',
   });
-  
-  const navigate = useNavigate();
-  
+
+  const showAlert = (message: string, severity: 'success' | 'error') => {
+    setAlert({ open: true, message, severity });
+  };
+
+  const fetchEvent = useCallback(async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        navigate('/login');
+        return;
+      }
+
+      const decoded = jwtDecode<{ userId: number }>(token);
+
+      const response = await axios.get<Event>(`${API_URL}/events/${id}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const eventData = response.data;
+
+      // Vérifier que l'utilisateur est le créateur de l'événement
+      if (eventData.creator.id !== decoded.userId) {
+        showAlert('Vous n\'êtes pas autorisé à modifier cet événement', 'error');
+        navigate('/my-events');
+        return;
+      }
+
+      // Vérifier que l'événement est en brouillon
+      if (eventData.status !== 'draft') {
+        showAlert('Seuls les événements en brouillon peuvent être modifiés', 'error');
+        navigate('/my-events');
+        return;
+      }
+      
+      // Convertir la date au format datetime-local
+      const eventDate = new Date(eventData.date);
+      const formattedDate = eventDate.toISOString().slice(0, 16);
+
+      setFormData({
+        name: eventData.name,
+        date: formattedDate,
+        location: eventData.location,
+        max_participants: eventData.max_participants,
+        min_participants: eventData.min_participants,
+        status: eventData.status,
+        type: eventData.type,
+        category: eventData.category || '',
+        description: eventData.description || '',
+        equipment_needed: eventData.equipment_needed || ''
+      });
+
+      setIsCommunityEvent(eventData.type === 'community');
+      setLoading(false);
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'événement:', error);
+      showAlert('Erreur lors du chargement de l\'événement', 'error');
+      navigate('/my-events');
+    }
+  }, [id, navigate]);
+
+  useEffect(() => {
+    if (id) {
+      fetchEvent();
+    }
+  }, [id, fetchEvent]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
@@ -58,7 +148,7 @@ const CreateEvent = () => {
     setIsCommunityEvent(e.target.checked);
     
     if (e.target.checked) {
-      setFormData({ ...formData, type: 'community', category: 'cleaning' }); // Sélectionner 'cleaning' par défaut
+      setFormData({ ...formData, type: 'community', category: 'cleaning' });
     } else {
       setFormData({ ...formData, type: 'regular', category: '' });
     }
@@ -73,8 +163,6 @@ const CreateEvent = () => {
         navigate('/login');
         return;
       }
-      
-      const decoded = jwtDecode<{ userId: number }>(token);
       
       // Validation côté client
       if (isCommunityEvent && !formData.category) {
@@ -102,16 +190,15 @@ const CreateEvent = () => {
         min_participants: formData.min_participants || 0,
         status: formData.status,
         type: formData.type,
-        creatorId: decoded.userId,
         ...(formData.type === 'community' && { category: formData.category }),
         ...(formData.description && { description: formData.description }),
         ...(formData.equipment_needed && { equipment_needed: formData.equipment_needed })
       };
       
-      console.log('Data à envoyer:', eventData); // Debug
+      console.log('Data à envoyer:', eventData);
       
-      await axios.post(
-        API_URL + '/events',
+      await axios.put(
+        `${API_URL}/events/${id}`,
         eventData,
         {
           headers: {
@@ -120,21 +207,17 @@ const CreateEvent = () => {
         }
       );
       
-      showAlert('Événement créé avec succès', 'success');
+      showAlert('Événement modifié avec succès', 'success');
       
-      // Rediriger en fonction du type d'événement
+      // Rediriger vers mes événements
       setTimeout(() => {
-        if (isCommunityEvent) {
-          navigate('/community-events');
-        } else {
-          navigate('/events');
-        }
+        navigate('/my-events');
       }, 1500);
       
     } catch (error: any) {
-      console.error('Erreur lors de la création:', error);
+      console.error('Erreur lors de la modification:', error);
       
-      let errorMessage = 'Erreur lors de la création de l\'événement';
+      let errorMessage = 'Erreur lors de la modification de l\'événement';
       
       if (error.response?.data?.message) {
         errorMessage = error.response.data.message;
@@ -147,16 +230,23 @@ const CreateEvent = () => {
       showAlert(errorMessage, 'error');
     }
   };
-  
-  const showAlert = (message: string, severity: 'success' | 'error') => {
-    setAlert({ open: true, message, severity });
-  };
-  
+
+  if (loading) {
+    return (
+      <Container maxWidth="md" sx={{ mt: 4, mb: 4, textAlign: 'center' }}>
+        <CircularProgress />
+        <Typography variant="h6" sx={{ mt: 2 }}>
+          Chargement de l'événement...
+        </Typography>
+      </Container>
+    );
+  }
+
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Paper sx={{ p: 3 }}>
         <Typography variant="h4" gutterBottom>
-          Créer un nouvel événement
+          Modifier l'événement
         </Typography>
         
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
@@ -298,7 +388,7 @@ const CreateEvent = () => {
           <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
             <Button 
               variant="outlined"
-              onClick={() => navigate(-1)}
+              onClick={() => navigate('/my-events')}
             >
               Annuler
             </Button>
@@ -306,7 +396,7 @@ const CreateEvent = () => {
               type="submit"
               variant="contained"
             >
-              Créer l'événement
+              Modifier l'événement
             </Button>
           </Box>
         </Box>
@@ -325,4 +415,4 @@ const CreateEvent = () => {
   );
 };
 
-export default CreateEvent;
+export default EditEvent;

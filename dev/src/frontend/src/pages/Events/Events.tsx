@@ -19,6 +19,7 @@ interface Event {
   min_participants: number;
   status: string;
   participants_count?: number;
+  participantsCount?: number;
 }
 
 interface EventsResponse {
@@ -139,7 +140,7 @@ const Events = () => {
                   <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <GroupIcon fontSize="small" color="action" />
                     <Typography variant="body2" color="text.secondary">
-                      {event.participants_count || 0}/{event.max_participants} participants (min: {event.min_participants})
+                      {(event.participantsCount ?? event.participants_count) || 0}/{event.max_participants} participants (min: {event.min_participants})
                     </Typography>
                   </Box>
                   <Box sx={{ mt: 1 }}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -31,6 +31,15 @@ interface Event {
   max_participants: number;
   min_participants: number;
   status: string;
+  type: string;
+  category?: string;
+  description?: string;
+  equipment_needed?: string;
+  creator: {
+    id: number;
+    firstname: string;
+    lastname: string;
+  };
 }
 
 interface EventParticipation {
@@ -55,6 +64,7 @@ interface ParticipationResponse {
 
 const MyEvents = () => {
   const [participations, setParticipations] = useState<EventParticipation[]>([]);
+  const [createdEvents, setCreatedEvents] = useState<Event[]>([]);
   const [tabValue, setTabValue] = useState(0);
   const [alert, setAlert] = useState<{
     open: boolean;
@@ -68,11 +78,7 @@ const MyEvents = () => {
 
   const navigate = useNavigate();
 
-  useEffect(() => {
-    fetchMyEvents();
-  }, []);
-
-  const fetchMyEvents = async () => {
+  const fetchMyEvents = useCallback(async () => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -92,6 +98,12 @@ const MyEvents = () => {
           },
         }
       );
+      
+      // Filtrer les événements créés par l'utilisateur (y compris les brouillons)
+      const userCreatedEvents = eventsData.data.filter(
+        (event) => event.creator.id === userId
+      );
+      setCreatedEvents(userCreatedEvents);
       
       // Ensuite récupérer les participations
       try {
@@ -124,7 +136,11 @@ const MyEvents = () => {
     } catch (error) {
       showAlert('Erreur lors du chargement de vos événements', 'error');
     }
-  };
+  }, [navigate]);
+
+  useEffect(() => {
+    fetchMyEvents();
+  }, [fetchMyEvents]);
 
   const handleCancelParticipation = async (participationId: number) => {
     try {
@@ -163,8 +179,25 @@ const MyEvents = () => {
         return 'error';
       case 'pending':
         return 'warning';
+      case 'draft':
+        return 'info';
       default:
         return 'default';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'open':
+        return 'Ouvert';
+      case 'closed':
+        return 'Fermé';
+      case 'pending':
+        return 'En attente';
+      case 'draft':
+        return 'Brouillon';
+      default:
+        return status;
     }
   };
 
@@ -196,6 +229,13 @@ const MyEvents = () => {
     return true;
   });
 
+  const filteredCreatedEvents = createdEvents.filter(event => {
+    if (tabValue === 0) return true; // Tous
+    if (tabValue === 1) return new Date(event.date) >= new Date(); // À venir
+    if (tabValue === 2) return new Date(event.date) < new Date(); // Passés
+    return true;
+  });
+
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>
@@ -213,7 +253,93 @@ const MyEvents = () => {
         </Tabs>
       </Box>
 
-      {filteredParticipations.length === 0 ? (
+      {/* Section des événements créés */}
+      {filteredCreatedEvents.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h5" gutterBottom>
+            Événements que j'ai créés
+          </Typography>
+          <Grid container spacing={3}>
+            {filteredCreatedEvents.map((event) => (
+              <Grid item xs={12} sm={6} md={4} key={`created-${event.id}`}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6" component="div">
+                        {event.name}
+                      </Typography>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Chip
+                          label={getStatusLabel(event.status)}
+                          color={getStatusColor(event.status) as any}
+                          size="small"
+                        />
+                        {event.type === 'community' && (
+                          <Chip
+                            label="Communautaire"
+                            color="info"
+                            size="small"
+                          />
+                        )}
+                      </Box>
+                    </Box>
+
+                    <Divider sx={{ my: 1 }} />
+
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <EventIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(event.date)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocationOnIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {event.location}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <GroupIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {event.max_participants} participants max
+                      </Typography>
+                    </Box>
+                  </CardContent>
+                  <CardActions>
+                    <Button
+                      size="small"
+                      onClick={() => navigate(`/events/${event.id}`)}
+                      sx={{ mr: 1 }}
+                    >
+                      Détails
+                    </Button>
+                    {event.status === 'draft' && (
+                      <Button
+                        size="small"
+                        color="primary"
+                        onClick={() => navigate(`/events/${event.id}/edit`)}
+                      >
+                        Modifier
+                      </Button>
+                    )}
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Box>
+      )}
+
+      {/* Section des participations */}
+      {filteredParticipations.length > 0 && (
+        <Box>
+          <Typography variant="h5" gutterBottom>
+            Événements auxquels je participe
+          </Typography>
+        </Box>
+      )}
+
+      {filteredParticipations.length === 0 && filteredCreatedEvents.length === 0 ? (
         <Box sx={{ textAlign: 'center', py: 4 }}>
           <Typography variant="body1">
             Vous n'avez pas encore d'inscriptions à des sorties.
@@ -227,66 +353,68 @@ const MyEvents = () => {
           </Button>
         </Box>
       ) : (
-        <Grid container spacing={3}>
-          {filteredParticipations.map((participation) => (
-            <Grid item xs={12} sm={6} md={4} key={participation.id}>
-              <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                <CardContent sx={{ flexGrow: 1 }}>
-                  <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <Typography variant="h6" component="div">
-                      {participation.event.name}
-                    </Typography>
-                    <Chip
-                      label={participation.status_participation}
-                      color={getParticipationStatusColor(participation.status_participation) as any}
-                      size="small"
-                    />
-                  </Box>
+        filteredParticipations.length > 0 && (
+          <Grid container spacing={3}>
+            {filteredParticipations.map((participation) => (
+              <Grid item xs={12} sm={6} md={4} key={participation.id}>
+                <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  <CardContent sx={{ flexGrow: 1 }}>
+                    <Box sx={{ mb: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Typography variant="h6" component="div">
+                        {participation.event.name}
+                      </Typography>
+                      <Chip
+                        label={participation.status_participation}
+                        color={getParticipationStatusColor(participation.status_participation) as any}
+                        size="small"
+                      />
+                    </Box>
 
-                  <Divider sx={{ my: 1 }} />
+                    <Divider sx={{ my: 1 }} />
 
-                  <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <EventIcon fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      {formatDate(participation.event.date)}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <LocationOnIcon fontSize="small" color="action" />
-                    <Typography variant="body2" color="text.secondary">
-                      {participation.event.location}
-                    </Typography>
-                  </Box>
-                  <Box sx={{ mt: 1 }}>
-                    <Chip
-                      label={participation.event.status}
-                      color={getStatusColor(participation.event.status) as any}
-                      size="small"
-                    />
-                  </Box>
-                </CardContent>
-                <CardActions>
-                  <Button
-                    size="small"
-                    onClick={() => navigate(`/events/${participation.eventId}`)}
-                    sx={{ mr: 1 }}
-                  >
-                    Détails
-                  </Button>
-                  {new Date(participation.event.date) > new Date() && (
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <EventIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {formatDate(participation.event.date)}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <LocationOnIcon fontSize="small" color="action" />
+                      <Typography variant="body2" color="text.secondary">
+                        {participation.event.location}
+                      </Typography>
+                    </Box>
+                    <Box sx={{ mt: 1 }}>
+                      <Chip
+                        label={participation.event.status}
+                        color={getStatusColor(participation.event.status) as any}
+                        size="small"
+                      />
+                    </Box>
+                  </CardContent>
+                  <CardActions>
                     <Button
                       size="small"
-                      color="error"
-                      onClick={() => handleCancelParticipation(participation.id)}
+                      onClick={() => navigate(`/events/${participation.eventId}`)}
+                      sx={{ mr: 1 }}
                     >
-                      Annuler
+                      Détails
                     </Button>
-                  )}
-                </CardActions>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
+                    {new Date(participation.event.date) > new Date() && (
+                      <Button
+                        size="small"
+                        color="error"
+                        onClick={() => handleCancelParticipation(participation.id)}
+                      >
+                        Annuler
+                      </Button>
+                    )}
+                  </CardActions>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        )
       )}
 
       <Snackbar

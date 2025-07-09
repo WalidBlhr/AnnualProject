@@ -23,7 +23,7 @@ import {
     updateArticleHandler
 } from './article';
 import { createCategoryHandler, deleteCategoryHandler, listCategoriesHandler, updateCategoryHandler } from "./category";
-import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler } from "./event";
+import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler, cancelEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
 import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
 import { bookServiceHandler, cancelServiceBookingHandler, createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
@@ -847,6 +847,27 @@ export const initHandlers = (app: Application) => {
    *         description: Event supprimé
    */
   app.delete("/events/:id", authMiddleware, deleteEventHandler);
+
+  /**
+   * @openapi
+   * /events/{id}/cancel:
+   *   put:
+   *     tags:
+   *       - Events
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Annuler un événement
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: number
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Event annulé
+   */
+  app.put("/events/:id/cancel", authMiddleware, cancelEventHandler);
 
   /**
    * @openapi

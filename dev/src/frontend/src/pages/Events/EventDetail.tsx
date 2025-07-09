@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Container,
   Typography,
@@ -20,7 +20,14 @@ import {
   DialogContent,
   DialogActions,
   TextField,
-  LinearProgress
+  LinearProgress,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  SelectChangeEvent,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -28,9 +35,14 @@ import EventIcon from '@mui/icons-material/Event';
 import LocationOnIcon from '@mui/icons-material/LocationOn';
 import GroupIcon from '@mui/icons-material/Group';
 import PersonIcon from '@mui/icons-material/Person';
+import EditIcon from '@mui/icons-material/Edit';
+import DeleteIcon from '@mui/icons-material/Delete';
+import PersonRemoveIcon from '@mui/icons-material/PersonRemove';
+import PublishIcon from '@mui/icons-material/Publish';
+import CancelIcon from '@mui/icons-material/Cancel';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import jwtDecode from 'jwt-decode';
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
-import DeleteIcon from '@mui/icons-material/Delete';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
 import { API_URL } from '../../const';
@@ -49,6 +61,11 @@ interface Event {
   category?: string;
   description?: string;
   equipment_needed?: string;
+  creator?: {
+    id: number;
+    firstname: string;
+    lastname: string;
+  };
 }
 
 interface Participant {
@@ -83,6 +100,10 @@ const EventDetail = () => {
   const [openDialog, setOpenDialog] = useState(false);
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreator, setIsCreator] = useState(false);
+  const [statusChangeDialog, setStatusChangeDialog] = useState(false);
+  const [newStatus, setNewStatus] = useState('');
+  const [deleteDialog, setDeleteDialog] = useState(false);
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -92,10 +113,6 @@ const EventDetail = () => {
     message: '',
     severity: 'success',
   });
-
-  useEffect(() => {
-    fetchEventDetails();
-  }, [id]);
 
   const handleParticipate = async () => {
     setIsLoading(true);
@@ -129,7 +146,7 @@ const EventDetail = () => {
       } else {
         // Créer une nouvelle participation avec la structure exacte attendue par l'API
         const response = await axios.post<{ id: number }>(
-          '${API_URL}/event-participants',
+          `${API_URL}/event-participants`,
           {
             userId: decoded.userId,
             eventId: Number(id),
@@ -182,26 +199,38 @@ const EventDetail = () => {
   };
 
   // Amélioration du fetchEventDetails pour être plus robuste
-  const fetchEventDetails = async () => {
+  const fetchEventDetails = useCallback(async () => {
     try {
+      const token = localStorage.getItem('token');
+      let decoded: { userId: number } | null = null;
+      
+      if (token) {
+        decoded = jwtDecode<{ userId: number }>(token);
+      }
+      
       // 1. Récupérer les détails de l'événement
       const eventResponse = await axios.get<Event>(
         `${API_URL}/events/${id}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
       
       setEvent(eventResponse.data);
       
+      // Vérifier si l'utilisateur est le créateur
+      if (decoded && eventResponse.data.creator) {
+        setIsCreator(decoded.userId === eventResponse.data.creator.id);
+      }
+      
       // 2. Récupérer spécifiquement les participants pour cet événement
       const participantsResponse = await axios.get<ApiResponse<Participant>>(
         `${API_URL}/event-participants?eventId=${id}`,
         {
           headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
+            Authorization: `Bearer ${token}`,
           },
         }
       );
@@ -212,9 +241,7 @@ const EventDetail = () => {
       setParticipants(participantsResponse.data.data);
       
       // Vérifier si l'utilisateur actuel est inscrit
-      const token = localStorage.getItem('token');
-      if (token) {
-        const decoded = jwtDecode<{ userId: number }>(token);
+      if (decoded) {
         console.log("UserId actuel:", decoded.userId, typeof decoded.userId);
   
         // Vérifier la structure des participants
@@ -224,8 +251,8 @@ const EventDetail = () => {
   
         // Comparaison avec conversion explicite des types
         const userParticipation = participantsResponse.data.data.find(p => {
-          console.log(`Comparaison: ${Number(p.user?.id)} === ${Number(decoded.userId)}`);
-          return Number(p.user?.id) === Number(decoded.userId);
+          console.log(`Comparaison: ${Number(p.user?.id)} === ${Number(decoded!.userId)}`);
+          return Number(p.user?.id) === Number(decoded!.userId);
         });
   
         console.log("Participation trouvée?", userParticipation);
@@ -241,6 +268,160 @@ const EventDetail = () => {
     } catch (error) {
       console.error("Erreur lors du chargement des détails:", error);
       showAlert('Erreur lors du chargement des détails de l\'événement', 'error');
+    }
+  }, [id]);
+
+  useEffect(() => {
+    fetchEventDetails();
+  }, [fetchEventDetails]);
+
+  // Fonctions de gestion pour le créateur
+  const handleStatusChange = async () => {
+    if (!newStatus || !event) return;
+    
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      
+      // Si le nouveau statut est "canceled", utiliser la route spécifique
+      if (newStatus === 'canceled') {
+        await axios.put(
+          `${API_URL}/events/${event.id}/cancel`,
+          {},
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      } else {
+        // Sinon, utiliser la route de mise à jour normale
+        await axios.put(
+          `${API_URL}/events/${event.id}`,
+          { status: newStatus },
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        );
+      }
+      
+      setEvent({ ...event, status: newStatus as Event['status'] });
+      setStatusChangeDialog(false);
+      setNewStatus('');
+      showAlert('Statut mis à jour avec succès', 'success');
+    } catch (error) {
+      console.error("Erreur lors du changement de statut:", error);
+      showAlert('Erreur lors du changement de statut', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleCancelEvent = async () => {
+    if (!event) return;
+    
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_URL}/events/${event.id}/cancel`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setEvent({ ...event, status: 'canceled' });
+      showAlert('Événement annulé avec succès', 'success');
+    } catch (error) {
+      console.error("Erreur lors de l'annulation:", error);
+      showAlert('Erreur lors de l\'annulation', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    if (!event) return;
+    
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${API_URL}/events/${event.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      showAlert('Événement supprimé avec succès', 'success');
+      navigate('/events');
+    } catch (error) {
+      console.error("Erreur lors de la suppression:", error);
+      showAlert('Erreur lors de la suppression', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemoveParticipant = async (participantId: number) => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(
+        `${API_URL}/event-participants/${participantId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setParticipants(participants.filter(p => p.id !== participantId));
+      showAlert('Participant retiré avec succès', 'success');
+    } catch (error) {
+      console.error("Erreur lors de la suppression du participant:", error);
+      showAlert('Erreur lors de la suppression du participant', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleEditEvent = () => {
+    if (event) {
+      navigate(`/events/${event.id}/edit`);
+    }
+  };
+
+  const handlePublishEvent = async () => {
+    if (!event) return;
+    
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_URL}/events/${event.id}`,
+        { status: 'open' },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setEvent({ ...event, status: 'open' });
+      showAlert('Événement publié avec succès', 'success');
+    } catch (error) {
+      console.error("Erreur lors de la publication:", error);
+      showAlert('Erreur lors de la publication', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -407,6 +588,75 @@ const EventDetail = () => {
               </Box>
             </Box>
             
+            {/* Section de gestion pour le créateur */}
+            {isCreator && (
+              <Box sx={{ mt: 3, p: 2, bgcolor: 'background.paper', borderRadius: 1, border: '1px solid', borderColor: 'divider' }}>
+                <Typography variant="h6" gutterBottom color="primary">
+                  Gestion de l'événement
+                </Typography>
+                
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {event.status === 'draft' && (
+                    <>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handlePublishEvent}
+                        startIcon={<PublishIcon />}
+                        disabled={isLoading}
+                      >
+                        Publier
+                      </Button>
+                      <Button
+                        variant="outlined"
+                        onClick={handleEditEvent}
+                        startIcon={<EditIcon />}
+                      >
+                        Modifier
+                      </Button>
+                    </>
+                  )}
+                  
+                  {event.status !== 'draft' && (
+                    <>
+                      <Button
+                        variant="outlined"
+                        onClick={() => setStatusChangeDialog(true)}
+                        startIcon={<CheckCircleIcon />}
+                      >
+                        Changer le statut
+                      </Button>
+                      
+                      {event.status !== 'canceled' && (
+                        <Button
+                          variant="outlined"
+                          color="warning"
+                          onClick={handleCancelEvent}
+                          startIcon={<CancelIcon />}
+                          disabled={isLoading}
+                        >
+                          Annuler l'événement
+                        </Button>
+                      )}
+                    </>
+                  )}
+                  
+                  <Button
+                    variant="outlined"
+                    color="error"
+                    onClick={() => setDeleteDialog(true)}
+                    startIcon={<DeleteIcon />}
+                  >
+                    Supprimer
+                  </Button>
+                </Box>
+                
+                <Typography variant="body2" color="text.secondary">
+                  En tant que créateur, vous pouvez gérer cet événement.
+                </Typography>
+              </Box>
+            )}
+            
             <Box sx={{ mt: 3 }}>
               <Typography variant="h6" gutterBottom>
                 Informations importantes
@@ -479,6 +729,18 @@ const EventDetail = () => {
                         `Participant #${participant.userId}`}
                       secondary={`Statut: ${participant.status_participation}`}
                     />
+                    {isCreator && (
+                      <Tooltip title="Supprimer ce participant">
+                        <IconButton
+                          edge="end"
+                          color="error"
+                          onClick={() => handleRemoveParticipant(participant.id)}
+                          disabled={isLoading}
+                        >
+                          <PersonRemoveIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </ListItem>
                 ))}
               </List>
@@ -501,6 +763,60 @@ const EventDetail = () => {
           </Button>
         </Box>
       </Paper>
+
+      {/* Dialogue de changement de statut */}
+      <Dialog open={statusChangeDialog} onClose={() => setStatusChangeDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Changer le statut de l'événement</DialogTitle>
+        <DialogContent>
+          <FormControl fullWidth sx={{ mt: 2 }}>
+            <InputLabel>Nouveau statut</InputLabel>
+            <Select
+              value={newStatus}
+              label="Nouveau statut"
+              onChange={(e: SelectChangeEvent) => setNewStatus(e.target.value)}
+            >
+              <MenuItem value="open">Ouvert</MenuItem>
+              <MenuItem value="closed">Fermé</MenuItem>
+              <MenuItem value="pending">En attente</MenuItem>
+              <MenuItem value="canceled">Annulé</MenuItem>
+            </Select>
+          </FormControl>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setStatusChangeDialog(false)}>Annuler</Button>
+          <Button 
+            onClick={handleStatusChange}
+            variant="contained" 
+            disabled={!newStatus || isLoading}
+          >
+            Confirmer
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialogue de confirmation de suppression */}
+      <Dialog open={deleteDialog} onClose={() => setDeleteDialog(false)} maxWidth="sm" fullWidth>
+        <DialogTitle>Supprimer l'événement</DialogTitle>
+        <DialogContent>
+          <Typography variant="body1">
+            Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible.
+          </Typography>
+          <Typography variant="body2" color="error" sx={{ mt: 2 }}>
+            Tous les participants seront automatiquement désinscrit.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog(false)}>Annuler</Button>
+          <Button 
+            onClick={handleDeleteEvent}
+            variant="contained" 
+            color="error"
+            disabled={isLoading}
+          >
+            Supprimer définitivement
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Dialogue d'inscription */}
       <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
