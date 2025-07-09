@@ -92,6 +92,42 @@ interface ApiResponse<T> {
 const EventDetail = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
+  // Fonctions utilitaires
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'open': return 'Ouvert';
+      case 'closed': return 'Fermé';
+      case 'pending': return 'En attente';
+      case 'draft': return 'Brouillon';
+      case 'canceled': return 'Annulé';
+      default: return status;
+    }
+  };
+
+  const getParticipationStatusLabel = (status: string) => {
+    switch (status) {
+      case 'pending': return 'En attente';
+      case 'confirmed': return 'Confirmé';
+      case 'canceled': return 'Annulé';
+      case 'approved': return 'Approuvé';
+      default: return status;
+    }
+  };
+
+  const getParticipationStatusColor = (status: string) => {
+    switch (status) {
+      case 'confirmed': 
+      case 'approved': 
+        return 'success';
+      case 'pending': 
+        return 'warning';
+      case 'canceled': 
+        return 'error';
+      default: 
+        return 'default';
+    }
+  };
   
   const [event, setEvent] = useState<Event | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -345,6 +381,36 @@ const EventDetail = () => {
     }
   };
 
+  const handleParticipantStatusChange = async (participantId: number, newStatus: string) => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_URL}/event-participants/${participantId}`,
+        { status_participation: newStatus },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      // Mettre à jour localement le statut du participant
+      setParticipants(participants.map(p => 
+        p.id === participantId 
+          ? { ...p, status_participation: newStatus }
+          : p
+      ));
+      
+      showAlert(`Participant ${newStatus === 'confirmed' ? 'confirmé' : 'refusé'} avec succès`, 'success');
+    } catch (error) {
+      console.error("Erreur lors de la mise à jour du statut:", error);
+      showAlert('Erreur lors de la mise à jour du statut', 'error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleDeleteEvent = async () => {
     if (!event) return;
     
@@ -467,17 +533,6 @@ const EventDetail = () => {
       case 'closed': return 'error';
       case 'pending': return 'warning';
       default: return 'default';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'open': return 'Ouvert';
-      case 'closed': return 'Fermé';
-      case 'pending': return 'En attente';
-      case 'draft': return 'Brouillon';
-      case 'canceled': return 'Annulé'; // Ajout de ce cas
-      default: return status;
     }
   };
 
@@ -727,19 +782,54 @@ const EventDetail = () => {
                       primary={participant.user ? 
                         `${participant.user.firstname} ${participant.user.lastname}` : 
                         `Participant #${participant.userId}`}
-                      secondary={`Statut: ${participant.status_participation}`}
+                      secondary={
+                        <Chip 
+                          label={getParticipationStatusLabel(participant.status_participation)}
+                          color={getParticipationStatusColor(participant.status_participation) as any}
+                          size="small"
+                        />
+                      }
                     />
                     {isCreator && (
-                      <Tooltip title="Supprimer ce participant">
-                        <IconButton
-                          edge="end"
-                          color="error"
-                          onClick={() => handleRemoveParticipant(participant.id)}
-                          disabled={isLoading}
-                        >
-                          <PersonRemoveIcon />
-                        </IconButton>
-                      </Tooltip>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        {participant.status_participation === 'pending' && (
+                          <>
+                            <Tooltip title="Confirmer ce participant">
+                              <IconButton
+                                edge="end"
+                                color="success"
+                                onClick={() => handleParticipantStatusChange(participant.id, 'confirmed')}
+                                disabled={isLoading}
+                                size="small"
+                              >
+                                <CheckCircleIcon />
+                              </IconButton>
+                            </Tooltip>
+                            <Tooltip title="Refuser ce participant">
+                              <IconButton
+                                edge="end"
+                                color="error"
+                                onClick={() => handleParticipantStatusChange(participant.id, 'canceled')}
+                                disabled={isLoading}
+                                size="small"
+                              >
+                                <CancelIcon />
+                              </IconButton>
+                            </Tooltip>
+                          </>
+                        )}
+                        <Tooltip title="Supprimer ce participant">
+                          <IconButton
+                            edge="end"
+                            color="error"
+                            onClick={() => handleRemoveParticipant(participant.id)}
+                            disabled={isLoading}
+                            size="small"
+                          >
+                            <PersonRemoveIcon />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
                     )}
                   </ListItem>
                 ))}

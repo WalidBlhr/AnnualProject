@@ -193,17 +193,41 @@ export const updateEventParticipantHandler = async (req: Request, res: Response)
 
       const updateEventParticipant = validation.value
       const eventParticipantRepository = AppDataSource.getRepository(EventParticipant)
-      const eventParticipantFound = await eventParticipantRepository.findOneBy({ id: updateEventParticipant.id })
+      const eventParticipantFound = await eventParticipantRepository.findOne({
+          where: { id: updateEventParticipant.id },
+          relations: ['event', 'event.creator']
+      })
       if (eventParticipantFound === null) {
           res.status(404).send({ "error": `eventParticipant ${updateEventParticipant.id} not found` })
           return
       }
 
-      // if (updateEventParticipant.price) {
-      //     eventParticipantFound.price = updateEventParticipant.price
-      // }
+      // Vérifier que l'utilisateur connecté est le créateur de l'événement
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+          res.status(401).send({ error: 'Non authentifié' });
+          return;
+      }
+      
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+      
+      if (eventParticipantFound.event.creator.id !== decoded.userId) {
+          res.status(403).send({ "error": "Seul le créateur de l'événement peut modifier les participations" })
+          return
+      }
+
+      // Mettre à jour les champs spécifiés
+      if (updateEventParticipant.status_participation !== undefined) {
+          eventParticipantFound.status_participation = updateEventParticipant.status_participation
+          console.log(`Mise à jour du statut du participant ${updateEventParticipant.id} vers: ${updateEventParticipant.status_participation}`);
+      }
+      if (updateEventParticipant.date_inscription !== undefined) {
+          eventParticipantFound.date_inscription = updateEventParticipant.date_inscription
+      }
 
       const eventParticipantUpdate = await eventParticipantRepository.save(eventParticipantFound)
+      console.log(`Participant mis à jour:`, eventParticipantUpdate);
       res.status(200).send(eventParticipantUpdate)
   } catch (error) {
       console.log(error)
