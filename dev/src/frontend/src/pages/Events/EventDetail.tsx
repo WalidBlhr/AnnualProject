@@ -45,6 +45,7 @@ import jwtDecode from 'jwt-decode';
 import CleaningServicesIcon from '@mui/icons-material/CleaningServices';
 import CelebrationIcon from '@mui/icons-material/Celebration';
 import VolunteerActivismIcon from '@mui/icons-material/VolunteerActivism';
+import CommentIcon from '@mui/icons-material/Comment';
 import { API_URL } from '../../const';
 
 // Types définis selon la structure de l'API
@@ -74,6 +75,7 @@ interface Participant {
   eventId: number;
   date_inscription: string;
   status_participation: string;
+  comment?: string | null;
   user?: {
     id: number;
     firstname: string;
@@ -168,8 +170,7 @@ const EventDetail = () => {
           `${API_URL}/event-participants/${participantId}`,
           {
             status_participation: 'pending',
-            // Note est un commentaire optionnel
-            note: note || undefined
+            comment: note || undefined
           },
           {
             headers: {
@@ -187,7 +188,8 @@ const EventDetail = () => {
             userId: decoded.userId,
             eventId: Number(id),
             date_inscription: new Date().toISOString(),
-            status_participation: 'pending'
+            status_participation: 'pending',
+            comment: note || undefined
           },
           {
             headers: {
@@ -296,9 +298,12 @@ const EventDetail = () => {
         if (userParticipation) {
           setIsParticipant(true);
           setParticipantId(userParticipation.id);
+          // Remplir le commentaire existant s'il y en a un
+          setNote(userParticipation.comment || '');
         } else {
           setIsParticipant(false);
           setParticipantId(null);
+          setNote('');
         }
       }
     } catch (error) {
@@ -772,65 +777,88 @@ const EventDetail = () => {
             {participants.length > 0 ? (
               <List>
                 {participants.map((participant) => (
-                  <ListItem key={participant.id}>
-                    <ListItemAvatar>
-                      <Avatar>
-                        <PersonIcon />
-                      </Avatar>
-                    </ListItemAvatar>
-                    <ListItemText
-                      primary={participant.user ? 
-                        `${participant.user.firstname} ${participant.user.lastname}` : 
-                        `Participant #${participant.userId}`}
-                      secondary={
+                  <ListItem 
+                    key={participant.id}
+                    sx={{ 
+                      flexDirection: 'column', 
+                      alignItems: 'stretch',
+                      py: 2,
+                      px: 1
+                    }}
+                  >
+                    <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      <ListItemAvatar>
+                        <Avatar>
+                          <PersonIcon />
+                        </Avatar>
+                      </ListItemAvatar>
+                      
+                      <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                            {participant.user ? 
+                              `${participant.user.firstname} ${participant.user.lastname}` : 
+                              `Participant #${participant.userId}`}
+                          </Typography>
+                          {participant.comment && (
+                            <Tooltip title={participant.comment} arrow placement="top">
+                              <CommentIcon 
+                                sx={{ 
+                                  fontSize: 16, 
+                                  color: 'primary.main',
+                                  cursor: 'help'
+                                }} 
+                              />
+                            </Tooltip>
+                          )}
+                        </Box>
+                        
                         <Chip 
                           label={getParticipationStatusLabel(participant.status_participation)}
                           color={getParticipationStatusColor(participant.status_participation) as any}
                           size="small"
                         />
-                      }
-                    />
-                    {isCreator && (
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        {participant.status_participation === 'pending' && (
-                          <>
-                            <Tooltip title="Confirmer ce participant">
-                              <IconButton
-                                edge="end"
-                                color="success"
-                                onClick={() => handleParticipantStatusChange(participant.id, 'confirmed')}
-                                disabled={isLoading}
-                                size="small"
-                              >
-                                <CheckCircleIcon />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Refuser ce participant">
-                              <IconButton
-                                edge="end"
-                                color="error"
-                                onClick={() => handleParticipantStatusChange(participant.id, 'canceled')}
-                                disabled={isLoading}
-                                size="small"
-                              >
-                                <CancelIcon />
-                              </IconButton>
-                            </Tooltip>
-                          </>
-                        )}
-                        <Tooltip title="Supprimer ce participant">
-                          <IconButton
-                            edge="end"
-                            color="error"
-                            onClick={() => handleRemoveParticipant(participant.id)}
-                            disabled={isLoading}
-                            size="small"
-                          >
-                            <PersonRemoveIcon />
-                          </IconButton>
-                        </Tooltip>
                       </Box>
-                    )}
+                      
+                      {isCreator && (
+                        <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                          {participant.status_participation === 'pending' && (
+                            <>
+                              <Tooltip title="Confirmer ce participant">
+                                <IconButton
+                                  color="success"
+                                  onClick={() => handleParticipantStatusChange(participant.id, 'confirmed')}
+                                  disabled={isLoading}
+                                  size="small"
+                                >
+                                  <CheckCircleIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Refuser ce participant">
+                                <IconButton
+                                  color="error"
+                                  onClick={() => handleParticipantStatusChange(participant.id, 'canceled')}
+                                  disabled={isLoading}
+                                  size="small"
+                                >
+                                  <CancelIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                          <Tooltip title="Supprimer ce participant">
+                            <IconButton
+                              color="error"
+                              onClick={() => handleRemoveParticipant(participant.id)}
+                              disabled={isLoading}
+                              size="small"
+                            >
+                              <PersonRemoveIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </Box>
+                      )}
+                    </Box>
                   </ListItem>
                 ))}
               </List>

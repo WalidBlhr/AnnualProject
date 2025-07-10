@@ -21,11 +21,15 @@ export class EventParticipant {
     @Column()
     status_participation: string;
 
-    constructor(id: number, user: User, event: Event, date_inscription: Date, status_participation: string) {
+    @Column({ type: 'text', nullable: true })
+    comment: string | null;
+
+    constructor(id: number, user: User, event: Event, date_inscription: Date, status_participation: string, comment?: string) {
         this.id = id
         this.user = user
         this.event = event
         this.date_inscription = date_inscription
         this.status_participation = status_participation
+        this.comment = comment || null
     }
 }

@@ -38,6 +38,7 @@ export interface CreateEventParticipantRequest {
   eventId: number; // liaison avec l'event
   date_inscription: Date;
   status_participation: string; // ex: "pending", "confirmed", "canceled", etc.
+  comment?: string; // commentaire optionnel lors de l'inscription
 }
 
 export const createEventParticipantValidation = Joi.object<CreateEventParticipantRequest>({
@@ -45,6 +46,7 @@ export const createEventParticipantValidation = Joi.object<CreateEventParticipan
   eventId: Joi.number().required(),
   date_inscription: Joi.date().required(),
   status_participation: Joi.string().valid("pending", "confirmed", "canceled", "approved").default("pending"),
+  comment: Joi.string().allow('').optional(),
 }).options({ abortEarly: false });
 
 /**
@@ -55,6 +57,7 @@ export interface UpdateEventParticipantRequest {
   id: number;
   date_inscription?: Date;
   status_participation?: string;
+  comment?: string; // commentaire optionnel
   // Selon votre logique, vous pouvez autoriser le changement de userId, eventId, etc. si besoin
 }
 
@@ -62,4 +65,5 @@ export const updateEventParticipantValidation = Joi.object<UpdateEventParticipan
   id: Joi.number().required(),
   date_inscription: Joi.date().optional(),
   status_participation: Joi.string().valid("pending", "confirmed", "canceled", "approved").optional(),
+  comment: Joi.string().allow('').optional(),
 }).options({ abortEarly: false });

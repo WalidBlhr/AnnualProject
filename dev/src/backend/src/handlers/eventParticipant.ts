@@ -20,7 +20,7 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
       return;
     }
 
-    const { userId, eventId, date_inscription, status_participation } = validation.value;
+    const { userId, eventId, date_inscription, status_participation, comment } = validation.value;
     
     // Récupérer les entités User et Event
     const userRepository = AppDataSource.getRepository(User);
@@ -55,7 +55,8 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
       user,
       event,
       new Date(date_inscription),
-      status_participation || 'pending'
+      status_participation || 'pending',
+      comment
     );
     
     const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
@@ -224,6 +225,9 @@ export const updateEventParticipantHandler = async (req: Request, res: Response)
       }
       if (updateEventParticipant.date_inscription !== undefined) {
           eventParticipantFound.date_inscription = updateEventParticipant.date_inscription
+      }
+      if (updateEventParticipant.comment !== undefined) {
+          eventParticipantFound.comment = updateEventParticipant.comment
       }
 
       const eventParticipantUpdate = await eventParticipantRepository.save(eventParticipantFound)
