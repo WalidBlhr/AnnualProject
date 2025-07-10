@@ -149,7 +149,7 @@ const MyServices: React.FC = () => {
             availability: {
               ...service.availability,
               days: convertDaysToEnglish(service.availability.days), // Convertir en anglais pour le frontend
-              timeSlots: service.availability.timeSlots || service.availability.timeSlots || [] // Harmoniser timeSlots
+              timeSlots: service.availability.time_slots || [] // Utiliser time_slots
             }
           }));
         setServices(myServices);
@@ -382,7 +382,7 @@ const MyServices: React.FC = () => {
   };
 
   const getTimeSlots = (service: Service) => {
-    return service.availability?.timeSlots || [];
+    return service.availability?.time_slots || [];
   };
 
   if (loading) {

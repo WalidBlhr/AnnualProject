@@ -6,6 +6,8 @@ import { TrocOffer } from "./troc_offer";
 import { Message } from "./message";
 import { EventParticipant } from "./event_participant";
 import { Absence } from "./absence";
+import { Booking } from "./booking";
+import * as Joi from 'joi';
 
 @Entity({ name: "user" })
 export class User {
@@ -42,9 +44,6 @@ export class User {
     @OneToMany(() => Service, service => service.provider)
     providedServices: Service[];
 
-    @OneToMany(() => Service, service => service.requester)
-    requestedServices: Service[];
-
     @OneToMany(() => TrocOffer, offer => offer.user)
     offers: TrocOffer[];
 
@@ -62,6 +61,9 @@ export class User {
 
     @OneToMany(() => Absence, absence => absence.user)
     absences: Absence[];
+
+    @OneToMany(() => Booking, booking => booking.requester)
+    bookings: Booking[];
 
     @ManyToMany(() => User)
     @JoinTable({
@@ -86,13 +88,13 @@ export class User {
         updatedAt: Date, 
         tokens: Token[], 
         providedServices: Service[], 
-        requestedServices: Service[], 
         offers: TrocOffer[], 
         sentMessages: Message[], 
         receivedMessages: Message[], 
         eventParticipations: EventParticipant[], 
         createdEvents: Event[],
         absences: Absence[],
+        bookings: Booking[],
         trusted_contacts: User[],
         status: 'online' | 'offline',
         last_active: Date
@@ -107,13 +109,13 @@ export class User {
         this.updatedAt = updatedAt
         this.tokens = tokens
         this.providedServices = providedServices
-        this.requestedServices = requestedServices
         this.offers = offers
         this.sentMessages = sentMessages
         this.receivedMessages = receivedMessages
         this.eventParticipations = eventParticipations
         this.createdEvents = createdEvents
         this.absences = absences
+        this.bookings = bookings
         this.trusted_contacts = trusted_contacts
         this.status = status
         this.last_active = last_active

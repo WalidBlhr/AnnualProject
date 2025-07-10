@@ -114,3 +114,41 @@ export const updateServiceValidation = Joi.object<UpdateServiceRequest>({
   }),
   status: Joi.string().valid('available', 'booked', 'completed')
 }).options({ abortEarly: false });
+
+/**
+ * Création d'une réservation (booking)
+ * Le requester_id est récupéré depuis le token JWT
+ */
+export interface CreateBookingRequest {
+  service_id: number;
+  day: string;
+  time_slot: string;
+}
+
+export const createBookingValidation = Joi.object<CreateBookingRequest>({
+  service_id: Joi.number().required(),
+  day: Joi.string().valid('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday').required(),
+  time_slot: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required()
+}).options({ abortEarly: false });
+
+/**
+ * Acceptation d'une réservation par le provider
+ */
+export interface AcceptBookingRequest {
+  booking_id: number;
+}
+
+export const acceptBookingValidation = Joi.object<AcceptBookingRequest>({
+  booking_id: Joi.number().required()
+}).options({ abortEarly: false });
+
+/**
+ * Annulation d'une réservation
+ */
+export interface CancelBookingRequest {
+  booking_id: number;
+}
+
+export const cancelBookingValidation = Joi.object<CancelBookingRequest>({
+  booking_id: Joi.number().required()
+}).options({ abortEarly: false });

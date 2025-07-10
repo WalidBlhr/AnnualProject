@@ -223,7 +223,7 @@ const MyServices: React.FC = () => {
         date_end: selectedService.date_end,
         availability: {
           days: selectedService.availability.days,
-          time_slots: selectedService.availability.timeSlots || []  // Convertir timeSlots en time_slots
+          time_slots: selectedService.availability.time_slots || []  // Utiliser time_slots
         },
         status: selectedService.status,
       };
@@ -453,7 +453,7 @@ const MyServices: React.FC = () => {
                             <strong>Jours:</strong> {formatDays(service.availability.days)}
                           </Typography>
                           <Typography variant="body2" gutterBottom>
-                            <strong>Horaires:</strong> {formatTimeSlots((service.availability as any).time_slots || service.availability.timeSlots || [])}
+                            <strong>Horaires:</strong> {formatTimeSlots(service.availability.time_slots || [])}
                           </Typography>
                           <Typography variant="body2" color="textSecondary">
                             Du {new Date(service.date_start).toLocaleDateString()} au {new Date(service.date_end).toLocaleDateString()}
@@ -787,7 +787,7 @@ const MyServices: React.FC = () => {
                   <Typography variant="subtitle1" gutterBottom>
                     Créneaux horaires
                   </Typography>
-                  {((selectedService.availability as any).time_slots || selectedService.availability.timeSlots || []).length > 0 && (
+                  {(selectedService.availability.time_slots || []).length > 0 && (
                     <TableContainer component={Paper} variant="outlined">
                       <Table size="small">
                         <TableHead>
@@ -798,7 +798,7 @@ const MyServices: React.FC = () => {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {((selectedService.availability as any).time_slots || selectedService.availability.timeSlots || []).map((slot: TimeSlot, index: number) => (
+                          {(selectedService.availability.time_slots || []).map((slot: TimeSlot, index: number) => (
                             <TableRow key={index}>
                               <TableCell>{slot.start}</TableCell>
                               <TableCell>{slot.end}</TableCell>
@@ -806,15 +806,14 @@ const MyServices: React.FC = () => {
                                 <IconButton
                                   size="small"
                                   onClick={() => {
-                                    const currentSlots = (selectedService.availability as any).time_slots || selectedService.availability.timeSlots || [];
+                                    const currentSlots = selectedService.availability.time_slots || [];
                                     const newTimeSlots = currentSlots.filter((_: TimeSlot, i: number) => i !== index);
                                     setSelectedService({
                                       ...selectedService,
                                       availability: {
                                         ...selectedService.availability,
-                                        timeSlots: newTimeSlots,
-                                        time_slots: newTimeSlots  // Garder les deux formats
-                                      } as any
+                                        time_slots: newTimeSlots
+                                      }
                                     });
                                   }}
                                   color="error"

@@ -1,5 +1,15 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm"
+import {
+  Column,
+  CreateDateColumn,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryGeneratedColumn,
+  UpdateDateColumn
+} from "typeorm";
 import { User } from "./user";
+import { Booking } from "./booking";
 
 @Entity({ name: "service" })
 export class Service {
@@ -28,8 +38,8 @@ export class Service {
     availability: {
         days: string[];
         time_slots: {
-            start: string;
-            end: string;
+        start: string;
+        end: string;
         }[];
     };
 
@@ -43,9 +53,8 @@ export class Service {
     @JoinColumn({ name: 'provider_id' })
     provider: User;
 
-    @ManyToOne(() => User, user => user.requestedServices, { nullable: true })
-    @JoinColumn({ name: 'requester_id' })
-    requester: User | null;
+    @OneToMany(() => Booking, booking => booking.service)
+    bookings: Booking[];
 
     constructor(
         id: number, 
@@ -58,7 +67,7 @@ export class Service {
         date_end: Date, 
         status: string, 
         provider: User, 
-        requester?: User
+        bookings: Booking[]
     ) {
         this.id = id;
         this.title = title;
@@ -74,6 +83,6 @@ export class Service {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.provider = provider;
-        this.requester = requester || null;
+        this.bookings = bookings;
     }
 }

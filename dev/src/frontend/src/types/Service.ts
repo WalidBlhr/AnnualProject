@@ -3,6 +3,29 @@ export interface TimeSlot {
   end: string;   // Format HH:MM
 }
 
+export interface Booking {
+  id: number;
+  service: {
+    id: number;
+    title: string;
+    provider: {
+      id: number;
+      firstname: string;
+      lastname: string;
+    };
+  };
+  requester: {
+    id: number;
+    firstname: string;
+    lastname: string;
+  };
+  day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  time_slot: string; // Format HH:MM-HH:MM
+  status: 'pending' | 'accepted' | 'cancelled';
+  created_at: string;
+  updated_at: string;
+}
+
 export interface ServiceBooking {
   id: number;
   date: string; // Format YYYY-MM-DD
@@ -22,7 +45,7 @@ export interface Service {
   recurring: boolean; // Si le service est récurrent
   availability: {
     days: ('monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday')[];
-    timeSlots: TimeSlot[];
+    time_slots: TimeSlot[];
   };
   location?: string; // Localisation du service
   price?: number;    // Prix du service (optionnel)
@@ -71,7 +94,6 @@ export const DAY_LABELS = {
 
 export const BOOKING_STATUS = {
   pending: 'En attente',
-  confirmed: 'Confirmé',
-  completed: 'Terminé',
+  accepted: 'Accepté',
   cancelled: 'Annulé'
 };

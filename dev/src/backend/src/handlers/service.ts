@@ -1,11 +1,12 @@
 import { Request, Response } from "express";
-import { createServiceValidation, updateServiceValidation, ServiceIdValidation, ListServicesValidation } from "./validators/service";
+import { createServiceValidation, updateServiceValidation, ServiceIdValidation, ListServicesValidation, createBookingValidation, acceptBookingValidation, cancelBookingValidation } from "./validators/service";
 import jwt from "jsonwebtoken";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { Service } from "../db/models/service";
 import { User } from "../db/models/user";
 import { Message } from "../db/models/message";
+import { Booking, BookingDay, BookingStatus } from "../db/models/booking";
 
 /**
  * Create a new Service
@@ -72,8 +73,7 @@ export const createServiceHandler = async (req: Request, res: Response) => {
       date_end: createServiceRequest.date_end,
       availability: createServiceRequest.availability,
       provider: provider,
-      status: 'available',
-      requester: null
+      status: 'available'
     });
     
     const serviceCreated = await serviceRepository.save(service);
@@ -92,8 +92,7 @@ export const createServiceHandler = async (req: Request, res: Response) => {
         id: provider.id,
         firstname: provider.firstname,
         lastname: provider.lastname
-      },
-      requester: null
+      }
     };
 
     res.status(201).send(response);
@@ -120,15 +119,11 @@ export const listServiceHandler = async (req: Request, res: Response) => {
     const listServiceRequest = validation.value;
     const query = AppDataSource.createQueryBuilder(Service, 'service')
       .leftJoinAndSelect('service.provider', 'provider')
-      .leftJoinAndSelect('service.requester', 'requester')
       .select([
         'service',
         'provider.id',
         'provider.firstname',
-        'provider.lastname',
-        'requester.id',
-        'requester.firstname',
-        'requester.lastname'
+        'provider.lastname'
       ]);
 
     // Ajout des filtres
@@ -184,8 +179,7 @@ export const detailedServiceHandler = async (req: Request, res: Response) => {
     const service = await serviceRepository.findOne({
       where: { id: getServiceRequest.id },
       relations: {
-        provider: true,
-        requester: true
+        provider: true
       },
       select: {
         id: true,
@@ -203,11 +197,6 @@ export const detailedServiceHandler = async (req: Request, res: Response) => {
           }
         },
         provider: {
-          id: true,
-          firstname: true,
-          lastname: true
-        },
-        requester: {
           id: true,
           firstname: true,
           lastname: true
@@ -279,8 +268,7 @@ export const updateServiceHandler = async (req: Request, res: Response) => {
     const updatedServiceWithRelations = await serviceRepository.findOne({
       where: { id: serviceUpdate.id },
       relations: {
-        provider: true,
-        requester: true
+        provider: true
       }
     });
 
@@ -318,3 +306,341 @@ export const deleteServiceHandler = async (req: Request, res: Response) => {
       res.status(500).send({ error: "Internal error" })
   }
 }
+
+/**
+ * Créer une nouvelle réservation (booking)
+ * POST /bookings
+ */
+export const createBookingHandler = async (req: Request, res: Response) => {
+  try {
+    // Récupérer l'utilisateur depuis le token JWT
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      res.status(401).send({ error: 'Non authentifié' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    const userRepository = AppDataSource.getRepository(User);
+    const requester = await userRepository.findOneBy({ id: decoded.userId });
+
+    if (!requester) {
+      res.status(404).send({ message: "Utilisateur non trouvé" });
+      return;
+    }
+
+    // Validation de la requête
+    const validation = createBookingValidation.validate(req.body);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const createBookingRequest = validation.value;
+
+    // Récupérer le service
+    const serviceRepository = AppDataSource.getRepository(Service);
+    const service = await serviceRepository.findOne({
+      where: { id: createBookingRequest.service_id },
+      relations: ['provider']
+    });
+
+    if (!service) {
+      res.status(404).send({ message: "Service non trouvé" });
+      return;
+    }
+
+    // Vérifier que l'utilisateur ne réserve pas son propre service
+    if (service.provider.id === requester.id) {
+      res.status(400).send({ message: "Vous ne pouvez pas réserver votre propre service" });
+      return;
+    }
+
+    // Vérifier que le service est disponible
+    if (service.status !== 'available') {
+      res.status(400).send({ message: "Ce service n'est pas disponible pour les réservations" });
+      return;
+    }
+
+    // Convertir le jour en français pour la vérification
+    const dayMapping: { [key: string]: string } = {
+      'monday': 'Lundi',
+      'tuesday': 'Mardi', 
+      'wednesday': 'Mercredi',
+      'thursday': 'Jeudi',
+      'friday': 'Vendredi',
+      'saturday': 'Samedi',
+      'sunday': 'Dimanche'
+    };
+
+    const frenchDay = dayMapping[createBookingRequest.day];
+    
+    // Vérifier que le jour demandé est dans la disponibilité du service
+    if (!service.availability || !service.availability.days.includes(frenchDay)) {
+      res.status(400).send({ 
+        message: `Le service n'est pas disponible le ${frenchDay}` 
+      });
+      return;
+    }
+
+    // Vérifier que le créneau demandé est dans la disponibilité du service
+    const [requestedStart, requestedEnd] = createBookingRequest.time_slot.split('-');
+    const isTimeSlotAvailable = service.availability.time_slots.some(slot => 
+      slot.start === requestedStart && slot.end === requestedEnd
+    );
+
+    if (!isTimeSlotAvailable) {
+      res.status(400).send({ 
+        message: `Le créneau ${createBookingRequest.time_slot} n'est pas disponible pour ce service` 
+      });
+      return;
+    }
+
+    // Vérifier qu'il n'y a pas déjà une réservation 'accepted' sur le même jour et créneau pour ce service
+    const bookingRepository = AppDataSource.getRepository(Booking);
+    const existingBooking = await bookingRepository.findOne({
+      where: {
+        service: { id: service.id },
+        day: createBookingRequest.day as BookingDay,
+        time_slot: createBookingRequest.time_slot,
+        status: BookingStatus.ACCEPTED
+      }
+    });
+
+    if (existingBooking) {
+      res.status(400).send({ 
+        message: `Ce créneau ${createBookingRequest.time_slot} le ${frenchDay} est déjà réservé pour ce service` 
+      });
+      return;
+    }
+
+    // Créer la réservation
+    const booking = bookingRepository.create({
+      service: service,
+      requester: requester,
+      day: createBookingRequest.day as BookingDay,
+      time_slot: createBookingRequest.time_slot,
+      status: BookingStatus.PENDING
+    });
+
+    const bookingCreated = await bookingRepository.save(booking);
+
+    // Retourner la réservation créée
+    const response = {
+      id: bookingCreated.id,
+      service: {
+        id: service.id,
+        title: service.title,
+        provider: {
+          id: service.provider.id,
+          firstname: service.provider.firstname,
+          lastname: service.provider.lastname
+        }
+      },
+      requester: {
+        id: requester.id,
+        firstname: requester.firstname,
+        lastname: requester.lastname
+      },
+      day: bookingCreated.day,
+      time_slot: bookingCreated.time_slot,
+      status: bookingCreated.status,
+      created_at: bookingCreated.created_at,
+      updated_at: bookingCreated.updated_at
+    };
+
+    res.status(201).send(response);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ message: "Internal error" });
+  }
+};
+
+/**
+ * Accepter une réservation (booking)
+ * PUT /bookings/:booking_id/accept
+ */
+export const acceptBookingHandler = async (req: Request, res: Response) => {
+  try {
+    // Récupérer l'utilisateur depuis le token JWT
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      res.status(401).send({ error: 'Non authentifié' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: decoded.userId });
+
+    if (!user) {
+      res.status(404).send({ message: "Utilisateur non trouvé" });
+      return;
+    }
+
+    // Validation de la requête
+    const validation = acceptBookingValidation.validate({ booking_id: req.params.booking_id });
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const acceptBookingRequest = validation.value;
+
+    // Récupérer la réservation avec les relations
+    const bookingRepository = AppDataSource.getRepository(Booking);
+    const booking = await bookingRepository.findOne({
+      where: { id: acceptBookingRequest.booking_id },
+      relations: ['service', 'service.provider', 'requester']
+    });
+
+    if (!booking) {
+      res.status(404).send({ message: "Réservation non trouvée" });
+      return;
+    }
+
+    // Vérifier que l'utilisateur est bien le provider du service
+    if (booking.service.provider.id !== user.id) {
+      res.status(403).send({ message: "Vous n'êtes pas autorisé à modifier cette réservation" });
+      return;
+    }
+
+    // Vérifier que la réservation est en statut 'pending'
+    if (booking.status !== BookingStatus.PENDING) {
+      res.status(400).send({ message: "Cette réservation ne peut plus être acceptée" });
+      return;
+    }
+
+    // Mettre à jour le statut de la réservation
+    booking.status = BookingStatus.ACCEPTED;
+    const updatedBooking = await bookingRepository.save(booking);
+
+    // Retourner la réservation mise à jour
+    const response = {
+      id: updatedBooking.id,
+      service: {
+        id: booking.service.id,
+        title: booking.service.title,
+        provider: {
+          id: booking.service.provider.id,
+          firstname: booking.service.provider.firstname,
+          lastname: booking.service.provider.lastname
+        }
+      },
+      requester: {
+        id: booking.requester.id,
+        firstname: booking.requester.firstname,
+        lastname: booking.requester.lastname
+      },
+      day: updatedBooking.day,
+      time_slot: updatedBooking.time_slot,
+      status: updatedBooking.status,
+      created_at: updatedBooking.created_at,
+      updated_at: updatedBooking.updated_at
+    };
+
+    res.status(200).send(response);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ message: "Internal error" });
+  }
+};
+
+/**
+ * Annuler une réservation (booking)
+ * PUT /bookings/:booking_id/cancel
+ */
+export const cancelBookingHandler = async (req: Request, res: Response) => {
+  try {
+    // Récupérer l'utilisateur depuis le token JWT
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      res.status(401).send({ error: 'Non authentifié' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: decoded.userId });
+
+    if (!user) {
+      res.status(404).send({ message: "Utilisateur non trouvé" });
+      return;
+    }
+
+    // Validation de la requête
+    const validation = cancelBookingValidation.validate({ booking_id: req.params.booking_id });
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const cancelBookingRequest = validation.value;
+
+    // Récupérer la réservation avec les relations
+    const bookingRepository = AppDataSource.getRepository(Booking);
+    const booking = await bookingRepository.findOne({
+      where: { id: cancelBookingRequest.booking_id },
+      relations: ['service', 'service.provider', 'requester']
+    });
+
+    if (!booking) {
+      res.status(404).send({ message: "Réservation non trouvée" });
+      return;
+    }
+
+    // Vérifier que l'utilisateur est soit le requester soit le provider du service
+    const isRequester = booking.requester.id === user.id;
+    const isProvider = booking.service.provider.id === user.id;
+
+    if (!isRequester && !isProvider) {
+      res.status(403).send({ message: "Vous n'êtes pas autorisé à annuler cette réservation" });
+      return;
+    }
+
+    // Vérifier que la réservation n'est pas déjà annulée
+    if (booking.status === BookingStatus.CANCELLED) {
+      res.status(400).send({ message: "Cette réservation est déjà annulée" });
+      return;
+    }
+
+    // Mettre à jour le statut de la réservation
+    booking.status = BookingStatus.CANCELLED;
+    const updatedBooking = await bookingRepository.save(booking);
+
+    // Retourner la réservation mise à jour
+    const response = {
+      id: updatedBooking.id,
+      service: {
+        id: booking.service.id,
+        title: booking.service.title,
+        provider: {
+          id: booking.service.provider.id,
+          firstname: booking.service.provider.firstname,
+          lastname: booking.service.provider.lastname
+        }
+      },
+      requester: {
+        id: booking.requester.id,
+        firstname: booking.requester.firstname,
+        lastname: booking.requester.lastname
+      },
+      day: updatedBooking.day,
+      time_slot: updatedBooking.time_slot,
+      status: updatedBooking.status,
+      created_at: updatedBooking.created_at,
+      updated_at: updatedBooking.updated_at
+    };
+
+    res.status(200).send(response);
+  } catch (error) {
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ message: "Internal error" });
+  }
+};
