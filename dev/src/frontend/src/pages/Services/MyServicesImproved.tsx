@@ -140,9 +140,18 @@ const MyServices: React.FC = () => {
       });
 
       if (response.data?.data) {
-        const myServices = response.data.data.filter((service: Service) => 
-          service.provider && service.provider.id === decoded.userId
-        );
+        const myServices = response.data.data
+          .filter((service: Service) => 
+            service.provider && service.provider.id === decoded.userId
+          )
+          .map((service: Service) => ({
+            ...service,
+            availability: {
+              ...service.availability,
+              days: convertDaysToEnglish(service.availability.days), // Convertir en anglais pour le frontend
+              timeSlots: service.availability.timeSlots || service.availability.timeSlots || [] // Harmoniser timeSlots
+            }
+          }));
         setServices(myServices);
       }
     } catch (error) {
@@ -199,12 +208,15 @@ const MyServices: React.FC = () => {
         date_start: new Date(formData.date_start).toISOString(),
         date_end: new Date(formData.date_end).toISOString(),
         availability: {
-          days: formData.days,
+          days: convertDaysToFrench(formData.days), // Convertir les jours en français
           time_slots: formData.timeSlots
         }
       };
 
-      console.log('Creating service with data:', serviceData);
+      console.log('🚀 Creating service with data:', serviceData);
+      console.log('🎯 Original formData.days:', formData.days);
+      console.log('🔄 Converted days:', convertDaysToFrench(formData.days));
+      console.log('⏰ Time slots:', formData.timeSlots);
 
       await axios.post(`${API_URL}/services`, serviceData, {
         headers: {
@@ -340,6 +352,25 @@ const MyServices: React.FC = () => {
     return days.map(day => DAY_LABELS[day as keyof typeof DAY_LABELS] || day).join(', ');
   };
 
+  // Fonction pour convertir les jours anglais vers français pour l'API
+  const convertDaysToFrench = (englishDays: string[]): string[] => {
+    return englishDays.map(day => DAY_LABELS[day as keyof typeof DAY_LABELS] || day);
+  };
+
+  // Fonction pour convertir les jours français vers anglais depuis l'API
+  const convertDaysToEnglish = (frenchDays: string[]): string[] => {
+    const reverseMapping: { [key: string]: string } = {
+      'Lundi': 'monday',
+      'Mardi': 'tuesday', 
+      'Mercredi': 'wednesday',
+      'Jeudi': 'thursday',
+      'Vendredi': 'friday',
+      'Samedi': 'saturday',
+      'Dimanche': 'sunday'
+    };
+    return frenchDays.map(day => reverseMapping[day] || day);
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'available': return 'success';
@@ -351,7 +382,7 @@ const MyServices: React.FC = () => {
   };
 
   const getTimeSlots = (service: Service) => {
-    return (service.availability as any)?.time_slots || service.availability?.timeSlots || [];
+    return service.availability?.timeSlots || [];
   };
 
   if (loading) {

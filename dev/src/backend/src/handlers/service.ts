@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { createServiceValidation, updateServiceValidation, ServiceIdValidation, ListServicesValidation, bookServiceValidation } from "./validators/service";
+import { createServiceValidation, updateServiceValidation, ServiceIdValidation, ListServicesValidation } from "./validators/service";
 import jwt from "jsonwebtoken";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
@@ -13,18 +13,7 @@ import { Message } from "../db/models/message";
  */
 export const createServiceHandler = async (req: Request, res: Response) => {
   try {
-    // Validation de la requête
-    const validation = createServiceValidation.validate(req.body);
-    if (validation.error) {
-      res.status(400).send(generateValidationErrorMessage(validation.error.details))
-      return;
-    }
-
-    const createServiceRequest = validation.value;
-    const serviceRepository = AppDataSource.getRepository(Service);
-    const userRepository = AppDataSource.getRepository(User);
-
-    // Récupérer l'utilisateur qui crée le service (provider)
+    // Récupérer le provider depuis le token JWT (ignore provider_id du body)
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) {
       res.status(401).send({ error: 'Non authentifié' });
@@ -32,16 +21,56 @@ export const createServiceHandler = async (req: Request, res: Response) => {
     }
 
     const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    const userRepository = AppDataSource.getRepository(User);
     const provider = await userRepository.findOneBy({ id: decoded.userId });
 
     if (!provider) {
-      res.status(400).send({ message: "Utilisateur non trouvé" });
+      res.status(404).send({ message: "Utilisateur non trouvé" });
       return;
     }
 
-    // Créer le service avec le provider
-    const service = serviceRepository.create({ 
-      ...createServiceRequest,
+    // Extraire les données du body (sans provider_id)
+    const { provider_id, ...serviceData } = req.body;
+
+    // Validation de la requête (sans provider_id)
+    const validation = createServiceValidation.validate(serviceData);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const createServiceRequest = validation.value;
+
+    // Vérifier que availability est correctement formaté
+    if (!createServiceRequest.availability || 
+        !Array.isArray(createServiceRequest.availability.days) ||
+        !Array.isArray(createServiceRequest.availability.time_slots)) {
+      res.status(400).send({ 
+        message: "availability doit contenir un objet avec 'days' (array) et 'time_slots' (array)" 
+      });
+      return;
+    }
+
+    // Vérifier la structure des time_slots
+    for (const slot of createServiceRequest.availability.time_slots) {
+      if (!slot.start || !slot.end) {
+        res.status(400).send({ 
+          message: "Chaque time_slot doit avoir 'start' et 'end'" 
+        });
+        return;
+      }
+    }
+
+    const serviceRepository = AppDataSource.getRepository(Service);
+
+    // Créer le service avec le provider du token et status 'available'
+    const service = serviceRepository.create({
+      title: createServiceRequest.title,
+      description: createServiceRequest.description,
+      type: createServiceRequest.type,
+      date_start: createServiceRequest.date_start,
+      date_end: createServiceRequest.date_end,
+      availability: createServiceRequest.availability,
       provider: provider,
       status: 'available',
       requester: null
@@ -49,33 +78,25 @@ export const createServiceHandler = async (req: Request, res: Response) => {
     
     const serviceCreated = await serviceRepository.save(service);
 
-    // Recharger le service avec les relations pour la réponse
-    const serviceWithRelations = await serviceRepository.findOne({
-      where: { id: serviceCreated.id },
-      relations: {
-        provider: true
+    // Retourner un JSON clair avec provider info
+    const response = {
+      id: serviceCreated.id,
+      title: serviceCreated.title,
+      description: serviceCreated.description,
+      type: serviceCreated.type,
+      status: serviceCreated.status,
+      date_start: serviceCreated.date_start,
+      date_end: serviceCreated.date_end,
+      availability: serviceCreated.availability,
+      provider: {
+        id: provider.id,
+        firstname: provider.firstname,
+        lastname: provider.lastname
       },
-      select: {
-        id: true,
-        title: true,
-        description: true,
-        type: true,
-        status: true,
-        date_start: true,
-        date_end: true,
-        availability: {
-          days: true,
-          time_slots: true
-        },
-        provider: {
-          id: true,
-          firstname: true,
-          lastname: true
-        }
-      }
-    });
+      requester: null
+    };
 
-    res.status(201).send(serviceWithRelations);
+    res.status(201).send(response);
   } catch (error) {
     if (error instanceof Error) {
       console.log(`Internal error: ${error.message}`);
@@ -297,169 +318,3 @@ export const deleteServiceHandler = async (req: Request, res: Response) => {
       res.status(500).send({ error: "Internal error" })
   }
 }
-
-// Ajoutez cette nouvelle fonction
-export const bookServiceHandler = async (req: Request, res: Response) => {
-  try {
-    const validation = bookServiceValidation.validate({ 
-      ...req.params,
-      ...req.body 
-    });
-    
-    if (validation.error) {
-      res.status(400).send(generateValidationErrorMessage(validation.error.details));
-      return;
-    }
-
-    const bookingRequest = validation.value;
-    const serviceRepository = AppDataSource.getRepository(Service);
-    const userRepository = AppDataSource.getRepository(User);
-    const messageRepository = AppDataSource.getRepository(Message);
-
-    // Récupérer le service
-    const service = await serviceRepository.findOne({
-      where: { id: bookingRequest.id },
-      relations: ['provider']
-    });
-
-    if (!service) {
-      res.status(404).send({ error: 'Service non trouvé' });
-      return;
-    }
-
-    // Vérifier que le service est disponible
-    if (service.status !== 'available') {
-      res.status(400).send({ error: 'Ce service n\'est pas disponible' });
-      return;
-    }
-
-    // Vérifier que le jour est disponible
-    if (!service.availability.days.includes(bookingRequest.day)) {
-      res.status(400).send({ error: 'Ce jour n\'est pas disponible' });
-      return;
-    }
-
-    // Vérifier que le créneau horaire est disponible
-    const [requestedStart, requestedEnd] = bookingRequest.timeSlot.split('-');
-    const timeSlotExists = service.availability.time_slots.some(
-      slot => slot.start === requestedStart && slot.end === requestedEnd
-    );
-
-    if (!timeSlotExists) {
-      res.status(400).send({ error: 'Ce créneau horaire n\'est pas disponible' });
-      return;
-    }
-
-    // Récupérer l'utilisateur qui fait la réservation
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      res.status(401).send({ error: 'Non authentifié' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
-    const requester = await userRepository.findOneBy({ id: decoded.userId });
-
-    if (!requester) {
-      res.status(404).send({ error: 'Utilisateur non trouvé' });
-      return;
-    }
-
-    // Mettre à jour le service
-    service.status = 'booked';
-    service.requester = requester;
-    
-    const updatedService = await serviceRepository.save(service);
-
-    // Création du message de notification
-    const newMessage = messageRepository.create({
-      content: `Nouvelle réservation pour le service "${service.title}"
-Date : ${bookingRequest.day}
-Horaire : ${bookingRequest.timeSlot}
-${bookingRequest.note ? `\nNote : ${bookingRequest.note}` : ''}`,
-      date_sent: new Date(), // Ajout de la date d'envoi
-      sender: requester,
-      receiver: service.provider,
-      status: 'unread'
-    });
-
-    await messageRepository.save(newMessage);
-
-    res.status(200).send(updatedService);
-  } catch (error) {
-    console.error('Erreur lors de la réservation:', error);
-    res.status(500).send({ error: 'Erreur interne du serveur' });
-  }
-};
-
-// Ajoutez cette nouvelle fonction
-export const cancelServiceBookingHandler = async (req: Request, res: Response) => {
-  try {
-    const validation = ServiceIdValidation.validate(req.params);
-    if (validation.error) {
-      res.status(400).send(generateValidationErrorMessage(validation.error.details));
-      return;
-    }
-
-    const serviceRepository = AppDataSource.getRepository(Service);
-    const service = await serviceRepository.findOne({
-      where: { id: parseInt(req.params.id) },
-      relations: ['provider', 'requester']
-    });
-
-    if (!service) {
-      res.status(404).send({ error: 'Service non trouvé' });
-      return;
-    }
-
-    // Vérifier que le service est bien réservé
-    if (service.status !== 'booked') {
-      res.status(400).send({ error: 'Ce service n\'est pas réservé' });
-      return;
-    }
-
-    // Vérifier que l'utilisateur est bien le demandeur ou le prestataire
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) {
-      res.status(401).send({ error: 'Non authentifié' });
-      return;
-    }
-
-    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
-    if (service.requester?.id !== decoded.userId && service.provider.id !== decoded.userId) {
-      res.status(403).send({ error: 'Non autorisé à annuler cette réservation' });
-      return;
-    }
-
-    // Réinitialiser le service
-    service.status = 'available';
-    service.requester = null;
-
-    const updatedService = await serviceRepository.save(service);
-    
-    const messageRepository = AppDataSource.getRepository(Message);
-    const userRepository = AppDataSource.getRepository(User);
-    const requester = await userRepository.findOneBy({ id: decoded.userId });
-    if (!requester) {
-      res.status(404).send({ error: 'Utilisateur non trouvé' });
-      return;
-    }
-    service.requester = requester;
-
-    // Dans cancelServiceBookingHandler, ajouter la notification d'annulation :
-    const newMessage = messageRepository.create({
-      content: `Réservation annulée pour le service "${service.title}"
-Date : ${service.date_start}`,
-      date_sent: new Date(), // Ajout de la date d'envoi
-      sender: requester,
-      receiver: service.provider,
-      status: 'unread'
-    });
-    await messageRepository.save(newMessage);
-
-    res.status(200).send(updatedService);
-  } catch (error) {
-    console.error('Erreur lors de l\'annulation:', error);
-    res.status(500).send({ error: 'Erreur interne du serveur' });
-  }
-};

@@ -15,7 +15,7 @@ export interface ListServicesRequest {
 export const ListServicesValidation = Joi.object<ListServicesRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
-  type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'other'),
+  type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'cleaning', 'gardening', 'other'),
   status: Joi.string().valid('available', 'booked', 'completed'),
   date_start: Joi.date(),
   date_end: Joi.date().min(Joi.ref('date_start'))
@@ -35,6 +35,7 @@ export const ServiceIdValidation = Joi.object<ServiceId>({
 /**
  * Création d'un service
  * Correspond à la structure attendue dans le body d'un POST /services
+ * Le provider_id est récupéré depuis le token JWT, pas depuis le body
  */
 export interface CreateServiceRequest {
   title: string;
@@ -49,14 +50,13 @@ export interface CreateServiceRequest {
       end: string;
     }[];
   };
-  provider_id: number;
   status?: string;
 }
 
 export const createServiceValidation = Joi.object<CreateServiceRequest>({
   title: Joi.string().required(),
   description: Joi.string().required(),
-  type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'other').required(),
+  type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'cleaning', 'gardening', 'other').required(),
   date_start: Joi.date().required(),
   date_end: Joi.date().min(Joi.ref('date_start')).required(),
   availability: Joi.object({
@@ -70,7 +70,6 @@ export const createServiceValidation = Joi.object<CreateServiceRequest>({
       })
     ).required()
   }).required(),
-  provider_id: Joi.number().required(),
   status: Joi.string().valid('available', 'booked', 'completed').default('available')
 }).options({ abortEarly: false });
 
@@ -99,7 +98,7 @@ export const updateServiceValidation = Joi.object<UpdateServiceRequest>({
   id: Joi.number().required(),
   title: Joi.string(),
   description: Joi.string(),
-  type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'other'),
+  type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'cleaning', 'gardening', 'other'),
   date_start: Joi.date(),
   date_end: Joi.date().min(Joi.ref('date_start')),
   availability: Joi.object({
@@ -114,20 +113,4 @@ export const updateServiceValidation = Joi.object<UpdateServiceRequest>({
     )
   }),
   status: Joi.string().valid('available', 'booked', 'completed')
-}).options({ abortEarly: false });
-
-// Ajoutez cette interface pour la requête de réservation
-export interface BookServiceRequest {
-  id: number;
-  day: string;
-  timeSlot: string;
-  note?: string;
-}
-
-// Ajoutez cette validation
-export const bookServiceValidation = Joi.object<BookServiceRequest>({
-  id: Joi.number().required(),
-  day: Joi.string().valid('Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche').required(),
-  timeSlot: Joi.string().pattern(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).required(),
-  note: Joi.string()
 }).options({ abortEarly: false });

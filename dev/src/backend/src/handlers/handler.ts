@@ -26,7 +26,7 @@ import { createCategoryHandler, deleteCategoryHandler, listCategoriesHandler, up
 import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler, cancelEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
 import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
-import { bookServiceHandler, cancelServiceBookingHandler, createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
+import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler } from "./user";
@@ -461,73 +461,6 @@ export const initHandlers = (app: Application) => {
    *         description: Service supprimé
    */
   app.delete("/services/:id", authMiddleware, deleteServiceHandler);
-
-  /**
-   * @openapi
-   * /services/{id}/book:
-   *   post:
-   *     tags:
-   *       - Services
-   *     security:
-   *       - bearerAuth: []
-   *     summary: Réserver un service
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: number
-   *     requestBody:
-   *       required: true
-   *       content:
-   *         application/json:
-   *           schema:
-   *             type: object
-   *             properties:
-   *               day:
-   *                 type: string
-   *               timeSlot:
-   *                 type: string
-   *               note:
-   *                 type: string
-   *     responses:
-   *       200:
-   *         description: Service réservé avec succès
-   *       400:
-   *         description: Données invalides ou service non disponible
-   *       404:
-   *         description: Service non trouvé
-   */
-  app.post('/services/:id/book', authMiddleware, bookServiceHandler);
-
-  /**
-   * @openapi
-   * /services/{id}/cancel:
-   *   post:
-   *     tags:
-   *       - Services
-   *     security:
-   *       - bearerAuth: []
-   *     summary: Annuler la réservation d'un service
-   *     parameters:
-   *       - in: path
-   *         name: id
-   *         required: true
-   *         schema:
-   *           type: number
-   *     responses:
-   *       200:
-   *         description: Réservation annulée avec succès
-   *       400:
-   *         description: Service non réservé
-   *       401:
-   *         description: Non authentifié
-   *       403:
-   *         description: Non autorisé
-   *       404:
-   *         description: Service non trouvé
-   */
-  app.post('/services/:id/cancel', authMiddleware, cancelServiceBookingHandler);
 
   /**
    * @openapi
