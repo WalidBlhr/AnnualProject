@@ -12,11 +12,9 @@ import {
   MenuItem,
   Typography,
   Alert,
-  Chip,
   Grid,
 } from '@mui/material';
-import { format, isAfter, isBefore, startOfDay } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import { format } from 'date-fns';
 import axios from 'axios';
 import { API_URL } from '../../const';
 import { Service, DAY_LABELS } from '../../types/Service';
@@ -39,14 +37,35 @@ const BookService: React.FC<BookServiceProps> = ({
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Créer un mapping inverse pour convertir les labels français en clés anglaises
+  const FRENCH_TO_ENGLISH_DAYS: Record<string, string> = {
+    'Lundi': 'monday',
+    'Mardi': 'tuesday',
+    'Mercredi': 'wednesday',
+    'Jeudi': 'thursday',
+    'Vendredi': 'friday',
+    'Samedi': 'saturday',
+    'Dimanche': 'sunday'
+  };
+
+  // Convertir les jours français en clés anglaises
+  const availableDaysInEnglish = service.availability.days.map(frenchDay => 
+    FRENCH_TO_ENGLISH_DAYS[frenchDay] || frenchDay
+  );
+
   // Réinitialiser les valeurs quand le dialog s'ouvre
   useEffect(() => {
     if (open) {
       setSelectedDay('');
       setSelectedTimeSlot('');
       setError('');
+      // Debug
+      console.log('Service availability days:', service.availability.days);
+      console.log('DAY_LABELS:', DAY_LABELS);
+      console.log('Available days in English:', availableDaysInEnglish);
+      console.log('Time slots disponibles:', service.availability.time_slots);
     }
-  }, [open]);
+  }, [open, service.id]); // Utiliser service.id au lieu de service.availability.days et availableDaysInEnglish
 
   const handleSubmit = async () => {
     if (!selectedDay || !selectedTimeSlot) {
@@ -112,14 +131,18 @@ const BookService: React.FC<BookServiceProps> = ({
               <Typography variant="body2" gutterBottom>
                 <strong>Jours disponibles :</strong>
               </Typography>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 2 }}>
-                {service.availability.days.map(day => (
-                  <Chip 
-                    key={day} 
-                    label={DAY_LABELS[day]} 
-                    size="small" 
-                    variant="outlined" 
-                  />
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {availableDaysInEnglish.map((day) => (
+                  <Typography key={day} variant="body2" sx={{ 
+                    bgcolor: 'primary.light', 
+                    color: 'white', 
+                    px: 1, 
+                    py: 0.5, 
+                    borderRadius: 1,
+                    fontSize: '0.75rem'
+                  }}>
+                    {DAY_LABELS[day as keyof typeof DAY_LABELS]}
+                  </Typography>
                 ))}
               </Box>
             </Grid>
@@ -133,14 +156,17 @@ const BookService: React.FC<BookServiceProps> = ({
                 <Select
                   value={selectedDay}
                   onChange={(e) => {
-                    setSelectedDay(e.target.value);
+                    const selectedValue = e.target.value as string;
+                    console.log('Jour sélectionné:', selectedValue);
+                    setSelectedDay(selectedValue);
                     setSelectedTimeSlot(''); // Réinitialiser le créneau
                   }}
                   label="Jour de la semaine"
+                  displayEmpty={false}
                 >
-                  {service.availability.days.map((day) => (
+                  {availableDaysInEnglish.map((day) => (
                     <MenuItem key={day} value={day}>
-                      {DAY_LABELS[day]}
+                      {DAY_LABELS[day as keyof typeof DAY_LABELS]}
                     </MenuItem>
                   ))}
                 </Select>

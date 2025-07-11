@@ -119,7 +119,7 @@ const MyServices: React.FC = () => {
       const decoded = jwtDecode<{ userId: number }>(token);
       
       // Récupérer tous les services puis filtrer côté client
-      const { data } = await axios.get(API_URL + '/services?limit=1000', {
+      const { data } = await axios.get(API_URL + '/services?limit=100', {
         headers: {
           Authorization: `Bearer ${token}`
         }
@@ -167,6 +167,12 @@ const MyServices: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
+      // Convertir les clés anglaises en labels français pour le backend
+      const frenchDays = newService.availability.days.map(dayKey => {
+        const dayObj = DAYS_OF_WEEK.find(d => d.key === dayKey);
+        return dayObj ? dayObj.label : dayKey;
+      });
+
       const serviceData = {
         title: newService.title.trim(),
         description: newService.description.trim(),
@@ -174,7 +180,7 @@ const MyServices: React.FC = () => {
         date_start: new Date(newService.date_start).toISOString(),
         date_end: new Date(newService.date_end).toISOString(),
         availability: {
-          days: newService.availability.days,
+          days: frenchDays,
           time_slots: newService.availability.time_slots
         }
       };
@@ -198,13 +204,7 @@ const MyServices: React.FC = () => {
       showAlert('Service créé avec succès', 'success');
     } catch (error) {
       console.error('Error creating service:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        console.error('Response data:', error.response.data);
-        console.error('Response status:', error.response.status);
-        showAlert(`Erreur lors de la création du service: ${error.response.data.message || error.message}`, 'error');
-      } else {
-        showAlert('Erreur lors de la création du service', 'error');
-      }
+      showAlert('Erreur lors de la création du service', 'error');
     }
   };
 
@@ -215,6 +215,12 @@ const MyServices: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
+      // Convertir les clés anglaises en labels français pour le backend
+      const frenchDays = selectedService.availability.days.map((dayKey: string) => {
+        const dayObj = DAYS_OF_WEEK.find(d => d.key === dayKey);
+        return dayObj ? dayObj.label : dayKey;
+      });
+
       const serviceData = {
         title: selectedService.title,
         description: selectedService.description,
@@ -222,7 +228,7 @@ const MyServices: React.FC = () => {
         date_start: selectedService.date_start,
         date_end: selectedService.date_end,
         availability: {
-          days: selectedService.availability.days,
+          days: frenchDays,
           time_slots: selectedService.availability.time_slots || []  // Utiliser time_slots
         },
         status: selectedService.status,
@@ -277,7 +283,8 @@ const MyServices: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) throw new Error('No token found');
 
-      const newStatus = currentStatus === 'available' ? 'paused' : 'available';
+      // Basculer entre 'available' et 'completed' (au lieu de 'paused' qui n'existe pas)
+      const newStatus = currentStatus === 'available' ? 'completed' : 'available';
       
       await axios.put(
         API_URL + `/services/${serviceId}`,
@@ -290,7 +297,7 @@ const MyServices: React.FC = () => {
       );
 
       fetchMyServices();
-      showAlert(`Service ${newStatus === 'available' ? 'activé' : 'mis en pause'}`, 'success');
+      showAlert(`Service ${newStatus === 'available' ? 'activé' : 'marqué comme terminé'}`, 'success');
     } catch (error) {
       console.error('Error updating service status:', error);
       showAlert('Erreur lors de la mise à jour du statut', 'error');
@@ -353,8 +360,6 @@ const MyServices: React.FC = () => {
         return 'warning';
       case 'completed':
         return 'info';
-      case 'paused':
-        return 'default';
       default:
         return 'default';
     }
@@ -471,7 +476,7 @@ const MyServices: React.FC = () => {
                             color="primary"
                           />
                         }
-                        label={service.status === 'available' ? 'Actif' : 'En pause'}
+                        label={service.status === 'available' ? 'Actif' : 'Terminé'}
                       />
                       
                       <Box>
