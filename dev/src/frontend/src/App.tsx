@@ -41,6 +41,7 @@ import Profile from './pages/Profile/Profile';
 import ServiceDetail from './pages/Services/ServiceDetail';
 import ServicesList from './pages/Services/ServicesList';
 import MyServices from './pages/Services/MyServices';
+import { MyBookings, ReceivedBookings } from './pages/Bookings';
 import Signup from './pages/Signup';
 import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
 import TrocOffersList from './pages/TrocOffers/TrocOffersList';
@@ -70,6 +71,8 @@ const App: React.FC = () => {
                                     <Route path="/services" element={<ServicesList />} />
                                     <Route path="/my-services" element={<ProtectedRoute><MyServices /></ProtectedRoute>} />
                                     <Route path="/services/:id" element={<ServiceDetail />} />
+                                    <Route path="/my-bookings" element={<ProtectedRoute><MyBookings /></ProtectedRoute>} />
+                                    <Route path="/received-bookings" element={<ProtectedRoute><ReceivedBookings /></ProtectedRoute>} />
                                     <Route path="/events" element={<ProtectedRoute><Events /></ProtectedRoute>} />
                                     <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
                                     <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />

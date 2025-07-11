@@ -43,7 +43,6 @@ const DAYS_OF_WEEK = [
 const ServicesList: React.FC = () => {
   const navigate = useNavigate();
   const [services, setServices] = useState<Service[]>([]);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
@@ -94,34 +93,6 @@ const ServicesList: React.FC = () => {
     }
   };
 
-  const handleCreateService = async () => {
-    try {
-      const token = localStorage.getItem('token');
-      if (!token) throw new Error('No token found');
-      
-      const decoded = jwtDecode<{ userId: number }>(token);
-
-      await axios.post(
-        API_URL + '/services',
-        {
-          ...newService,
-          provider_id: decoded.userId
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-
-      setCreateDialogOpen(false);
-      fetchServices();
-      showAlert('Service créé avec succès', 'success');
-    } catch (error) {
-      showAlert('Erreur lors de la création du service: ' + error, 'error');
-    }
-  };
-
   const showAlert = (message: string, severity: 'success' | 'error') => {
     setAlert({ open: true, message, severity });
   };
@@ -141,9 +112,9 @@ const ServicesList: React.FC = () => {
         <Button 
           variant="contained" 
           color="primary"
-          onClick={() => setCreateDialogOpen(true)}
+          onClick={() => navigate('/my-services')}
         >
-          Proposer un service
+          Mes services
         </Button>
       </Box>
 
@@ -241,111 +212,6 @@ const ServicesList: React.FC = () => {
           </Grid>
         ))}
       </Grid>
-
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)} maxWidth="md" fullWidth>
-        <DialogTitle>Proposer un nouveau service</DialogTitle>
-        <DialogContent>
-          <Grid container spacing={2} sx={{ mt: 1 }}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Titre"
-                value={newService.title}
-                onChange={(e) => setNewService({ ...newService, title: e.target.value })}
-                required
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                multiline
-                rows={3}
-                label="Description"
-                value={newService.description}
-                onChange={(e) => setNewService({ ...newService, description: e.target.value })}
-                required
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <FormControl fullWidth>
-                <InputLabel>Type de service*</InputLabel>
-                <Select
-                  value={newService.type}
-                  onChange={(e) => setNewService({ ...newService, type: e.target.value as any })}
-                  label="Type de service"
-                  required
-                >
-                  {Object.entries(SERVICE_TYPES).map(([value, label]) => (
-                    <MenuItem key={value} value={value}>{label}</MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Date de début"
-                required
-                type="datetime-local"
-                value={newService.date_start}
-                onChange={(e) => setNewService({ ...newService, date_start: e.target.value })}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Date de fin"
-                required
-                type="datetime-local"
-                value={newService.date_end}
-                onChange={(e) => setNewService({ ...newService, date_end: e.target.value })}
-                InputLabelProps={{
-                  shrink: true,
-                }}
-              />
-            </Grid>
-
-            <Grid item xs={12}>
-              <Typography variant="subtitle1">Disponibilités *</Typography>
-              <FormGroup row>
-                {DAYS_OF_WEEK.map((day) => (
-                  <FormControlLabel
-                    key={day}
-                    control={
-                      <Checkbox
-                        checked={newService.availability.days.includes(day)}
-                        onChange={(e) => {
-                          const days = e.target.checked
-                            ? [...newService.availability.days, day]
-                            : newService.availability.days.filter(d => d !== day);
-                          setNewService({
-                            ...newService,
-                            availability: { ...newService.availability, days }
-                          });
-                        }}
-                      />
-                    }
-                    label={day.charAt(0).toUpperCase() + day.slice(1)}
-                  />
-                ))}
-              </FormGroup>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Annuler</Button>
-          <Button onClick={handleCreateService} variant="contained" color="primary">
-            Créer
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <Snackbar
         open={alert.open}

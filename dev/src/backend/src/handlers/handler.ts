@@ -26,7 +26,7 @@ import { createCategoryHandler, deleteCategoryHandler, listCategoriesHandler, up
 import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler, cancelEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
 import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
-import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler } from "./service";
+import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, createBookingHandler, acceptBookingHandler, cancelBookingHandler, listBookingHandler } from "./service";
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler } from "./user";
@@ -461,6 +461,96 @@ export const initHandlers = (app: Application) => {
    *         description: Service supprimé
    */
   app.delete("/services/:id", authMiddleware, deleteServiceHandler);
+
+  /**
+   * @openapi
+   * /bookings:
+   *   get:
+   *     tags:
+   *       - Bookings
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Liste des réservations de l'utilisateur
+   *     responses:
+   *       200:
+   *         description: Liste des réservations
+   */
+  app.get("/bookings", authMiddleware, listBookingHandler);
+
+  /**
+   * @openapi
+   * /bookings:
+   *   post:
+   *     tags:
+   *       - Bookings
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Créer une réservation
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateBookingRequest'
+   *     responses:
+   *       201:
+   *         description: Réservation créée
+   *       400:
+   *         description: Erreur de validation
+   *       404:
+   *         description: Service non trouvé
+   */
+  app.post("/bookings", authMiddleware, createBookingHandler);
+
+  /**
+   * @openapi
+   * /bookings/{id}/accept:
+   *   put:
+   *     tags:
+   *       - Bookings
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Accepter une réservation
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: Réservation acceptée
+   *       403:
+   *         description: Non autorisé
+   *       404:
+   *         description: Réservation non trouvée
+   */
+  app.put("/bookings/:booking_id/accept", authMiddleware, acceptBookingHandler);
+
+  /**
+   * @openapi
+   * /bookings/{id}/cancel:
+   *   put:
+   *     tags:
+   *       - Bookings
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Annuler une réservation
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: Réservation annulée
+   *       403:
+   *         description: Non autorisé
+   *       404:
+   *         description: Réservation non trouvée
+   */
+  app.put("/bookings/:booking_id/cancel", authMiddleware, cancelBookingHandler);
 
   /**
    * @openapi

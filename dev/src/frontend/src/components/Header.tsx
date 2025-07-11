@@ -89,6 +89,12 @@ const Header: React.FC = () => {
                             <MenuItem component={Link} to="/my-services" onClick={() => setServicesAnchorEl(null)}>
                                 Mes services
                             </MenuItem>
+                            <MenuItem component={Link} to="/my-bookings" onClick={() => setServicesAnchorEl(null)}>
+                                Mes réservations
+                            </MenuItem>
+                            <MenuItem component={Link} to="/received-bookings" onClick={() => setServicesAnchorEl(null)}>
+                                Réservations reçues
+                            </MenuItem>
                             <MenuItem component={Link} to="/absences" onClick={() => setServicesAnchorEl(null)}>
                                 Surveillance logement
                             </MenuItem>
@@ -330,6 +336,12 @@ const Header: React.FC = () => {
                     </ListItem>
                     <ListItem button component={Link} to="/my-services" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Mes services" />
+                    </ListItem>
+                    <ListItem button component={Link} to="/my-bookings" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Mes réservations" />
+                    </ListItem>
+                    <ListItem button component={Link} to="/received-bookings" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Réservations reçues" />
                     </ListItem>
                     <ListItem button component={Link} to="/absences" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Surveillance logement" />

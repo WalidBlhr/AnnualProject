@@ -43,7 +43,7 @@ const BookingsList: React.FC<BookingsListProps> = ({ userRole = 'requester' }) =
     setError('');
 
     try {
-      const response = await axios.get(`${API_URL}/bookings`, {
+      const response = await axios.get(`${API_URL}/bookings?role=${userRole}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },

@@ -308,6 +308,91 @@ export const deleteServiceHandler = async (req: Request, res: Response) => {
 }
 
 /**
+ * Lister les réservations (bookings) pour l'utilisateur connecté
+ * GET /bookings?role=requester|provider (optionnel)
+ */
+export const listBookingHandler = async (req: Request, res: Response) => {
+  try {
+    // Récupérer l'utilisateur depuis le token JWT
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      res.status(401).send({ error: 'Non authentifié' });
+      return;
+    }
+
+    const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: decoded.userId });
+
+    if (!user) {
+      res.status(404).send({ message: "Utilisateur non trouvé" });
+      return;
+    }
+
+    const bookingRepository = AppDataSource.getRepository(Booking);
+    const { role } = req.query;
+    
+    let whereCondition: any;
+    
+    if (role === 'requester') {
+      // Seules les réservations où l'utilisateur est le demandeur
+      whereCondition = { requester: { id: user.id } };
+    } else if (role === 'provider') {
+      // Seules les réservations où l'utilisateur est le prestataire
+      whereCondition = { service: { provider: { id: user.id } } };
+    } else {
+      // Par défaut, toutes les réservations (requester ET provider)
+      whereCondition = [
+        { requester: { id: user.id } },
+        { service: { provider: { id: user.id } } }
+      ];
+    }
+    
+    // Récupérer les réservations selon le filtre
+    const bookings = await bookingRepository.find({
+      where: whereCondition,
+      relations: [
+        'service',
+        'service.provider',
+        'requester'
+      ],
+      order: { created_at: 'DESC' }
+    });
+
+    // Formatter les réservations pour le frontend
+    const formattedBookings = bookings.map(booking => ({
+      id: booking.id,
+      service: {
+        id: booking.service.id,
+        title: booking.service.title,
+        provider: {
+          id: booking.service.provider.id,
+          firstname: booking.service.provider.firstname,
+          lastname: booking.service.provider.lastname
+        }
+      },
+      requester: {
+        id: booking.requester.id,
+        firstname: booking.requester.firstname,
+        lastname: booking.requester.lastname
+      },
+      day: booking.day,
+      time_slot: booking.time_slot,
+      status: booking.status,
+      created_at: booking.created_at,
+      updated_at: booking.updated_at
+    }));
+
+    res.status(200).send({ data: formattedBookings });
+  } catch (error) {
+    if (error instanceof Error) {
+      console.log(`Internal error: ${error.message}`);
+    }
+    res.status(500).send({ message: "Internal error" });
+  }
+};
+
+/**
  * Créer une nouvelle réservation (booking)
  * POST /bookings
  */

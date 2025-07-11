@@ -348,7 +348,19 @@ const MyServices: React.FC = () => {
   };
 
   const openEditDialog = (service: ExtendedService) => {
-    setSelectedService({ ...service });
+    // Convertir les jours français en clés anglaises pour l'édition
+    const englishDays = service.availability.days.map((dayLabel: string) => {
+      const dayObj = DAYS_OF_WEEK.find(d => d.label === dayLabel);
+      return dayObj ? dayObj.key : dayLabel;
+    }) as ("monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday")[];
+
+    setSelectedService({ 
+      ...service, 
+      availability: {
+        ...service.availability,
+        days: englishDays
+      }
+    });
     setEditDialogOpen(true);
   };
 
@@ -370,7 +382,14 @@ const MyServices: React.FC = () => {
   };
 
   const formatDays = (days: string[]) => {
-    return days.map(day => DAY_LABELS[day as keyof typeof DAY_LABELS] || day).join(', ');
+    return days.map(day => {
+      // Si c'est déjà en français, le retourner tel quel
+      if (['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].includes(day)) {
+        return day;
+      }
+      // Sinon, essayer de le convertir depuis l'anglais
+      return DAY_LABELS[day as keyof typeof DAY_LABELS] || day;
+    }).join(', ');
   };
 
   if (loading) {
