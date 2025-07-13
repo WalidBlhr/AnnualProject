@@ -300,7 +300,19 @@ const ArticleEditor: React.FC = () => {
                   color="primary"
                 />
               }
-              label="Article public"
+              label={
+                <Box>
+                  <Typography variant="body1">
+                    Article public
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {article.isPublic 
+                      ? "Visible par tous les utilisateurs" 
+                      : "Visible uniquement par vous"
+                    }
+                  </Typography>
+                </Box>
+              }
             />
             
             <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>

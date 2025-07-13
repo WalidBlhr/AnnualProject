@@ -18,6 +18,10 @@ import {
   TextField,
   Pagination,
   SelectChangeEvent,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
 } from '@mui/material';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -41,9 +45,13 @@ const AllArticles: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedCategory, setSelectedCategory] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
+  const [visibilityFilter, setVisibilityFilter] = useState('all'); // 'all', 'public', 'private'
   
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // Vérifier si l'utilisateur est connecté
+  const token = localStorage.getItem('token');
 
   // Parse query parameters
   useEffect(() => {
@@ -60,10 +68,6 @@ const AllArticles: React.FC = () => {
   useEffect(() => {
     fetchCategories();
   }, []);
-
-  useEffect(() => {
-    fetchArticles();
-  }, [currentPage, selectedCategory, searchTerm]);
 
   const fetchCategories = async () => {
     try {
@@ -82,7 +86,6 @@ const AllArticles: React.FC = () => {
       const params = new URLSearchParams({
         page: currentPage.toString(),
         limit: '12',
-        isPublic: 'true',
       });
 
       if (selectedCategory) {
@@ -93,7 +96,22 @@ const AllArticles: React.FC = () => {
         params.append('search', searchTerm);
       }
 
-      const response = await axios.get(`${API_URL}/journal/articles?${params}`);
+      // Gestion du filtre de visibilité
+      if (visibilityFilter === 'public') {
+        params.append('isPublic', 'true');
+      } else if (visibilityFilter === 'private') {
+        params.append('isPublic', 'false');
+      }
+      // Si 'all', on ne met pas de paramètre isPublic pour laisser le backend gérer
+
+      const config: any = {};
+      if (token) {
+        config.headers = {
+          Authorization: `Bearer ${token}`,
+        };
+      }
+
+      const response = await axios.get(`${API_URL}/journal/articles?${params}`, config);
       setArticles(response.data.data || []);
       setTotalPages(response.data.total_pages || 1);
     } catch (error: any) {
@@ -102,7 +120,11 @@ const AllArticles: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentPage, selectedCategory, searchTerm]);
+  }, [currentPage, selectedCategory, searchTerm, visibilityFilter, token]);
+
+  useEffect(() => {
+    fetchArticles();
+  }, [fetchArticles]);
 
   const handleCategoryChange = (event: SelectChangeEvent) => {
     const category = event.target.value;
@@ -116,6 +138,12 @@ const AllArticles: React.FC = () => {
     setSearchTerm(search);
     setCurrentPage(1);
     updateURL({ category: selectedCategory, search, page: 1 });
+  };
+
+  const handleVisibilityChange = (event: SelectChangeEvent) => {
+    const visibility = event.target.value;
+    setVisibilityFilter(visibility);
+    setCurrentPage(1);
   };
 
   const handlePageChange = (event: React.ChangeEvent<unknown>, page: number) => {
@@ -151,7 +179,14 @@ const AllArticles: React.FC = () => {
           Tous les articles
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          Découvrez tous les articles publics de notre communauté
+          {!token 
+            ? "Découvrez tous les articles publics de notre communauté"
+            : visibilityFilter === 'public' 
+              ? "Articles publics de la communauté"
+              : visibilityFilter === 'private'
+                ? "Vos articles privés"
+                : "Articles publics et vos articles privés"
+          }
         </Typography>
       </Box>
 
@@ -181,6 +216,22 @@ const AllArticles: React.FC = () => {
           sx={{ flexGrow: 1, maxWidth: 400 }}
           placeholder="Rechercher dans les articles..."
         />
+
+        {/* Filtre de visibilité - affiché seulement si connecté */}
+        {token && (
+          <FormControl sx={{ minWidth: 180 }}>
+            <InputLabel>Visibilité</InputLabel>
+            <Select
+              value={visibilityFilter}
+              label="Visibilité"
+              onChange={handleVisibilityChange}
+            >
+              <MenuItem value="all">Tous mes articles</MenuItem>
+              <MenuItem value="public">Articles publics</MenuItem>
+              <MenuItem value="private">Mes articles privés</MenuItem>
+            </Select>
+          </FormControl>
+        )}
       </Box>
 
       {error && (
@@ -226,9 +277,20 @@ const AllArticles: React.FC = () => {
                         />
                       )}
                       <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" component="h2" gutterBottom>
-                          {article.title}
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                          <Typography variant="h6" component="h2" gutterBottom sx={{ mb: 0 }}>
+                            {article.title}
+                          </Typography>
+                          {!article.isPublic && (
+                            <Chip 
+                              label="Privé" 
+                              size="small" 
+                              color="warning" 
+                              variant="outlined"
+                              sx={{ ml: 1 }}
+                            />
+                          )}
+                        </Box>
                         
                         <Typography variant="body2" color="text.secondary" sx={{ flexGrow: 1, mb: 2 }}>
                           {truncateContent(article.content)}

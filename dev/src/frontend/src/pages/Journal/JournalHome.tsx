@@ -187,9 +187,20 @@ const JournalHome: React.FC = () => {
                     />
                   )}
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h3" gutterBottom>
-                      {article.title}
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="h6" component="h3" gutterBottom sx={{ mb: 0 }}>
+                        {article.title}
+                      </Typography>
+                      {!article.isPublic && (
+                        <Chip 
+                          label="Privé" 
+                          size="small" 
+                          color="warning" 
+                          variant="outlined"
+                          sx={{ ml: 1 }}
+                        />
+                      )}
+                    </Box>
                     <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
                       <CategoryIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
@@ -264,9 +275,20 @@ const JournalHome: React.FC = () => {
                     />
                   )}
                   <CardContent sx={{ flexGrow: 1 }}>
-                    <Typography variant="h6" component="h3" gutterBottom>
-                      {article.title}
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1 }}>
+                      <Typography variant="h6" component="h3" gutterBottom sx={{ mb: 0 }}>
+                        {article.title}
+                      </Typography>
+                      {!article.isPublic && (
+                        <Chip 
+                          label="Privé" 
+                          size="small" 
+                          color="warning" 
+                          variant="outlined"
+                          sx={{ ml: 1 }}
+                        />
+                      )}
+                    </Box>
                     <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
                       <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">

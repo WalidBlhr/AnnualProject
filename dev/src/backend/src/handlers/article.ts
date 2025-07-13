@@ -57,20 +57,53 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
         { content: { $regex: search, $options: 'i' } }
       ];
     }
-    
-    // Exclure un article spécifique (utile pour les articles similaires)
+      // Exclure un article spécifique (utile pour les articles similaires)
     if (exclude) {
       query._id = { $ne: exclude };
     }
-    
-    // If no token or isPublic is explicitly true, show only public articles
-    // If authenticated user, show both public and private articles
+
+    // Gestion de la visibilité des articles
     const token = req.headers.authorization?.split(' ')[1];
-    if (!token && isPublic !== 'false') {
-      query.isPublic = true;
-    } else if (isPublic) {
-      query.isPublic = isPublic === 'true';
+    let currentUserId = null;
+    
+    console.log('Token reçu:', !!token);
+    
+    if (token) {
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+        currentUserId = decoded.userId;
+        console.log('Utilisateur authentifié:', currentUserId);
+      } catch (error) {
+        console.log('Token invalide');
+        // Token invalide, traiter comme non authentifié
+      }
     }
+    
+    if (!currentUserId) {
+      // Utilisateur non authentifié : seulement les articles publics
+      query.isPublic = true;
+      console.log('Filtre non-authentifié - articles publics seulement');
+    } else {
+      // Utilisateur authentifié : articles publics OU articles privés de l'utilisateur
+      if (isPublic === 'true') {
+        query.isPublic = true;
+        console.log('Filtre authentifié - articles publics seulement (paramètre explicite)');
+      } else if (isPublic === 'false') {
+        query.isPublic = false;
+        query.author = currentUserId; // Seulement ses propres articles privés
+        console.log('Filtre authentifié - articles privés de l\'utilisateur seulement');
+      } else {
+        // Par défaut : articles publics OU ses propres articles privés
+        query.$or = [
+          { isPublic: true },
+          { isPublic: false, author: currentUserId }
+        ];
+        console.log('Filtre authentifié - articles publics OU privés de l\'utilisateur');
+      }
+    }
+    
+    console.log('Query finale:', JSON.stringify(query, null, 2));
     
     const pageNum = parseInt(page as string);
     const limitNum = parseInt(limit as string);
@@ -79,6 +112,11 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
       .sort({ createdAt: -1 })
       .skip((pageNum - 1) * limitNum)
       .limit(limitNum);
+      
+    console.log(`Articles trouvés: ${articles.length}`);
+    articles.forEach(article => {
+      console.log(`- ${article.title}: isPublic=${article.isPublic}, author=${article.author}`);
+    });
       
     const total = await Article.countDocuments(query);
     
@@ -106,10 +144,24 @@ export const getArticleHandler = async (req: Request, res: Response) => {
       return res.status(404).send({ message: "Article not found" });
     }
     
-    // Check if article is private and user is not authenticated
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!article.isPublic && !token) {
-      return res.status(403).send({ message: "Access denied" });
+    // Vérifier l'accès aux articles privés
+    if (!article.isPublic) {
+      const token = req.headers.authorization?.split(' ')[1];
+      if (!token) {
+        return res.status(403).send({ message: "Access denied" });
+      }
+      
+      try {
+        const jwt = require('jsonwebtoken');
+        const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+        
+        // L'utilisateur peut voir l'article seulement s'il en est l'auteur
+        if (decoded.userId !== article.author) {
+          return res.status(403).send({ message: "Access denied" });
+        }
+      } catch (error) {
+        return res.status(403).send({ message: "Access denied" });
+      }
     }
     
     res.status(200).send(article);
