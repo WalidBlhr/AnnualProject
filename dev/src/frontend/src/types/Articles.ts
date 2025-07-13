@@ -3,7 +3,7 @@ export interface Article {
   title: string;
   summary: string;
   content: string;
-  image_url?: string;
+  imageUrl?: string;
   author: {
     id: number;
     firstname: string;
@@ -16,6 +16,7 @@ export interface Article {
   updatedAt: string;
   status: 'draft' | 'published' | 'archived';
   visibility: 'public' | 'restricted';
+  isPublic: boolean;
   featured: boolean;
   comments: any[];
 }

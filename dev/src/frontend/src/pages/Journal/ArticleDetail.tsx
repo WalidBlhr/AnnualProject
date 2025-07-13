@@ -40,7 +40,7 @@ interface RelatedArticle {
   _id: string;
   title: string;
   summary: string;
-  image_url?: string;
+  imageUrl?: string;
   category: string;
   createdAt: string;
 }
@@ -235,10 +235,10 @@ const ArticleDetail = () => {
       </Paper>
       
       {/* Image de couverture */}
-      {article.image_url && (
+      {article.imageUrl && (
         <Box sx={{ mb: 4, borderRadius: 2, overflow: 'hidden' }}>
           <img 
-            src={article.image_url} 
+            src={article.imageUrl} 
             alt={article.title} 
             style={{ width: '100%', maxHeight: '500px', objectFit: 'cover' }}
           />
@@ -323,11 +323,11 @@ const ArticleDetail = () => {
                     '&:hover': { transform: 'translateY(-5px)', boxShadow: 4 }
                   }}
                 >
-                  {relatedArticle.image_url && (
+                  {relatedArticle.imageUrl && (
                     <CardMedia
                       component="img"
                       height="140"
-                      image={relatedArticle.image_url}
+                      image={relatedArticle.imageUrl}
                       alt={relatedArticle.title}
                     />
                   )}

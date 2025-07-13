@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
 import { 
   Container, 
   Typography, 
@@ -23,7 +23,6 @@ import SearchIcon from '@mui/icons-material/Search';
 import DateRangeIcon from '@mui/icons-material/DateRange';
 import PersonIcon from '@mui/icons-material/Person';
 import CategoryIcon from '@mui/icons-material/Category';
-import jwtDecode from 'jwt-decode';
 import { Article } from '../../types/Articles';
 import { API_URL } from '../../const';
 import { CategoriesResponse, Category } from '../Admin/AdminCategories';
@@ -33,23 +32,13 @@ const JournalHome: React.FC = () => {
   const [featuredArticles, setFeaturedArticles] = useState<Article[]>([]);
   const [recentArticles, setRecentArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [tabValue, setTabValue] = useState(0);
   
   // Récupérer l'ID utilisateur si connecté
   const token = localStorage.getItem('token');
-  const userId = token ? (jwtDecode<{ userId: number }>(token)).userId : null;
 
-  useEffect(() => {
-    fetchFeaturedArticles();
-    //fetchRecentArticles();
-    fetchCategories();
-    //fetchTags();
-  }, []);
-
-  const fetchFeaturedArticles = async () => {
+  const fetchFeaturedArticles = useCallback(async () => {
     try {
       const config = token ? {
         headers: { Authorization: `Bearer ${token}` }
@@ -67,9 +56,9 @@ const JournalHome: React.FC = () => {
     } catch (error) {
       console.error('Erreur lors de la récupération des articles à la une:', error);
     }
-  };
+  }, [token]);
 
-  const fetchRecentArticles = async () => {
+  const fetchRecentArticles = useCallback(async () => {
     try {
       const config = token ? {
         headers: { Authorization: `Bearer ${token}` }
@@ -78,15 +67,20 @@ const JournalHome: React.FC = () => {
       const { data } = await axios.get<{ data: Article[] }>(API_URL + '/journal/articles', { 
         ...config,
         params: {
-          limit: 6,
-          category: selectedCategory || undefined
+          limit: 6
         } 
       });
       setRecentArticles(data.data);
     } catch (error) {
       console.error('Erreur lors de la récupération des articles récents:', error);
     }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    fetchFeaturedArticles();
+    fetchRecentArticles();
+    fetchCategories();
+  }, [fetchFeaturedArticles, fetchRecentArticles]);
 
   const fetchCategories = async () => {
     
@@ -98,25 +92,25 @@ const JournalHome: React.FC = () => {
     }
   };
 
-  const fetchTags = async () => {
-    try {
-      const { data } = await axios.get<string[]>(API_URL + '/journal-tags');
-      setTags(data);
-    } catch (error) {
-      console.error('Erreur lors de la récupération des tags:', error);
-    }
-  };
-
   const handleSearch = () => {
-    navigate(`/journal/search?term=${encodeURIComponent(searchTerm)}`);
-  };
-
-  const handleCategorySelect = (category: string) => {
-    setSelectedCategory(category === selectedCategory ? null : category);
+    if (searchTerm.trim()) {
+      navigate(`/journal/all?search=${encodeURIComponent(searchTerm.trim())}`);
+    }
   };
 
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+    
+    if (newValue === 0) {
+      // "Tous les articles" - rediriger vers /journal/all sans filtre
+      navigate('/journal/all');
+    } else {
+      // Catégorie spécifique - rediriger avec le filtre de catégorie
+      const selectedCategory = categories[newValue - 1]; // -1 car l'index 0 est "Tous les articles"
+      if (selectedCategory) {
+        navigate(`/journal/all?category=${encodeURIComponent(selectedCategory.name)}`);
+      }
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -184,11 +178,11 @@ const JournalHome: React.FC = () => {
                     }
                   }}
                 >
-                  {article.image_url && (
+                  {article.imageUrl && (
                     <CardMedia
                       component="img"
                       height="200"
-                      image={article.image_url}
+                      image={article.imageUrl}
                       alt={article.title}
                     />
                   )}
@@ -261,11 +255,11 @@ const JournalHome: React.FC = () => {
             recentArticles.map((article) => (
               <Grid item key={article._id} xs={12} sm={6} md={4}>
                 <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                  {article.image_url && (
+                  {article.imageUrl && (
                     <CardMedia
                       component="img"
                       height="140"
-                      image={article.image_url}
+                      image={article.imageUrl}
                       alt={article.title}
                     />
                   )}
@@ -276,7 +270,10 @@ const JournalHome: React.FC = () => {
                     <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
                       <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {article.author.firstname} {article.author.lastname}
+                        {article.author ? 
+                          `${article.author.firstname} ${article.author.lastname}` : 
+                          article.authorName || 'Auteur inconnu'
+                        }
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', mb: 2, alignItems: 'center' }}>
@@ -288,7 +285,7 @@ const JournalHome: React.FC = () => {
                     <Typography variant="body2" paragraph>
                       {article.summary}
                     </Typography>
-                    {article.tags.length > 0 && (
+                    {article.tags && article.tags.length > 0 && (
                       <Box sx={{ mt: 1, display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                         {article.tags.map(tag => (
                           <Chip 

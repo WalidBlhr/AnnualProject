@@ -38,7 +38,7 @@ export const createArticleHandler = async (req: Request, res: Response) => {
 // Get all articles handler
 export const listArticlesHandler = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 10, category, status, isPublic } = req.query;
+    const { page = 1, limit = 10, category, status, isPublic, exclude, search } = req.query;
     
     const query: any = {};
     
@@ -48,6 +48,19 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
     
     if (status) {
       query.status = status;
+    }
+    
+    // Recherche par mot-clé dans le titre et le contenu
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { content: { $regex: search, $options: 'i' } }
+      ];
+    }
+    
+    // Exclure un article spécifique (utile pour les articles similaires)
+    if (exclude) {
+      query._id = { $ne: exclude };
     }
     
     // If no token or isPublic is explicitly true, show only public articles
