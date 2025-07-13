@@ -31,6 +31,7 @@ import Home from './pages/Home';
 import ArticleDetail from './pages/Journal/ArticleDetail';
 import ArticleEditor from './pages/Journal/ArticleEditor';
 import AllArticles from './pages/Journal/AllArticles';
+import MyArticles from './pages/Journal/MyArticles';
 import Categories from './pages/Journal/Categories';
 import JournalHome from './pages/Journal/JournalHome';
 import Login from './pages/Login';
@@ -119,6 +120,7 @@ const App: React.FC = () => {
                                     <Route path="/events/:id/edit" element={<ProtectedRoute><EditEvent /></ProtectedRoute>} />
                                     <Route path="/journal" element={<ProtectedRoute><JournalHome /></ProtectedRoute>} />
                                     <Route path="/journal/all" element={<ProtectedRoute><AllArticles /></ProtectedRoute>} />
+                                    <Route path="/journal/my-articles" element={<ProtectedRoute><MyArticles /></ProtectedRoute>} />
                                     <Route path="/journal/editor/:id?" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
                                     <Route path="/journal/editor" element={<ProtectedRoute><ArticleEditor /></ProtectedRoute>} />
                                     <Route path="/journal/article/:id" element={<ProtectedRoute><ArticleDetail /></ProtectedRoute>} />

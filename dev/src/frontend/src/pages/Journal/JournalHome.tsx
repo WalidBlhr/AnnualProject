@@ -362,15 +362,26 @@ const JournalHome: React.FC = () => {
           <Typography variant="body1" paragraph>
             Contribuez au journal de votre quartier en partageant vos histoires, événements ou actualités!
           </Typography>
-          <Button 
-            variant="contained" 
-            color="primary"
-            component={Link}
-            to="/journal/editor"
-            size="large"
-          >
-            Rédiger un article
-          </Button>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+            <Button 
+              variant="contained" 
+              color="primary"
+              component={Link}
+              to="/journal/editor"
+              size="large"
+            >
+              Rédiger un article
+            </Button>
+            <Button 
+              variant="outlined" 
+              color="primary"
+              component={Link}
+              to="/journal/my-articles"
+              size="large"
+            >
+              Mes articles
+            </Button>
+          </Box>
         </Paper>
       )}
     </Container>

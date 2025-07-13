@@ -38,7 +38,7 @@ export const createArticleHandler = async (req: Request, res: Response) => {
 // Get all articles handler
 export const listArticlesHandler = async (req: Request, res: Response) => {
   try {
-    const { page = 1, limit = 10, category, status, isPublic, exclude, search } = req.query;
+    const { page = 1, limit = 10, category, status, isPublic, exclude, search, author } = req.query;
     
     const query: any = {};
     
@@ -80,26 +80,36 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
       }
     }
     
-    if (!currentUserId) {
-      // Utilisateur non authentifié : seulement les articles publics
-      query.isPublic = true;
-      console.log('Filtre non-authentifié - articles publics seulement');
+    // Filtre par auteur (pour "Mes articles")
+    if (author === 'me') {
+      if (!currentUserId) {
+        return res.status(401).send({ message: 'Authentication required' });
+      }
+      query.author = currentUserId;
+      console.log('Filtre mes articles seulement');
     } else {
-      // Utilisateur authentifié : articles publics OU articles privés de l'utilisateur
-      if (isPublic === 'true') {
+      // Gestion normale de la visibilité
+      if (!currentUserId) {
+        // Utilisateur non authentifié : seulement les articles publics
         query.isPublic = true;
-        console.log('Filtre authentifié - articles publics seulement (paramètre explicite)');
-      } else if (isPublic === 'false') {
-        query.isPublic = false;
-        query.author = currentUserId; // Seulement ses propres articles privés
-        console.log('Filtre authentifié - articles privés de l\'utilisateur seulement');
+        console.log('Filtre non-authentifié - articles publics seulement');
       } else {
-        // Par défaut : articles publics OU ses propres articles privés
-        query.$or = [
-          { isPublic: true },
-          { isPublic: false, author: currentUserId }
-        ];
-        console.log('Filtre authentifié - articles publics OU privés de l\'utilisateur');
+        // Utilisateur authentifié : articles publics OU articles privés de l'utilisateur
+        if (isPublic === 'true') {
+          query.isPublic = true;
+          console.log('Filtre authentifié - articles publics seulement (paramètre explicite)');
+        } else if (isPublic === 'false') {
+          query.isPublic = false;
+          query.author = currentUserId; // Seulement ses propres articles privés
+          console.log('Filtre authentifié - articles privés de l\'utilisateur seulement');
+        } else {
+          // Par défaut : articles publics OU ses propres articles privés
+          query.$or = [
+            { isPublic: true },
+            { isPublic: false, author: currentUserId }
+          ];
+          console.log('Filtre authentifié - articles publics OU privés de l\'utilisateur');
+        }
       }
     }
     
@@ -174,28 +184,53 @@ export const getArticleHandler = async (req: Request, res: Response) => {
 // Update article handler
 export const updateArticleHandler = async (req: Request, res: Response) => {
   try {
+    console.log('Update article handler called with:', { params: req.params, body: req.body });
+    
     const { id } = req.params;
     const validation = UpdateArticleValidation.validate(req.body);
     
     if (validation.error) {
+      console.log('Validation error:', validation.error.details[0].message);
       return res.status(400).send({ message: validation.error.details[0].message });
     }
     
     const { title, content, category, status, isPublic, imageUrl } = validation.value;
     
+    console.log('Finding article with id:', id);
     const article = await Article.findById(id);
     
     if (!article) {
+      console.log('Article not found with id:', id);
       return res.status(404).send({ message: "Article not found" });
     }
     
-    // Check if user is author or admin
-    const userId = (req as any).decoded.userId;
-    const isAdmin = (req as any).decoded.isAdmin;
+    console.log('Article found:', { id: article._id, author: article.author });
     
-    if (article.author !== userId && !isAdmin) {
+    // Extraire l'ID utilisateur du token
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      console.log('No token provided');
+      return res.status(401).send({ message: "Authentication required" });
+    }
+    
+    let currentUserId: number;
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+      currentUserId = decoded.userId;
+      console.log('Decoded user ID:', currentUserId);
+    } catch (error) {
+      console.log('Token verification error:', error);
+      return res.status(401).send({ message: "Invalid token" });
+    }
+    
+    // Vérifier que l'utilisateur est l'auteur de l'article
+    if (article.author !== currentUserId) {
+      console.log('Permission denied:', { articleAuthor: article.author, currentUserId });
       return res.status(403).send({ message: "You don't have permission to update this article" });
     }
+    
+    console.log('Updating article with data:', { title, content, category, status, isPublic, imageUrl });
     
     if (title) article.title = title;
     if (content) article.content = content;
@@ -207,9 +242,10 @@ export const updateArticleHandler = async (req: Request, res: Response) => {
     article.updatedAt = new Date();
     
     await article.save();
+    console.log('Article updated successfully');
     res.status(200).send(article);
   } catch (error) {
-    console.error(error);
+    console.error('Update article error:', error);
     res.status(500).send({ message: "Internal server error" });
   }
 };
@@ -225,11 +261,25 @@ export const deleteArticleHandler = async (req: Request, res: Response) => {
       return res.status(404).send({ message: "Article not found" });
     }
     
-    // Check if user is author or admin
-    const userId = (req as any).decoded.userId;
-    const isAdmin = (req as any).decoded.isAdmin;
+    // Extraire l'ID utilisateur du token
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) {
+      return res.status(401).send({ message: "Authentication required" });
+    }
     
-    if (article.author !== userId && !isAdmin) {
+    let currentUserId: number;
+    let isAdmin = false;
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, "valuerandom") as { userId: number; isAdmin?: boolean };
+      currentUserId = decoded.userId;
+      isAdmin = decoded.isAdmin || false;
+    } catch (error) {
+      return res.status(401).send({ message: "Invalid token" });
+    }
+    
+    // Vérifier que l'utilisateur est l'auteur de l'article ou admin
+    if (article.author !== currentUserId && !isAdmin) {
       return res.status(403).send({ message: "You don't have permission to delete this article" });
     }
     
