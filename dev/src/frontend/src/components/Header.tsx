@@ -149,11 +149,6 @@ const Header: React.FC = () => {
                             <MenuItem component={Link} to="/journal/editor" onClick={() => setJournalAnchorEl(null)}>
                                 Rédiger un article
                             </MenuItem>
-                            {userIsAdmin && (
-                                <MenuItem component={Link} to="/journal/manage" onClick={() => setJournalAnchorEl(null)}>
-                                    Gérer les articles
-                                </MenuItem>
-                            )}
                         </Menu>
                         
                         <Button color="inherit" component={Link} to="/messages">

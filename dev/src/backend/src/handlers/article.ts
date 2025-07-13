@@ -65,15 +65,17 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
     // Gestion de la visibilité des articles
     const token = req.headers.authorization?.split(' ')[1];
     let currentUserId = null;
+    let isAdmin = false;
     
     console.log('Token reçu:', !!token);
     
     if (token) {
       try {
         const jwt = require('jsonwebtoken');
-        const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+        const decoded = jwt.verify(token, "valuerandom") as { userId: number; role?: number };
         currentUserId = decoded.userId;
-        console.log('Utilisateur authentifié:', currentUserId);
+        isAdmin = decoded.role === 1;
+        console.log('Utilisateur authentifié:', currentUserId, 'isAdmin:', isAdmin);
       } catch (error) {
         console.log('Token invalide');
         // Token invalide, traiter comme non authentifié
@@ -93,8 +95,19 @@ export const listArticlesHandler = async (req: Request, res: Response) => {
         // Utilisateur non authentifié : seulement les articles publics
         query.isPublic = true;
         console.log('Filtre non-authentifié - articles publics seulement');
+      } else if (isAdmin) {
+        // Admin : peut voir tous les articles selon les filtres demandés
+        if (isPublic === 'true') {
+          query.isPublic = true;
+          console.log('Filtre admin - articles publics seulement (paramètre explicite)');
+        } else if (isPublic === 'false') {
+          query.isPublic = false;
+          console.log('Filtre admin - articles privés seulement');
+        }
+        // Si pas de filtre isPublic, l'admin voit tout
+        console.log('Filtre admin - tous les articles');
       } else {
-        // Utilisateur authentifié : articles publics OU articles privés de l'utilisateur
+        // Utilisateur authentifié non-admin : articles publics OU articles privés de l'utilisateur
         if (isPublic === 'true') {
           query.isPublic = true;
           console.log('Filtre authentifié - articles publics seulement (paramètre explicite)');
@@ -214,19 +227,21 @@ export const updateArticleHandler = async (req: Request, res: Response) => {
     }
     
     let currentUserId: number;
+    let isAdmin = false;
     try {
       const jwt = require('jsonwebtoken');
-      const decoded = jwt.verify(token, "valuerandom") as { userId: number };
+      const decoded = jwt.verify(token, "valuerandom") as { userId: number; role?: number };
       currentUserId = decoded.userId;
-      console.log('Decoded user ID:', currentUserId);
+      isAdmin = decoded.role === 1;
+      console.log('Decoded user ID:', currentUserId, 'isAdmin:', isAdmin);
     } catch (error) {
       console.log('Token verification error:', error);
       return res.status(401).send({ message: "Invalid token" });
     }
     
-    // Vérifier que l'utilisateur est l'auteur de l'article
-    if (article.author !== currentUserId) {
-      console.log('Permission denied:', { articleAuthor: article.author, currentUserId });
+    // Vérifier que l'utilisateur est l'auteur de l'article ou admin
+    if (article.author !== currentUserId && !isAdmin) {
+      console.log('Permission denied:', { articleAuthor: article.author, currentUserId, isAdmin });
       return res.status(403).send({ message: "You don't have permission to update this article" });
     }
     
@@ -271,9 +286,9 @@ export const deleteArticleHandler = async (req: Request, res: Response) => {
     let isAdmin = false;
     try {
       const jwt = require('jsonwebtoken');
-      const decoded = jwt.verify(token, "valuerandom") as { userId: number; isAdmin?: boolean };
+      const decoded = jwt.verify(token, "valuerandom") as { userId: number; role?: number };
       currentUserId = decoded.userId;
-      isAdmin = decoded.isAdmin || false;
+      isAdmin = decoded.role === 1;
     } catch (error) {
       return res.status(401).send({ message: "Invalid token" });
     }

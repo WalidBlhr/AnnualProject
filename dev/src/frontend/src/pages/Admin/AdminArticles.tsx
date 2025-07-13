@@ -1,14 +1,18 @@
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import {
     Alert,
     Button,
+    Chip,
     Container,
     Dialog,
     DialogActions,
     DialogContent,
     DialogTitle,
+    FormControl,
     IconButton,
+    InputLabel,
     MenuItem,
     Paper,
     Select,
@@ -18,18 +22,25 @@ import {
     TablePagination,
     TableRow,
     TextField,
-    Typography
+    Typography,
+    Box
 } from '@mui/material';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../const';
 
 interface Article {
   _id: string;
   title: string;
+  content: string;
   category: string;
   isPublic: boolean;
+  status: string;
+  author: number;
+  authorName: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 interface ArticlesResponse {
@@ -41,28 +52,39 @@ interface ArticlesResponse {
 };
 
 const AdminArticles: React.FC = () => {
+  const navigate = useNavigate();
   const [articles, setArticles] = useState<Article[]>([]);
   const [totalArticles, setTotalArticles] = useState<number>(0);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     title: '',
+    content: '',
     category: '',
-    isPublic: true
+    isPublic: true,
+    status: 'published'
   });
   const [alert, setAlert] = useState<{ open: boolean; message: string; severity: 'success' | 'error'; }>({ open: false, message: '', severity: 'success' });
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filterPublic, setFilterPublic] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  const categories = ['Actualités', 'Lifestyle', 'Cuisine', 'Jardinage', 'Bricolage', 'Sport', 'Culture', 'Technologie', 'Autre'];
+  const statuses = ['draft', 'published', 'archived'];
 
   useEffect(() => {
     fetchArticles();
-  }, [page, rowsPerPage, filterPublic]);
+  }, [page, rowsPerPage, filterPublic, filterStatus, searchTerm]);
 
   const fetchArticles = async () => {
     try {
       let url = `${API_URL}/journal/articles?page=${page + 1}&limit=${rowsPerPage}`;
       if (filterPublic !== 'all') url += `&isPublic=${filterPublic}`;
+      if (filterStatus !== 'all') url += `&status=${filterStatus}`;
+      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
+      
       const { data } = await axios.get<ArticlesResponse>(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
       });
@@ -77,8 +99,10 @@ const AdminArticles: React.FC = () => {
     setEditingArticle(article);
     setEditFormData({
       title: article.title,
+      content: article.content,
       category: article.category,
-      isPublic: article.isPublic
+      isPublic: article.isPublic,
+      status: article.status || 'published'
     });
     setEditDialogOpen(true);
   };
@@ -110,6 +134,40 @@ const AdminArticles: React.FC = () => {
     }
   };
 
+  const handleViewArticle = (articleId: string) => {
+    navigate(`/journal/article/${articleId}`);
+  };
+
+  const handleTogglePublic = async (article: Article, isPublic: boolean) => {
+    try {
+      await axios.put(`${API_URL}/journal/articles/${article._id}`, { ...article, isPublic }, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+      });
+      showAlert(`Article ${isPublic ? 'rendu public' : 'rendu privé'} avec succès`, 'success');
+      fetchArticles();
+    } catch (error) {
+      showAlert('Erreur lors du changement de statut', 'error');
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'published': return 'success';
+      case 'draft': return 'warning';
+      case 'archived': return 'default';
+      default: return 'default';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'published': return 'Publié';
+      case 'draft': return 'Brouillon';
+      case 'archived': return 'Archivé';
+      default: return status;
+    }
+  };
+
   const handleChangePage = (_: unknown, newPage: number) => setPage(newPage);
   const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
     setRowsPerPage(parseInt(event.target.value, 10));
@@ -120,20 +178,45 @@ const AdminArticles: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Gestion des Articles</Typography>
+      
+      {/* Filtres et recherche */}
       <Paper sx={{ mb: 2, p: 2 }}>
-        <Select value={filterPublic} onChange={e => setFilterPublic(e.target.value)}>
-          <MenuItem value="all">Tous</MenuItem>
-          <MenuItem value="true">Public</MenuItem>
-          <MenuItem value="false">Privé</MenuItem>
-        </Select>
+        <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+          <TextField
+            label="Rechercher"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            size="small"
+            sx={{ minWidth: 200 }}
+          />
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Visibilité</InputLabel>
+            <Select value={filterPublic} onChange={e => setFilterPublic(e.target.value)}>
+              <MenuItem value="all">Tous</MenuItem>
+              <MenuItem value="true">Public</MenuItem>
+              <MenuItem value="false">Privé</MenuItem>
+            </Select>
+          </FormControl>
+          <FormControl size="small" sx={{ minWidth: 120 }}>
+            <InputLabel>Statut</InputLabel>
+            <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+              <MenuItem value="all">Tous</MenuItem>
+              <MenuItem value="published">Publié</MenuItem>
+              <MenuItem value="draft">Brouillon</MenuItem>
+              <MenuItem value="archived">Archivé</MenuItem>
+            </Select>
+          </FormControl>
+        </Box>
       </Paper>
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell>ID</TableCell>
               <TableCell>Titre</TableCell>
+              <TableCell>Auteur</TableCell>
               <TableCell>Catégorie</TableCell>
+              <TableCell>Statut</TableCell>
               <TableCell>Public</TableCell>
               <TableCell>Date de création</TableCell>
               <TableCell>Actions</TableCell>
@@ -142,28 +225,51 @@ const AdminArticles: React.FC = () => {
           <TableBody>
             {articles.map((article) => (
               <TableRow key={article._id}>
-                <TableCell>{article._id}</TableCell>
-                <TableCell>{article.title}</TableCell>
+                <TableCell sx={{ maxWidth: 200 }}>
+                  <Typography variant="body2" noWrap title={article.title}>
+                    {article.title}
+                  </Typography>
+                </TableCell>
+                <TableCell>{article.authorName || 'Inconnu'}</TableCell>
                 <TableCell>{article.category}</TableCell>
+                <TableCell>
+                  <Chip 
+                    label={getStatusLabel(article.status || 'published')} 
+                    color={getStatusColor(article.status || 'published')}
+                    size="small"
+                  />
+                </TableCell>
                 <TableCell>
                   <Switch
                     checked={article.isPublic}
-                    onChange={async (e) => {
-                      try {
-                        await axios.put(`${API_URL}/journal/articles/${article._id}`, { ...article, isPublic: e.target.checked }, {
-                          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-                        });
-                        fetchArticles();
-                      } catch {
-                        showAlert('Erreur lors du changement de statut', 'error');
-                      }
-                    }}
+                    onChange={(e) => handleTogglePublic(article, e.target.checked)}
+                    size="small"
                   />
                 </TableCell>
                 <TableCell>{new Date(article.createdAt).toLocaleDateString()}</TableCell>
                 <TableCell>
-                  <IconButton onClick={() => handleEditClick(article)}><EditIcon /></IconButton>
-                  <IconButton onClick={() => handleDeleteArticle(article._id)}><DeleteIcon /></IconButton>
+                  <IconButton 
+                    onClick={() => handleViewArticle(article._id)} 
+                    title="Voir l'article"
+                    size="small"
+                  >
+                    <VisibilityIcon />
+                  </IconButton>
+                  <IconButton 
+                    onClick={() => handleEditClick(article)} 
+                    title="Modifier"
+                    size="small"
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton 
+                    onClick={() => handleDeleteArticle(article._id)} 
+                    title="Supprimer"
+                    size="small"
+                    color="error"
+                  >
+                    <DeleteIcon />
+                  </IconButton>
                 </TableCell>
               </TableRow>
             ))}
@@ -179,17 +285,56 @@ const AdminArticles: React.FC = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+
+      {/* Dialog d'édition */}
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Modifier l'article</DialogTitle>
         <DialogContent>
-          <TextField margin="normal" fullWidth label="Titre" value={editFormData.title} onChange={e => setEditFormData({ ...editFormData, title: e.target.value })} />
-          <TextField margin="normal" fullWidth label="Catégorie" value={editFormData.category} onChange={e => setEditFormData({ ...editFormData, category: e.target.value })} />
+          <TextField 
+            margin="normal" 
+            fullWidth 
+            label="Titre" 
+            value={editFormData.title} 
+            onChange={e => setEditFormData({ ...editFormData, title: e.target.value })} 
+          />
+          <TextField 
+            margin="normal" 
+            fullWidth 
+            multiline
+            rows={4}
+            label="Contenu" 
+            value={editFormData.content} 
+            onChange={e => setEditFormData({ ...editFormData, content: e.target.value })} 
+          />
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Catégorie</InputLabel>
+            <Select 
+              value={editFormData.category} 
+              onChange={e => setEditFormData({ ...editFormData, category: e.target.value })}
+            >
+              {categories.map(cat => (
+                <MenuItem key={cat} value={cat}>{cat}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Statut</InputLabel>
+            <Select 
+              value={editFormData.status} 
+              onChange={e => setEditFormData({ ...editFormData, status: e.target.value })}
+            >
+              {statuses.map(status => (
+                <MenuItem key={status} value={status}>{getStatusLabel(status)}</MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Annuler</Button>
           <Button onClick={handleEditSubmit} variant="contained">Enregistrer</Button>
         </DialogActions>
       </Dialog>
+
       <Snackbar open={alert.open} autoHideDuration={6000} onClose={() => setAlert({ ...alert, open: false })}>
         <Alert severity={alert.severity} onClose={() => setAlert({ ...alert, open: false })}>{alert.message}</Alert>
       </Snackbar>
