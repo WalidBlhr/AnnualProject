@@ -211,3 +211,75 @@ export const getUserStatusHandler = async (req: Request, res: Response) => {
   }
 };
 
+// UPDATE email notification preferences - PUT /users/:id/email-notifications
+export const updateEmailNotificationPreferencesHandler = async (req: Request, res: Response) => {
+  try {
+    const validation = UserIdValidation.validate(req.params);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const { enabled } = req.body;
+    
+    // Validation simple pour enabled
+    if (typeof enabled !== 'boolean') {
+      res.status(400).send({ error: "Le paramètre 'enabled' doit être un booléen" });
+      return;
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: validation.value.id });
+
+    if (!user) {
+      res.status(404).send({ error: "Utilisateur non trouvé" });
+      return;
+    }
+
+    // Mettre à jour la préférence
+    user.email_notifications_enabled = enabled;
+    await userRepository.save(user);
+
+    console.log(`Notifications email ${enabled ? 'activées' : 'désactivées'} pour l'utilisateur ${user.id}`);
+
+    res.send({ 
+      message: `Notifications email ${enabled ? 'activées' : 'désactivées'}`,
+      email_notifications_enabled: user.email_notifications_enabled
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la mise à jour des préférences email:', error);
+    res.status(500).send({ error: "Erreur interne du serveur" });
+  }
+};
+
+// GET email notification preferences - GET /users/:id/email-notifications
+export const getEmailNotificationPreferencesHandler = async (req: Request, res: Response) => {
+  try {
+    const validation = UserIdValidation.validate(req.params);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({
+      where: { id: validation.value.id },
+      select: ['id', 'email_notifications_enabled']
+    });
+
+    if (!user) {
+      res.status(404).send({ error: "Utilisateur non trouvé" });
+      return;
+    }
+
+    res.send({ 
+      email_notifications_enabled: user.email_notifications_enabled 
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération des préférences email:', error);
+    res.status(500).send({ error: "Erreur interne du serveur" });
+  }
+};
+

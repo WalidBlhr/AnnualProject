@@ -79,6 +79,9 @@ export class User {
     @Column({ type: "timestamptz", nullable: true, default: () => "CURRENT_TIMESTAMP"})
     last_active: Date;
 
+    @Column({ type: "boolean", default: true })
+    email_notifications_enabled: boolean;
+
     constructor(id: number, 
         email: string, password: string, 
         lastname: string, 
@@ -97,7 +100,8 @@ export class User {
         bookings: Booking[],
         trusted_contacts: User[],
         status: 'online' | 'offline',
-        last_active: Date
+        last_active: Date,
+        email_notifications_enabled: boolean = true
     ) {
         this.id = id
         this.email = email
@@ -119,5 +123,6 @@ export class User {
         this.trusted_contacts = trusted_contacts
         this.status = status
         this.last_active = last_active
+        this.email_notifications_enabled = email_notifications_enabled
     }
 }

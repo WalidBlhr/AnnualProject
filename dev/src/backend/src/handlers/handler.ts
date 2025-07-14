@@ -29,7 +29,7 @@ import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, lis
 import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, createBookingHandler, acceptBookingHandler, cancelBookingHandler, listBookingHandler } from "./service";
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
-import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler } from "./user";
+import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler } from "./user";
 
 export const initHandlers = (app: Application) => {
   // Commencez par les routes statiques
@@ -354,6 +354,84 @@ export const initHandlers = (app: Application) => {
    *         description: Utilisateur non trouvé
    */
   app.delete("/users/:id", authMiddleware, isAdmin, deleteUserHandler);
+
+  /**
+   * @openapi
+   * /users/{id}/email-notifications:
+   *   get:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Récupérer les préférences de notification par email
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: number
+   *     responses:
+   *       200:
+   *         description: Préférences de notification
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 email_notifications_enabled:
+   *                   type: boolean
+   *       401:
+   *         description: Non authentifié
+   *       404:
+   *         description: Utilisateur non trouvé
+   */
+  app.get("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin, getEmailNotificationPreferencesHandler);
+
+  /**
+   * @openapi
+   * /users/{id}/email-notifications:
+   *   put:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Mettre à jour les préférences de notification par email
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: number
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               enabled:
+   *                 type: boolean
+   *                 description: Activer ou désactiver les notifications par email
+   *             required:
+   *               - enabled
+   *     responses:
+   *       200:
+   *         description: Préférences mises à jour
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 message:
+   *                   type: string
+   *                 email_notifications_enabled:
+   *                   type: boolean
+   *       401:
+   *         description: Non authentifié
+   *       404:
+   *         description: Utilisateur non trouvé
+   */
+  app.put("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin, updateEmailNotificationPreferencesHandler);
 
   /**
    * @openapi

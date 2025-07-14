@@ -14,7 +14,10 @@ import {
   Card,
   CardContent,
   IconButton,
-  CircularProgress
+  CircularProgress,
+  Switch,
+  FormControlLabel,
+  FormControl
 } from '@mui/material';
 import PersonIcon from '@mui/icons-material/Person';
 import EditIcon from '@mui/icons-material/Edit';
@@ -23,6 +26,7 @@ import CancelIcon from '@mui/icons-material/Cancel';
 import EmailIcon from '@mui/icons-material/Email';
 import CalendarTodayIcon from '@mui/icons-material/CalendarToday';
 import AdminPanelSettingsIcon from '@mui/icons-material/AdminPanelSettings';
+import NotificationsIcon from '@mui/icons-material/Notifications';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { API_URL } from '../../const';
@@ -46,6 +50,8 @@ const Profile: React.FC = () => {
     lastname: '',
     email: ''
   });
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true);
+  const [notificationLoading, setNotificationLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [alert, setAlert] = useState({
     open: false,
@@ -62,8 +68,66 @@ const Profile: React.FC = () => {
       };
       setProfileData(data);
       setOriginalData(data);
+      
+      // Charger les préférences de notification
+      loadEmailNotificationPreferences();
     }
   }, [user]);
+
+  const loadEmailNotificationPreferences = async () => {
+    if (!user) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get(
+        `${API_URL}/users/${user.userId}/email-notifications`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setEmailNotificationsEnabled(response.data.email_notifications_enabled);
+    } catch (error) {
+      console.error('Erreur lors du chargement des préférences:', error);
+      // En cas d'erreur, on garde la valeur par défaut (true)
+    }
+  };
+
+  const handleEmailNotificationToggle = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = event.target.checked;
+    setNotificationLoading(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(
+        `${API_URL}/users/${user?.userId}/email-notifications`,
+        { enabled: newValue },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      
+      setEmailNotificationsEnabled(newValue);
+      setAlert({
+        open: true,
+        message: `Notifications par email ${newValue ? 'activées' : 'désactivées'}`,
+        severity: 'success'
+      });
+    } catch (error: any) {
+      console.error('Erreur lors de la mise à jour des préférences:', error);
+      setAlert({
+        open: true,
+        message: error.response?.data?.error || 'Erreur lors de la mise à jour des préférences',
+        severity: 'error'
+      });
+    } finally {
+      setNotificationLoading(false);
+    }
+  };
 
   const handleEdit = () => {
     setIsEditing(true);
@@ -306,6 +370,51 @@ const Profile: React.FC = () => {
             </Card>
           </Grid>
         </Grid>
+
+        {/* Section Préférences de notification */}
+        <Box sx={{ mt: 3 }}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                <NotificationsIcon sx={{ mr: 1 }} />
+                Préférences de notification
+              </Typography>
+              
+              <Box sx={{ mt: 2 }}>
+                <FormControl component="fieldset">
+                  <FormControlLabel
+                    control={
+                      <Switch
+                        checked={emailNotificationsEnabled}
+                        onChange={handleEmailNotificationToggle}
+                        disabled={notificationLoading}
+                        color="primary"
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="body1">
+                          Notifications par email
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          Recevoir un email pour les notifications importantes (réservations, demandes de surveillance, événements annulés)
+                        </Typography>
+                      </Box>
+                    }
+                  />
+                  {notificationLoading && (
+                    <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                      <CircularProgress size={16} sx={{ mr: 1 }} />
+                      <Typography variant="body2" color="text.secondary">
+                        Mise à jour en cours...
+                      </Typography>
+                    </Box>
+                  )}
+                </FormControl>
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
       </Paper>
 
       <Snackbar

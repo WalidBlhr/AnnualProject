@@ -1,6 +1,7 @@
 import { AppDataSource } from "../db/database";
 import { Message } from "../db/models/message";
 import { User } from "../db/models/user";
+import { sendNotificationEmail } from "../config/email";
 
 export interface NotificationData {
   type: 'troc' | 'service' | 'event' | 'booking' | 'absence' | 'message' | 'general';
@@ -9,6 +10,8 @@ export interface NotificationData {
   receiverId: number;
   senderId?: number;
   relatedId?: number; // ID de l'objet lié (troc, service, event, etc.)
+  sendEmail?: boolean; // Si true, envoie aussi un email
+  actionUrl?: string; // URL d'action pour l'email
 }
 
 export class NotificationService {
@@ -16,7 +19,39 @@ export class NotificationService {
   private static userRepository = AppDataSource.getRepository(User);
 
   /**
-   * Envoie une notification sous forme de message système
+   * Détermine si une notification est importante et doit être envoyée par email
+   */
+  private static isImportantNotification(type: string): boolean {
+    const importantTypes = ['booking', 'absence', 'event']; // Types importantes par défaut
+    return importantTypes.includes(type);
+  }
+
+  /**
+   * Génère l'URL d'action pour l'email selon le type de notification
+   */
+  private static generateActionUrl(type: string, relatedId?: number): string {
+    const baseUrl = process.env.FRONTEND_URL || 'http://localhost';
+    
+    switch (type) {
+      case 'troc':
+        return relatedId ? `${baseUrl}/trocs/${relatedId}` : `${baseUrl}/trocs`;
+      case 'service':
+        return relatedId ? `${baseUrl}/services/${relatedId}` : `${baseUrl}/services`;
+      case 'event':
+        return relatedId ? `${baseUrl}/events/${relatedId}` : `${baseUrl}/events`;
+      case 'booking':
+        return `${baseUrl}/services`; // Rediriger vers la page des services
+      case 'absence':
+        return `${baseUrl}/absences`;
+      case 'message':
+        return `${baseUrl}/messages`;
+      default:
+        return baseUrl;
+    }
+  }
+
+  /**
+   * Envoie une notification sous forme de message système et optionnellement par email
    */
   static async sendNotification(data: NotificationData): Promise<void> {
     try {
@@ -44,6 +79,30 @@ export class NotificationService {
 
       await this.messageRepository.save(notification);
       console.log(`Notification envoyée à ${receiver.firstname} ${receiver.lastname}`);
+
+      // Envoyer un email si nécessaire
+      const shouldSendEmail = data.sendEmail || this.isImportantNotification(data.type);
+      
+      if (shouldSendEmail && receiver.email_notifications_enabled) {
+        try {
+          const actionUrl = data.actionUrl || this.generateActionUrl(data.type, data.relatedId);
+          const userName = `${receiver.firstname} ${receiver.lastname}`;
+          
+          await sendNotificationEmail(
+            receiver.email,
+            data.type,
+            userName,
+            data.title,
+            data.content,
+            actionUrl
+          );
+          
+          console.log(`Email de notification envoyé à ${receiver.email}`);
+        } catch (emailError) {
+          console.error('Erreur lors de l\'envoi de l\'email:', emailError);
+          // On ne fait pas échouer la notification si l'email échoue
+        }
+      }
     } catch (error) {
       console.error('Erreur lors de l\'envoi de la notification:', error);
     }
@@ -113,7 +172,8 @@ export class NotificationService {
       content: `Votre service "${serviceTitle}" a été réservé pour le ${day} à ${timeSlot}.`,
       receiverId: providerId,
       senderId: requesterId,
-      relatedId: serviceId
+      relatedId: serviceId,
+      sendEmail: true // Forcer l'envoi d'email pour les réservations
     });
   }
 
@@ -124,7 +184,8 @@ export class NotificationService {
       content: `Votre réservation pour le service "${serviceTitle}" a été acceptée.`,
       receiverId: requesterId,
       senderId: providerId,
-      relatedId: serviceId
+      relatedId: serviceId,
+      sendEmail: true // Forcer l'envoi d'email pour les acceptations
     });
   }
 
@@ -135,7 +196,8 @@ export class NotificationService {
       content: `La réservation pour le service "${serviceTitle}" a été annulée.`,
       receiverId: receiverId,
       senderId: canceledBy,
-      relatedId: serviceId
+      relatedId: serviceId,
+      sendEmail: true // Forcer l'envoi d'email pour les annulations
     });
   }
 
@@ -180,7 +242,8 @@ export class NotificationService {
         title: 'Événement annulé',
         content: `L'événement "${eventTitle}" auquel vous étiez inscrit a été annulé.`,
         receiverId: participantId,
-        relatedId: eventId
+        relatedId: eventId,
+        sendEmail: true // Forcer l'envoi d'email pour les annulations d'événements
       })
     );
     
@@ -200,7 +263,8 @@ export class NotificationService {
         content: `Un voisin vous demande de surveiller son logement du ${formatDate(startDate)} au ${formatDate(endDate)}.`,
         receiverId: contactId,
         senderId: userId,
-        relatedId: absenceId
+        relatedId: absenceId,
+        sendEmail: true // Forcer l'envoi d'email pour les demandes de surveillance
       })
     );
     
@@ -214,7 +278,8 @@ export class NotificationService {
       content: `Votre demande de surveillance a été ${response === 'accepted' ? 'acceptée' : 'refusée'}.`,
       receiverId: ownerId,
       senderId: contactId,
-      relatedId: absenceId
+      relatedId: absenceId,
+      sendEmail: true // Forcer l'envoi d'email pour les réponses de surveillance
     });
   }
 
