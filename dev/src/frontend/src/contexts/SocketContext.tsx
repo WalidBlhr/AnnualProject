@@ -2,7 +2,7 @@ import React, {createContext, useContext, useEffect, useState} from 'react';
 import {io, Socket} from 'socket.io-client';
 import {useAuth} from './AuthContext';
 import axios from 'axios';
-import {API_URL} from '../const';
+import {API_URL, BASE_URL} from '../const';
 
 interface SocketContextType {
   socket: Socket | null;
@@ -62,10 +62,12 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     // Créer la connexion socket seulement si l'utilisateur est authentifié
     console.log("Socket context : ", isAuthenticated, token);
     if (isAuthenticated && token) {
-      const newSocket = io(API_URL, {
+      const newSocket = io(BASE_URL, {
+        path: "/api/socket.io",
         auth: {
           token
-        }
+        },
+        transports: ["websocket"],
       });
 
       setSocket(newSocket);
