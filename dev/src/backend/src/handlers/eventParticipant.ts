@@ -7,6 +7,7 @@ import { User } from "../db/models/user";
 import { Event } from "../db/models/event";
 import { Not } from "typeorm";
 import { Message } from "../db/models/message";
+import { NotificationService } from "../utils/notificationService";
 
 /**
  * Create a new EventParticipant
@@ -60,6 +61,21 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
     );
     
     const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
+
+    // Envoyer une notification au créateur de l'événement
+    const eventWithCreator = await eventRepository.findOne({
+      where: { id: eventId },
+      relations: ['creator']
+    });
+    
+    if (eventWithCreator && eventWithCreator.creator.id !== userId) {
+      await NotificationService.notifyEventParticipation(
+        eventId,
+        event.name,
+        userId,
+        eventWithCreator.creator.id
+      );
+    }
 
     // Vérifier si l'événement a atteint son quota minimum (pour le marquer comme confirmé)
     if (currentParticipantsCount + 1 >= (event.min_participants ?? 0) && event.status === 'pending') {

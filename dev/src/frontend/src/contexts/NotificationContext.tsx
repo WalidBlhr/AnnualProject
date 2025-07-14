@@ -2,10 +2,12 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import { useAuth } from './AuthContext';
 import axios from 'axios';
 import { API_URL } from '../const';
+import { NotificationParser } from '../utils/NotificationParser';
+import { NotificationDebug, NotificationSync } from '../utils/NotificationDebug';
 
 export interface Notification {
   id: string;
-  type: 'message' | 'event' | 'troc' | 'service' | 'general';
+  type: 'message' | 'event' | 'troc' | 'service' | 'booking' | 'absence' | 'general';
   title: string;
   message: string;
   isRead: boolean;
@@ -43,7 +45,11 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
   };
 
   // Marquer une notification comme lue
-  const markAsRead = (notificationId: string) => {
+  const markAsRead = async (notificationId: string) => {
+    const notification = notifications.find(n => n.id === notificationId);
+    NotificationDebug.logNotificationAction('Marking as read', notificationId, notification?.data?.messageId);
+
+    // Marquer localement d'abord
     setNotifications(prev =>
       prev.map(notification =>
         notification.id === notificationId
@@ -51,13 +57,81 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
           : notification
       )
     );
+
+    // Synchroniser avec le backend
+    if (notification?.data?.messageId) {
+      try {
+        const token = localStorage.getItem('token');
+        NotificationDebug.logApiCall(`/messages/${notification.data.messageId}`, 'PUT', { status: 'read' });
+        
+        await NotificationSync.retryApiCall(async () => {
+          await axios.put(
+            `${API_URL}/messages/${notification.data.messageId}`,
+            { status: 'read' },
+            { headers: { Authorization: `Bearer ${token}` } }
+          );
+        });
+        
+        // Rafraîchir les notifications après la mise à jour
+        await NotificationSync.delayedRefresh(fetchNotifications, 300);
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du statut:', error);
+        // En cas d'erreur, restaurer l'état local
+        setNotifications(prev =>
+          prev.map(n =>
+            n.id === notificationId
+              ? { ...n, isRead: false }
+              : n
+          )
+        );
+      }
+    }
   };
 
   // Marquer toutes les notifications comme lues
-  const markAllAsRead = () => {
+  const markAllAsRead = async () => {
+    const unreadNotifications = notifications.filter(n => !n.isRead);
+    NotificationDebug.log(`Marking ${unreadNotifications.length} notifications as read`);
+
+    // Marquer localement d'abord
     setNotifications(prev =>
       prev.map(notification => ({ ...notification, isRead: true }))
     );
+
+    // Synchroniser avec le backend
+    try {
+      const token = localStorage.getItem('token');
+      const messageIds = unreadNotifications
+        .filter(n => n.data?.messageId)
+        .map(n => n.data.messageId);
+
+      NotificationDebug.log(`Updating ${messageIds.length} messages in backend`);
+
+      // Marquer tous les messages comme lus
+      await Promise.all(
+        messageIds.map(messageId =>
+          NotificationSync.retryApiCall(() =>
+            axios.put(
+              `${API_URL}/messages/${messageId}`,
+              { status: 'read' },
+              { headers: { Authorization: `Bearer ${token}` } }
+            )
+          )
+        )
+      );
+      
+      // Rafraîchir les notifications après la mise à jour
+      await NotificationSync.delayedRefresh(fetchNotifications, 300);
+    } catch (error) {
+      console.error('Erreur lors de la mise à jour des statuts:', error);
+      // En cas d'erreur, restaurer l'état local
+      setNotifications(prev =>
+        prev.map(notification => {
+          const wasUnread = unreadNotifications.some(n => n.id === notification.id);
+          return wasUnread ? { ...notification, isRead: false } : notification;
+        })
+      );
+    }
   };
 
   // Supprimer toutes les notifications
@@ -71,58 +145,48 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     try {
       const token = localStorage.getItem('token');
+      NotificationDebug.logApiCall('/messages', 'GET');
       
       // Récupérer tous les messages de l'utilisateur connecté
       const messagesResponse = await axios.get(
-        `${API_URL}/messages`,
+        `${API_URL}/messages?page=1&limit=100`,
         {
           headers: { Authorization: `Bearer ${token}` }
         }
       );
 
-      console.log('Messages response:', messagesResponse.data);
+      NotificationDebug.log('Messages response received', { 
+        isArray: Array.isArray(messagesResponse.data),
+        hasData: !!messagesResponse.data?.data,
+        count: Array.isArray(messagesResponse.data) ? messagesResponse.data.length : messagesResponse.data?.data?.length
+      });
 
-      // Convertir les messages en notifications
+      // Convertir les messages en notifications en utilisant le parser
       const messagesData = messagesResponse.data as any;
       // Vérifier si on a une structure avec data ou directement un tableau
       const messages = Array.isArray(messagesData) ? messagesData : messagesData.data || [];
       
-      console.log('Messages found:', messages.length, 'messages');
+      NotificationDebug.log(`Processing ${messages.length} messages for user ${user.userId}`);
       
-      // Filtrer seulement les messages reçus par l'utilisateur connecté qui ne sont pas lus
-      const incomingMessages = messages.filter((message: any) => {
-        const isIncoming = message.receiver?.id === user.userId;
-        const isUnread = message.status === 'unread';
-        console.log(`Message ${message.id}: isIncoming=${isIncoming}, isUnread=${isUnread}, status=${message.status}`);
-        return isIncoming && isUnread;
-      });
+      // Utiliser le parser pour convertir les messages en notifications
+      const messageNotifications = NotificationParser.filterNotifications(messages, Number(user.userId));
       
-      console.log('Incoming unread messages:', incomingMessages.length);
-      
-      const messageNotifications: Notification[] = incomingMessages.map((message: any) => {
-        return {
-          id: `message-${message.id}`,
-          type: 'message' as const,
-          title: 'Nouveau message',
-          message: `Message de ${message.sender?.firstname || 'Utilisateur'}: ${(message.content || '').substring(0, 100)}${(message.content || '').length > 100 ? '...' : ''}`,
-          isRead: false, // Puisqu'on ne prend que les messages non lus
-          createdAt: new Date(message.createdAt || message.date_sent || Date.now()),
-          data: { messageId: message.id, senderId: message.sender?.id }
-        };
+      NotificationDebug.log(`Created ${messageNotifications.length} notifications`, {
+        unread: messageNotifications.filter(n => !n.isRead).length,
+        read: messageNotifications.filter(n => n.isRead).length
       });
 
-      console.log('Message notifications created:', messageNotifications.length);
-
-      // Fusionner avec les notifications existantes (éviter les doublons)
-      setNotifications(prev => {
-        const existingIds = prev.map(n => n.id);
-        const newNotifications = messageNotifications.filter(n => !existingIds.includes(n.id));
-        console.log('Adding new notifications:', newNotifications.length);
-        return [...newNotifications, ...prev];
-      });
+      // Remplacer toutes les notifications par les nouvelles (pour maintenir l'état synchronisé)
+      setNotifications(messageNotifications);
 
     } catch (error) {
       console.error('Erreur lors de la récupération des notifications:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Status:', error.response?.status);
+        console.error('Data:', error.response?.data);
+        console.error('URL:', error.config?.url);
+      }
+      // En cas d'erreur, on garde les notifications existantes
     }
   }, [isAuthenticated, user]);
 

@@ -49,6 +49,12 @@ const NotificationBell: React.FC = () => {
         return <TrocIcon fontSize="small" />;
       case 'service':
         return <ServiceIcon fontSize="small" />;
+      case 'booking':
+        return <ServiceIcon fontSize="small" />;
+      case 'absence':
+        return <InfoIcon fontSize="small" />;
+      case 'general':
+        return <InfoIcon fontSize="small" />;
       default:
         return <InfoIcon fontSize="small" />;
     }
@@ -64,13 +70,19 @@ const NotificationBell: React.FC = () => {
         return 'success';
       case 'service':
         return 'warning';
+      case 'booking':
+        return 'info';
+      case 'absence':
+        return 'error';
+      case 'general':
+        return 'default';
       default:
         return 'default';
     }
   };
 
-  const handleNotificationClick = (notification: Notification) => {
-    markAsRead(notification.id);
+  const handleNotificationClick = async (notification: Notification) => {
+    await markAsRead(notification.id);
     handleClose();
     
     // Navigation selon le type de notification
@@ -86,6 +98,12 @@ const NotificationBell: React.FC = () => {
         break;
       case 'service':
         navigate('/services');
+        break;
+      case 'booking':
+        navigate('/my-services');
+        break;
+      case 'absence':
+        navigate('/absences');
         break;
       default:
         break;

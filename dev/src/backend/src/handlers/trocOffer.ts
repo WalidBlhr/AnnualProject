@@ -4,6 +4,7 @@ import { generateValidationErrorMessage } from "./validators/generate-validation
 import { AppDataSource } from "../db/database";
 import { TrocOffer } from "../db/models/troc_offer";
 import { User } from "../db/models/user";
+import { NotificationService } from "../utils/notificationService";
 
 /**
  * Create a new TrocOffer
@@ -46,6 +47,14 @@ export const createTrocOfferHandler = async (req: Request, res: Response) => {
         user: true
       }
     })
+
+    // Envoyer une notification pour le nouveau troc
+    await NotificationService.notifyNewTroc(
+      trocOfferCreated.id,
+      trocOfferCreated.title,
+      trocOfferCreated.type as 'offer' | 'request',
+      user.id
+    );
 
     res.status(201).send(trocOfferWithRelations)
   } catch (error) {
@@ -181,6 +190,23 @@ export const updateTrocOfferHandler = async (req: Request, res: Response) => {
       if (currentStatus === 'closed' && newStatus !== 'closed') {
         res.status(400).send({ "error": "Une offre terminée ne peut pas être réouverte" });
         return;
+      }
+
+      // Envoyer notification si le statut change
+      if (currentStatus !== newStatus) {
+        const trocOfferWithUser = await trocOfferRepository.findOne({
+          where: { id: updateTrocOffer.id },
+          relations: { user: true }
+        });
+        
+        if (trocOfferWithUser) {
+          await NotificationService.notifyTrocStatusChange(
+            trocOfferWithUser.id,
+            trocOfferWithUser.title,
+            newStatus,
+            trocOfferWithUser.user.id
+          );
+        }
       }
     }
 

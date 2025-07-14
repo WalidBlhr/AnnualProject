@@ -88,7 +88,7 @@ const Messages = () => {
       }
 
       const decoded = jwtDecode<{ userId: number }>(token);
-      const { data } = await axios.get(API_URL + '/messages', {
+      const { data } = await axios.get(API_URL + '/messages?page=1&limit=100', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -101,14 +101,26 @@ const Messages = () => {
       
       if (Array.isArray(data.data)) {
         data.data.forEach((message: Message) => {
+          // Vérifier que le message a bien un sender et un receiver
+          if (!message.sender || !message.receiver) {
+            console.warn('Message incomplet ignoré:', message);
+            return;
+          }
+          
           const currentUserId = decoded.userId;
           const otherUser = message.sender.id === currentUserId ? message.receiver : message.sender;
+          
+          // Vérifier que l'autre utilisateur est valide
+          if (!otherUser || !otherUser.id) {
+            console.warn('Autre utilisateur invalide pour le message:', message);
+            return;
+          }
           
           const existingConversation = conversationsMap.get(otherUser.id);
           if (!existingConversation) {
             conversationsMap.set(otherUser.id, {
               otherUserId: otherUser.id,
-              otherUserName: `${otherUser.firstname} ${otherUser.lastname}`,
+              otherUserName: `${otherUser.firstname || ''} ${otherUser.lastname || ''}`.trim() || 'Utilisateur',
               lastMessage: message,
               unreadCount: message.status === 'non_lu' && message.receiver.id === currentUserId ? 1 : 0
             });

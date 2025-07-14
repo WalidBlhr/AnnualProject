@@ -7,6 +7,7 @@ import { Service } from "../db/models/service";
 import { User } from "../db/models/user";
 import { Message } from "../db/models/message";
 import { Booking, BookingDay, BookingStatus } from "../db/models/booking";
+import { NotificationService } from "../utils/notificationService";
 
 /**
  * Create a new Service
@@ -77,6 +78,13 @@ export const createServiceHandler = async (req: Request, res: Response) => {
     });
     
     const serviceCreated = await serviceRepository.save(service);
+
+    // Envoyer une notification pour le nouveau service
+    await NotificationService.notifyNewService(
+      serviceCreated.id,
+      serviceCreated.title,
+      provider.id
+    );
 
     // Retourner un JSON clair avec provider info
     const response = {
@@ -510,6 +518,16 @@ export const createBookingHandler = async (req: Request, res: Response) => {
 
     const bookingCreated = await bookingRepository.save(booking);
 
+    // Envoyer une notification au provider
+    await NotificationService.notifyServiceBooked(
+      service.id,
+      service.title,
+      service.provider.id,
+      requester.id,
+      frenchDay,
+      createBookingRequest.time_slot
+    );
+
     // Retourner la réservation créée
     const response = {
       id: bookingCreated.id,
@@ -601,6 +619,14 @@ export const acceptBookingHandler = async (req: Request, res: Response) => {
     // Mettre à jour le statut de la réservation
     booking.status = BookingStatus.ACCEPTED;
     const updatedBooking = await bookingRepository.save(booking);
+
+    // Envoyer une notification au requester
+    await NotificationService.notifyBookingAccepted(
+      booking.service.id,
+      booking.service.title,
+      booking.requester.id,
+      booking.service.provider.id
+    );
 
     // Retourner la réservation mise à jour
     const response = {
@@ -696,6 +722,15 @@ export const cancelBookingHandler = async (req: Request, res: Response) => {
     // Mettre à jour le statut de la réservation
     booking.status = BookingStatus.CANCELLED;
     const updatedBooking = await bookingRepository.save(booking);
+
+    // Envoyer une notification à l'autre partie
+    const receiverId = isRequester ? booking.service.provider.id : booking.requester.id;
+    await NotificationService.notifyBookingCanceled(
+      booking.service.id,
+      booking.service.title,
+      receiverId,
+      user.id
+    );
 
     // Retourner la réservation mise à jour
     const response = {

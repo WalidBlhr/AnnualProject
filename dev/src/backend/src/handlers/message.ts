@@ -86,8 +86,12 @@ export const createMessageHandler = async (req: Request, res: Response) => {
  */
 export const listMessageHandler = async (req: Request, res: Response) => {
   try {
+    console.log('listMessageHandler called with query:', req.query);
+    console.log('Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
+    
     const validation = ListMessagesValidation.validate(req.query);
     if (validation.error) {
+      console.log('Validation error:', validation.error.details);
       res.status(400).send(generateValidationErrorMessage(validation.error.details))
       return
     }
@@ -107,6 +111,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
         'receiver.firstname',
         'receiver.lastname'
       ])
+      .where('message.sender IS NOT NULL AND message.receiver IS NOT NULL') // Exclure les messages avec des relations nulles
       .orderBy('message.date_sent', 'ASC');
 
     // Si senderId et receiverId sont fournis, filtrer les messages
@@ -121,24 +126,60 @@ export const listMessageHandler = async (req: Request, res: Response) => {
     } else {
       // Sinon, récupérer tous les messages de l'utilisateur connecté
       const token = req.headers.authorization?.split(' ')[1];
-      const decoded = jwtDecode<{ userId: number }>(token!);
-      query.where(
-        'message.sender_id = :userId OR message.receiver_id = :userId',
-        { userId: decoded.userId }
-      );
+      if (!token) {
+        res.status(401).send({ message: "Token manquant" });
+        return;
+      }
+
+      try {
+        const decoded = jwtDecode<{ userId: number }>(token);
+        if (!decoded.userId) {
+          res.status(401).send({ message: "Token invalide - userId manquant" });
+          return;
+        }
+        
+        query.andWhere(
+          'message.sender_id = :userId OR message.receiver_id = :userId',
+          { userId: decoded.userId }
+        );
+      } catch (error) {
+        console.error('Erreur lors du décodage du token:', error);
+        res.status(401).send({ message: "Token invalide" });
+        return;
+      }
     }
 
     query.skip((validation.value.page - 1) * validation.value.limit);
     query.take(validation.value.limit);
 
     const [messages, totalCount] = await query.getManyAndCount();
+    
+    // Filtrer les messages qui ont des relations nulles pour plus de sécurité
+    const validMessages = messages.filter(msg => {
+      const isValid = msg.sender && msg.receiver && msg.sender.id && msg.receiver.id;
+      if (!isValid) {
+        console.warn(`Message ${msg.id} has invalid relations:`, {
+          hasSender: !!msg.sender,
+          hasReceiver: !!msg.receiver,
+          senderHasId: !!msg.sender?.id,
+          receiverHasId: !!msg.receiver?.id
+        });
+      }
+      return isValid;
+    });
+    
     const totalPages = Math.ceil(totalCount / validation.value.limit);
 
+    console.log(`Found ${validMessages.length} valid messages out of ${messages.length} total (user query)`);
+    validMessages.forEach(msg => {
+      console.log(`Message ${msg.id}: sender=${msg.sender?.id}, receiver=${msg.receiver?.id}, status=${msg.status}`);
+    });
+
     res.send({
-      data: messages,
+      data: validMessages,
       page_size: validation.value.limit,
       page: validation.value.page,
-      total_count: totalCount,
+      total_count: validMessages.length, // Utiliser le nombre de messages valides
       total_pages: totalPages,
     });
   } catch (error) {

@@ -14,6 +14,7 @@ import { generateValidationErrorMessage } from "./validators/generate-validation
 import jwt from "jsonwebtoken";
 import { In } from "typeorm";
 import { Message } from "../db/models/message";
+import { NotificationService } from "../utils/notificationService";
 
 /**
  * Fonction utilitaire pour formater les dates
@@ -101,6 +102,15 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
         });
         await messageRepository.save(newMessage);
       }
+
+      // Envoyer des notifications via le service de notification également
+      await NotificationService.notifyAbsenceRequest(
+        absenceCreated.id,
+        user.id,
+        new Date(start_date),
+        new Date(end_date),
+        trusted_contact_ids
+      );
     }
     
     // Récupérer l'absence avec ses relations pour la réponse
@@ -351,6 +361,14 @@ export const respondToAbsenceHandler = async (req: Request, res: Response) => {
         status: 'unread'
       });
       await messageRepository.save(newMessage);
+
+      // Envoyer également via le service de notification
+      await NotificationService.notifyAbsenceResponse(
+        updatedAbsence.id,
+        contact.id,
+        updatedAbsence.user.id,
+        status as 'accepted' | 'refused'
+      );
     }
     
     res.status(200).send({
@@ -568,6 +586,9 @@ export const addTrustedContactHandler = async (req: Request, res: Response) => {
     // Ajouter le contact de confiance
     user.trusted_contacts.push(trustedUser);
     await userRepository.save(user);
+
+    // Envoyer une notification au nouveau contact de confiance
+    await NotificationService.notifyTrustedContactAdded(userId, trustedUserId);
     
     res.status(200).send({ message: "Contact de confiance ajouté avec succès" });
   } catch (error) {

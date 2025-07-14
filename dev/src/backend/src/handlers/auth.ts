@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 import { Token } from "../db/models/token";
 import { ACCESS_TOKEN_DURATION, REFRESH_TOKEN_DURATION, TOKEN_SECRET } from "../constants";
 import { refreshValidation } from "./validators/auth/refresh-token";
+import { NotificationService } from "../utils/notificationService";
 
 export const createUser = async(req: Request, res: Response) => {
     try{
@@ -29,6 +30,10 @@ export const createUser = async(req: Request, res: Response) => {
             firstname: createUserRequest.firstname,
             role: createUserRequest.role
         })
+
+        // Envoyer une notification de bienvenue
+        await NotificationService.notifyWelcome(user.id);
+
         res.status(201).send({
             id: user.id,
             email: user.email,

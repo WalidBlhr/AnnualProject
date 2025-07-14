@@ -5,6 +5,7 @@ import { AppDataSource } from "../db/database";
 import { Event } from "../db/models/event";
 import { User } from "../db/models/user";
 import jwt from "jsonwebtoken";
+import { NotificationService } from "../utils/notificationService";
 
 /**
  * Create a new Event
@@ -60,6 +61,13 @@ export const createEventHandler = async (req: Request, res: Response) => {
 
       const eventRepository = AppDataSource.getRepository(Event);
       const eventCreated = await eventRepository.save(event);
+
+      // Envoyer une notification pour le nouvel événement
+      await NotificationService.notifyNewEvent(
+          eventCreated.id,
+          eventCreated.name,
+          user.id
+      );
       
       res.status(201).send(eventCreated);
   } catch (error) {
@@ -359,6 +367,18 @@ export const cancelEventHandler = async (req: Request, res: Response) => {
     // Annuler l'événement
     event.status = "canceled";
     const updatedEvent = await eventRepository.save(event);
+
+    // Notifier tous les participants de l'annulation
+    const EventParticipant = AppDataSource.getRepository(require("../db/models/event_participant").EventParticipant);
+    const participants = await EventParticipant.find({
+      where: { event: { id: eventId } },
+      relations: ['user']
+    });
+    
+    const participantIds = participants.map(p => p.user.id);
+    if (participantIds.length > 0) {
+      await NotificationService.notifyEventCanceled(eventId, event.name, participantIds);
+    }
     
     res.status(200).send(updatedEvent);
   } catch (error) {
