@@ -7,7 +7,7 @@ import { Message } from "./message";
 import { EventParticipant } from "./event_participant";
 import { Absence } from "./absence";
 import { Booking } from "./booking";
-import * as Joi from 'joi';
+import { MessageGroup } from "./message_group";
 
 @Entity({ name: "user" })
 export class User {
@@ -82,6 +82,12 @@ export class User {
     @Column({ type: "boolean", default: true })
     email_notifications_enabled: boolean;
 
+    @OneToMany(() => MessageGroup, group => group.owner)
+    ownedGroups: MessageGroup[];
+
+    @ManyToMany(() => MessageGroup, group => group.members)
+    joinedGroups: MessageGroup[];
+
     constructor(id: number, 
         email: string, password: string, 
         lastname: string, 
@@ -101,7 +107,9 @@ export class User {
         trusted_contacts: User[],
         status: 'online' | 'offline',
         last_active: Date,
-        email_notifications_enabled: boolean = true
+        email_notifications_enabled: boolean = true,
+        ownedGroups: MessageGroup[],
+        joinedGroups: MessageGroup[]
     ) {
         this.id = id
         this.email = email
@@ -124,5 +132,7 @@ export class User {
         this.status = status
         this.last_active = last_active
         this.email_notifications_enabled = email_notifications_enabled
+        this.ownedGroups = ownedGroups
+        this.joinedGroups = joinedGroups
     }
 }

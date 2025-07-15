@@ -283,3 +283,26 @@ export const getEmailNotificationPreferencesHandler = async (req: Request, res: 
   }
 };
 
+export const findUserById = (id: number): Promise<User | null> => {
+  const userRepo = AppDataSource.getRepository(User);
+  return userRepo.findOneBy({id});
+}
+
+export const checkUserIdArray = (ids: number[]) : {validUsers: User[], notFoundUsersIDs: number[]}=> {
+  const nullMembers : number[] = [];
+  const newMembers : User[] = [];
+
+  ids.forEach(async id => {
+    const user = await findUserById(id);
+      if (user) {
+        newMembers.push(user);
+      } else {
+        nullMembers.push(id);
+      }
+  });
+
+  return {
+    validUsers: newMembers,
+    notFoundUsersIDs: nullMembers,
+  };
+}
