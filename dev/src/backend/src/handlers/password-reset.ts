@@ -7,6 +7,7 @@ import { PasswordResetToken } from '../db/models/passwordResetToken';
 import { sendEmail, generatePasswordResetEmail } from '../config/email';
 import { forgotPasswordValidation, resetPasswordValidation, verifyTokenValidation } from './validators/password-reset';
 import { generateValidationErrorMessage } from './validators/generate-validation-message';
+import { FRONTEND_URL } from '../constants';
 
 /**
  * Demande de réinitialisation du mot de passe
@@ -52,7 +53,7 @@ export const forgotPasswordHandler = async (req: Request, res: Response) => {
     await tokenRepository.save(passwordResetToken);
 
     // Créer le lien de réinitialisation
-    const resetLink = `${process.env.FRONTEND_URL || 'http://localhost'}/reset-password?token=${resetToken}`;
+    const resetLink = `${FRONTEND_URL}/reset-password?token=${resetToken}`;
 
     // Envoyer l'email
     const emailContent = generatePasswordResetEmail(
