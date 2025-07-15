@@ -1,16 +1,15 @@
 import Joi from "joi";
+import { PaginationRequest } from "./user";
 
 /**
  * Liste des messages (READ multiple) avec pagination
  */
 export interface ListMessagesRequest {
-  page: number;
-  limit: number;
   senderId?: number;
   receiverId?: number;
 }
 
-export const ListMessagesValidation = Joi.object<ListMessagesRequest>({
+export const ListMessagesValidation = Joi.object<ListMessagesRequest & PaginationRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
   senderId: Joi.number(),

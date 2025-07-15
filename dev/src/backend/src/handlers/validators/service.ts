@@ -1,18 +1,17 @@
 import Joi from "joi";
+import { PaginationRequest } from "./user";
 
 /**
  * Liste des services (READ multiple) avec pagination
  */
 export interface ListServicesRequest {
-  page: number;
-  limit: number;
   type?: string;
   status?: string;
   date_start?: Date;
   date_end?: Date;
 }
 
-export const ListServicesValidation = Joi.object<ListServicesRequest>({
+export const ListServicesValidation = Joi.object<ListServicesRequest & PaginationRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
   type: Joi.string().valid('colis', 'dog_walking', 'shopping', 'cleaning', 'gardening', 'other'),

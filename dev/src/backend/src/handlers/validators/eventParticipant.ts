@@ -1,16 +1,15 @@
 import Joi from "joi";
+import { PaginationRequest } from "./user";
 
 /**
  * Liste des EventParticipants (READ multiple) avec pagination
  */
 export interface ListEventParticipantsRequest {
-  page: number;
-  limit: number;
   eventId?: number;
   // Ajoutez ici d'autres filtres éventuels (par eventId, userId, status_participation, etc.)
 }
 
-export const ListEventParticipantsValidation = Joi.object<ListEventParticipantsRequest>({
+export const ListEventParticipantsValidation = Joi.object<ListEventParticipantsRequest & PaginationRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
   eventId: Joi.number().optional(), // Accepter le paramètre eventId

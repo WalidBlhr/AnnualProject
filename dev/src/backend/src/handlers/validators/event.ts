@@ -1,16 +1,15 @@
 import Joi from "joi";
+import { PaginationRequest } from "./user";
 
 /**
  * Liste des Events (READ multiple) avec pagination
  */
 export interface ListEventsRequest {
-  page: number;
-  limit: number;
   type?: string;
   category?: string;
 }
 
-export const ListEventsValidation = Joi.object<ListEventsRequest>({
+export const ListEventsValidation = Joi.object<ListEventsRequest & PaginationRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
   type: Joi.string().valid("regular", "community").optional(),
