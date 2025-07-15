@@ -71,6 +71,8 @@ const JournalHome: React.FC = () => {
         } 
       });
       setRecentArticles(data.data);
+      console.log("articles")
+      console.log(data.data)
     } catch (error) {
       console.error('Erreur lors de la récupération des articles récents:', error);
     }
@@ -292,10 +294,7 @@ const JournalHome: React.FC = () => {
                     <Box sx={{ display: 'flex', mb: 1, alignItems: 'center' }}>
                       <PersonIcon fontSize="small" sx={{ mr: 0.5, color: 'text.secondary' }} />
                       <Typography variant="body2" color="text.secondary">
-                        {article.author ? 
-                          `${article.author.firstname} ${article.author.lastname}` : 
-                          article.authorName || 'Auteur inconnu'
-                        }
+                        {article.authorName || 'Auteur inconnu'}
                       </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', mb: 2, alignItems: 'center' }}>
