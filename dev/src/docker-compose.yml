@@ -29,24 +29,6 @@ services:
     volumes:
       - mongo_data:/data/db
 
-  # backend:
-  #   container_name: quartissimo-backend
-  #   build:
-  #     context: ./backend
-  #   volumes:
-  #     - ./backend/src:/app/src
-  #     - ./backend/uploads:/app/uploads
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - DB_NAME=quartissimo_db
-  #     - DB_PASSWORD=V3Gry9LUU9umyy+*
-  #     - DB_USER=admin
-  #     - DB_SYNCHRONISE=true
-  #     - DB_HOST=postgres
-  #   depends_on:
-  #     - postgres
-
   backend:
     container_name: quartissimo-backend
     build:
@@ -67,22 +49,6 @@ services:
     depends_on:
       - postgres
       - mongodb
-
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: quartissimo-frontend
-  #   ports:
-  #     - "80:80"
-  #   depends_on:
-  #     - backend
-  #   environment:
-  #     - CHOKIDAR_USEPOLLING=true  # Pour la détection des changements
-  #     - WDS_SOCKET_PORT=0   
-  #     - REACT_APP_BACKEND_URL=http://localhost:3000
-  #   volumes:
-  #     - ./frontend:/app    # Ce volume est crucial pour le hot-reload
   
   frontend:
     build:
