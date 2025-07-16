@@ -30,6 +30,7 @@ import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, lis
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler } from "./user";
+import { createMessageGroup, deleteMessageGroup, getMessageGroup, listMessageGroups, patchMessageGroup } from "./message-group";
 import { getAffinityScore, getRealTimeSuggestions, getSuggestions, getUserAffinities, getUserFavoriteCategories, getUserRecentInteractions, getUserStats, recordInteraction, recordSuggestionFeedback, recordSuggestionView, updateInteraction } from "./suggestion";
 
 export const initHandlers = (app: Application) => {
@@ -1537,6 +1538,222 @@ export const initHandlers = (app: Application) => {
   app.post('/tictactoe', authMiddleware, createTicTacToeGame);
   app.get('/tictactoe', authMiddleware, getTicTacToeGame);
   app.put('/tictactoe/:id/move', authMiddleware, playTicTacToeMove);
+
+  /**
+   * @openapi
+   * /message-groups/:
+   *   get:
+   *     tags:
+   *       - Message Groups
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Get all groupchats
+   *     parameters:
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Number of items per page
+   *       - in: query
+   *         name: name
+   *         schema:
+   *           type: string
+   *         description: Group's name
+   *       - in: query
+   *         name: ownerFullname
+   *         schema:
+   *           type: string
+   *         description: Group owner's fullname
+   *       - in: query
+   *         name: ownerId
+   *         schema:
+   *           type: integer
+   *         description: Group owner's id
+   *       - in: query
+   *         name: membersMin
+   *         schema:
+   *           type: integer
+   *         description: Minimum amount of members
+   *       - in: query
+   *         name: membersMax
+   *         schema:
+   *           type: integer
+   *         description: Maximum amount of members
+   *       - in: query
+   *         name: messageMin
+   *         schema:
+   *           type: integer
+   *         description: Minimum amount of messages
+   *       - in: query
+   *         name: messageMax
+   *         schema:
+   *           type: integer
+   *         description: Maximum amount of messages
+   *     responses:
+   *       200:
+   *         description: Category updated successfully
+   *       400:
+   *         description: Request is not as it should be. Refer to the response errors
+   *       500:
+   *         description: Server error
+   */
+  app.get("/message-groups/", authMiddleware, (req, res, next) => {
+    listMessageGroups(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /message-groups/{id}:
+   *   get:
+   *     tags:
+   *       - Message Groups
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Get groupchat by ID
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: integer
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Success. Response contains groupchat details
+   *       400:
+   *         description: Request is not as it should be. The ID parameter is probably missing.
+   *       404:
+   *         description: There is not any groupchat with such an ID.
+   *       500:
+   *         description: Server error
+   */
+  app.get("/message-groups/:id", (req, res, next) => {
+    getMessageGroup(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /message-groups/:
+   *   post:
+   *     tags:
+   *       - Message Groups
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Create a groupchat
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - name
+   *               - ownerId
+   *             properties:
+   *               name:
+   *                 type: string
+   *               ownerId:
+   *                 type: integer
+   *               description:
+   *                 type: string
+   *               membersId:
+   *                 type: array
+   *                 items:
+   *                   type: integer
+   *     responses:
+   *       201:
+   *         description: Groupchat has been created
+   *       400:
+   *         description: Request is not as it should be. Refer to the response error.
+   *       500:
+   *         description: Server error
+   */
+  app.post("/message-groups/", (req, res, next) => {
+    createMessageGroup(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /message-groups/:
+   *   patch:
+   *     tags:
+   *       - Message Groups
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Update the groupchat with the information of the body
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: integer
+   *         required: true
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             properties:
+   *               name:
+   *                 type: string
+   *               description:
+   *                 type: string
+   *               ownerId:
+   *                 type: integer
+   *               newMembersIDs:
+   *                 type: array
+   *                 items:
+   *                   type: integer
+   *               removedMembersIDs:
+   *                 type: array
+   *                 items:
+   *                   type: integer
+   *     responses:
+   *       200:
+   *         description: Modifications have been applied. The response contains the new data.
+   *       400:
+   *         description: Request is not as it should be. Refer to the response error.
+   *       404:
+   *         description: There is not any groupchat with such an ID.
+   *       500:
+   *         description: Server error
+   */
+  app.patch("/message-groups/:id", (req, res, next) => {
+    patchMessageGroup(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /message-groups/{id}:
+   *   delete:
+   *     tags:
+   *       - Message Groups
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Delete groupchat by ID
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         schema:
+   *           type: integer
+   *         required: true
+   *     responses:
+   *       200:
+   *         description: Groupchat has been deleted.
+   *       400:
+   *         description: Request is not as it should be. The ID parameter is probably missing.
+   *       404:
+   *         description: There is not any groupchat with such an ID.
+   *       500:
+   *         description: Server error
+   */
+  app.delete("/message-groups/:id", (req, res, next) => {
+    deleteMessageGroup(req, res).catch(next);
+  });
 
   // Routes pour le système de suggestions et d'interactions
   // app.use('/api/suggestions', suggestionRoutes);

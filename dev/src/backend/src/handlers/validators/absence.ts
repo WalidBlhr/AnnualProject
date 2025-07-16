@@ -1,16 +1,15 @@
 import Joi from "joi";
+import { PaginationRequest } from "./user";
 
 /**
  * Liste des absences avec pagination
  */
 export interface ListAbsencesRequest {
-  page: number;
-  limit: number;
   userId?: number;
   status?: string;
 }
 
-export const ListAbsencesValidation = Joi.object<ListAbsencesRequest>({
+export const ListAbsencesValidation = Joi.object<ListAbsencesRequest & PaginationRequest>({
   page: Joi.number().min(1).default(1),
   limit: Joi.number().min(1).max(100).default(10),
   userId: Joi.number().optional(),

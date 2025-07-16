@@ -2,6 +2,7 @@ import { AppDataSource } from "../db/database";
 import { Message } from "../db/models/message";
 import { User } from "../db/models/user";
 import { sendNotificationEmail } from "../config/email";
+import { FRONTEND_URL } from "../constants";
 
 export interface NotificationData {
   type: 'troc' | 'service' | 'event' | 'booking' | 'absence' | 'message' | 'general';
@@ -30,7 +31,7 @@ export class NotificationService {
    * Génère l'URL d'action pour l'email selon le type de notification
    */
   private static generateActionUrl(type: string, relatedId?: number): string {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost';
+    const baseUrl = FRONTEND_URL;
     
     switch (type) {
       case 'troc':

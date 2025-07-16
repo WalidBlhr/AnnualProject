@@ -1,13 +1,9 @@
 import Joi from "joi";
+import { PaginationRequest } from "./user";
 
 // READ (liste)
 export interface ListTrocOffersFilters {
     // priceMax?: number;
-}
-
-export interface PaginationRequest {
-    page: number;
-    limit: number;
 }
 
 export const ListTrocOffersValidation = Joi.object<ListTrocOffersFilters & PaginationRequest>({
