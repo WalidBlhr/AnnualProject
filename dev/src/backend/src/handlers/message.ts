@@ -99,6 +99,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
     const query = AppDataSource.createQueryBuilder(Message, 'message')
       .leftJoinAndSelect('message.sender', 'sender')
       .leftJoinAndSelect('message.receiver', 'receiver')
+      .leftJoinAndSelect('message.group', 'group')
       .select([
         'message.id',
         'message.content',
@@ -109,9 +110,12 @@ export const listMessageHandler = async (req: Request, res: Response) => {
         'sender.lastname',
         'receiver.id',
         'receiver.firstname',
-        'receiver.lastname'
+        'receiver.lastname',
+        'group.id',
+        'group.name',
+        'group.createdAt',
       ])
-      .where('message.sender IS NOT NULL AND message.receiver IS NOT NULL') // Exclure les messages avec des relations nulles
+      .where('message.sender IS NOT NULL AND (message.receiver IS NOT NULL OR message.group IS NOT NULL)') // Exclure les messages avec des relations nulles
       .orderBy('message.date_sent', 'ASC');
 
     // Si senderId et receiverId sont fournis, filtrer les messages
@@ -137,7 +141,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
           res.status(401).send({ message: "Token invalide - userId manquant" });
           return;
         }
-        
+
         query.andWhere(
           'message.sender_id = :userId OR message.receiver_id = :userId',
           { userId: decoded.userId }
@@ -156,13 +160,15 @@ export const listMessageHandler = async (req: Request, res: Response) => {
     
     // Filtrer les messages qui ont des relations nulles pour plus de sécurité
     const validMessages = messages.filter(msg => {
-      const isValid = msg.sender && msg.receiver && msg.sender.id && msg.receiver.id;
+      const isValid = msg.sender && msg.sender.id && (msg.receiver && msg.receiver.id || msg.group && msg.group.id);
       if (!isValid) {
         console.warn(`Message ${msg.id} has invalid relations:`, {
           hasSender: !!msg.sender,
           hasReceiver: !!msg.receiver,
+          hasGroup: !!msg.group,
           senderHasId: !!msg.sender?.id,
-          receiverHasId: !!msg.receiver?.id
+          receiverHasId: !!msg.receiver?.id,
+          groupHasId: !!msg.group?.id,
         });
       }
       return isValid;
@@ -172,7 +178,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
 
     console.log(`Found ${validMessages.length} valid messages out of ${messages.length} total (user query)`);
     validMessages.forEach(msg => {
-      console.log(`Message ${msg.id}: sender=${msg.sender?.id}, receiver=${msg.receiver?.id}, status=${msg.status}`);
+      console.log(`Message ${msg.id}: sender=${msg.sender?.id}, receiver=${msg.receiver?.id}, group=${msg.group?.id}, status=${msg.status}`);
     });
 
     res.send({
@@ -207,7 +213,8 @@ export const detailedMessageHandler = async (req: Request, res: Response) => {
           where: { id: getMessageRequest.id },
           relations: {
               sender: true,
-              receiver: true
+              receiver: true,
+              group: true,
           }
       })
       if (message === null) {
@@ -242,7 +249,7 @@ export const updateMessageHandler = async (req: Request, res: Response) => {
       where: { id: messageId.id },
       relations: ['receiver']
     });
-    
+
     if (!message) {
       res.status(404).send({ error: "Message non trouvé" });
       return;

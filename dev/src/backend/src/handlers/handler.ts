@@ -30,7 +30,8 @@ import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, lis
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler } from "./user";
-import { createMessageGroup, deleteMessageGroup, getMessageGroup, listMessageGroups, patchMessageGroup } from "./message-group";
+import { createMessageGroup, deleteMessageGroup, getMessageGroup, listMessageGroups, patchMessageGroup } from "./messageGroup";
+import { createGroupMessage, listGroupMessages } from "./groupMessage";
 
 export const initHandlers = (app: Application) => {
   // Commencez par les routes statiques
@@ -1752,5 +1753,98 @@ export const initHandlers = (app: Application) => {
    */
   app.delete("/message-groups/:id", authMiddleware, (req, res, next) => {
     deleteMessageGroup(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /messages:
+   *   get:
+   *     tags:
+   *       - Groups' messages
+   *     security:
+   *       - bearerAuth: []
+   *     summary: List a given group's messages.
+   *     parameters:
+   *       - in: path
+   *         name: groupId
+   *         schema:
+   *           type: integer
+   *         required: true
+   *       - in: query
+   *         name: page
+   *         schema:
+   *           type: integer
+   *         description: Page number
+   *       - in: query
+   *         name: limit
+   *         schema:
+   *           type: integer
+   *         description: Number of items per page
+   *       - in: query
+   *         name: sentAfter
+   *         schema:
+   *           type: integer
+   *         description: Minimum sending date of the messages
+   *       - in: query
+   *         name: sentBefore
+   *         schema:
+   *           type: integer
+   *         description: Maximum sending date of the messages
+   *       - in: query
+   *         name: senderId
+   *         schema:
+   *           type: integer
+   *         description: Sender's ID
+   *     responses:
+   *       200:
+   *         description: Success. The response contains the group's messages.
+   *       400:
+   *         description: Bad request. Refer to the response error message.
+   *       403:
+   *         description: Access forbidden.
+   *       404:
+   *         description: Resource not found. Refer to the response error message.
+   *       500:
+   *         description: Server error
+   */
+  app.get("/message-groups/:groupId/messages", authMiddleware, (req, res, next) => {
+    listGroupMessages(req, res).catch(next);
+  });
+
+  /**
+   * @openapi
+   * /messages:
+   *   post:
+   *     tags:
+   *       - Groups' messages
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Create a message in the given group.
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             $ref: '#/components/schemas/CreateMessageRequest'
+   *     parameters:
+   *       - in: path
+   *         name: groupId
+   *         schema:
+   *           type: integer
+   *         required: true
+   *     responses:
+   *       201:
+   *         description: Resource created.
+   *       400:
+   *         description: Bad request. Refer to the response error message.
+   *       403:
+   *         description: Access forbidden.
+   *       404:
+   *         description: Resource not found. Refer to the response error message.
+   *       500:
+   *         description: Server error.
+   */  
+  app.post("/message-groups/:groupId/messages", authMiddleware, (req, res, next) => {
+    createGroupMessage(req, res).catch(next);
   });
 }

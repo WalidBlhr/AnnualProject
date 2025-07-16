@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { createMessageGroupValidation, messageGroupIdValidation, listMessageGroupsValidation, patchMessageGroupValidation } from "./validators/message-group";
+import { createMessageGroupValidation, messageGroupIdValidation, listMessageGroupsValidation, patchMessageGroupValidation } from "./validators/messageGroup";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { MessageGroup } from "../db/models/message_group";
@@ -14,7 +14,6 @@ export const listMessageGroups = async (req: Request, res: Response) : Promise<v
     }
 
     const listGroupsRequest = validated.value;
-    console.log(listGroupsRequest)
     const query = AppDataSource.createQueryBuilder(MessageGroup, "mg");
 
     // Queries
@@ -88,7 +87,7 @@ export const listMessageGroups = async (req: Request, res: Response) : Promise<v
     console.log(error);
     res.status(500).send({error: "internal error"});
   }
-}
+};
 
 export const getMessageGroup = async (req: Request, res: Response) : Promise<void> => {
   try {
@@ -106,12 +105,19 @@ export const getMessageGroup = async (req: Request, res: Response) : Promise<voi
       return;
     }
 
+    const currentUser = (req as any).user
+    console.log(currentUser)
+    if (!group.isMemberOfGroup(currentUser.userId) && currentUser.role !== 1 && currentUser.userId !== group.owner.id) {
+      res.status(401).send({error: "Forbidden"});
+      return;
+    }
+
     res.status(200).send(group);
   } catch (error) {
     console.log(error);
     res.status(500).send({error: "internal error"});
   }
-}
+};
 
 export const createMessageGroup = async (req: Request, res: Response) : Promise<void> => {
   try {
@@ -134,6 +140,7 @@ export const createMessageGroup = async (req: Request, res: Response) : Promise<
       name: createGroupReq.name,
       description: createGroupReq.description ?? "",
       owner: owner,
+      members: [owner],
     });
 
     if (createGroupReq.membersIDs !== undefined && createGroupReq.membersIDs.length > 0) {
@@ -144,17 +151,16 @@ export const createMessageGroup = async (req: Request, res: Response) : Promise<
         return;
       }
 
-      group.members = validUsers;
+      group.members.push(...validUsers);
     }
 
-    console.log(group)
     const groupeCreated = await groupRepo.save(group);
     res.status(201).send(groupeCreated);
   } catch (error) {
     console.log(error);
     res.status(500).send({error: "internal error"});
   }
-}
+};
 
 export const patchMessageGroup = async (req: Request, res: Response) : Promise<void> => {
   try {
@@ -166,9 +172,16 @@ export const patchMessageGroup = async (req: Request, res: Response) : Promise<v
 
     const sentGroup = validated.value;
     const groupRepo = AppDataSource.getRepository(MessageGroup);
-    const group = await groupRepo.findOneBy({id: sentGroup.id});
+    const group = await groupRepo.findOne({where: {id: sentGroup.id}, relations: ["owner", "members", "messages"]});
     if (group === null) {
       res.status(404).send({error: `Group with id ${sentGroup.id} not found.`});
+      return;
+    }
+
+    const currentUser = (req as any).user
+    console.log(currentUser)
+    if (currentUser.role !== 1 && currentUser.userId !== group.owner.id) {
+      res.status(401).send({error: "Forbidden"});
       return;
     }
 
@@ -218,7 +231,7 @@ export const patchMessageGroup = async (req: Request, res: Response) : Promise<v
     console.log(error);
     res.status(500).send({error: "internal error"});
   }
-}
+};
 
 export const deleteMessageGroup = async (req: Request, res: Response) : Promise<void> => {
   try {
@@ -230,9 +243,16 @@ export const deleteMessageGroup = async (req: Request, res: Response) : Promise<
 
     const sentGroup = validated.value;
     const groupRepo = AppDataSource.getRepository(MessageGroup);
-    const group = await groupRepo.findOneBy({id: sentGroup.id});
+    const group = await groupRepo.findOne({where: {id: sentGroup.id}, relations: ["owner", "members", "messages"]});
     if (group === null) {
       res.status(404).send({"error": `Grooup with id ${sentGroup.id} not found.`});
+      return;
+    }
+
+    const currentUser = (req as any).user
+    console.log(currentUser)
+    if (currentUser.role !== 1 && currentUser.userId !== group.owner.id) {
+      res.status(401).send({error: "Forbidden"});
       return;
     }
 
@@ -242,4 +262,9 @@ export const deleteMessageGroup = async (req: Request, res: Response) : Promise<
     console.log(error);
     res.status(500).send({error: "internal error"});
   }
-}
+};
+
+export const findMessageGroupById = (id :number) => {
+  const groupRepo = AppDataSource.getRepository(MessageGroup);
+  return groupRepo.findOneBy({id});
+};
