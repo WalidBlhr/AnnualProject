@@ -158,6 +158,10 @@ const Header: React.FC = () => {
                             Messages
                         </Button>
                         
+                        <Button color="inherit" component={Link} to="/suggestions">
+                            Suggestions
+                        </Button>
+                        
                         <Button color="inherit" component={Link} to="/mini-games">
                             Mini Jeux
                         </Button>

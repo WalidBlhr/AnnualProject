@@ -6,7 +6,9 @@
     "start:dev": "nodemon -e ts --exec ts-node src/main.ts",
     "start:dev:js": "nodemon -e ts --exec \"tsc && node ./dist/main.js\"",
     "start": "ts-node src/index.ts",
-    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/main.ts"
+    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' src/main.ts",
+    "seed:suggestions": "ts-node src/scripts/testSeeder.ts",
+    "seed:interactions": "ts-node src/scripts/testInteractionSystem.ts"
   },
   "keywords": [],
   "author": "",

@@ -8,6 +8,8 @@ import { User } from "../db/models/user";
 import { Message } from "../db/models/message";
 import { Booking, BookingDay, BookingStatus } from "../db/models/booking";
 import { NotificationService } from "../utils/notificationService";
+import { interactionTracker } from "../services/interactionTracker";
+import { AutoInteractionService } from "../services/autoInteractionService";
 
 /**
  * Create a new Service
@@ -102,6 +104,14 @@ export const createServiceHandler = async (req: Request, res: Response) => {
         lastname: provider.lastname
       }
     };
+
+    // Enregistrer l'interaction de création de service automatiquement
+    await AutoInteractionService.onServiceCreated(
+      serviceCreated.id,
+      serviceCreated.title,
+      serviceCreated.type,
+      provider.id
+    );
 
     res.status(201).send(response);
   } catch (error) {
@@ -551,6 +561,15 @@ export const createBookingHandler = async (req: Request, res: Response) => {
       created_at: bookingCreated.created_at,
       updated_at: bookingCreated.updated_at
     };
+
+    // Enregistrer l'interaction de réservation automatiquement
+    await AutoInteractionService.onServiceBooked(
+      service.id,
+      service.title,
+      service.type,
+      service.provider.id,
+      requester.id
+    );
 
     res.status(201).send(response);
   } catch (error) {
