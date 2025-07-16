@@ -30,6 +30,7 @@ import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, lis
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler } from "./user";
+import { getAffinityScore, getRealTimeSuggestions, getSuggestions, getUserAffinities, getUserFavoriteCategories, getUserRecentInteractions, getUserStats, recordInteraction, recordSuggestionFeedback, recordSuggestionView, updateInteraction } from "./suggestion";
 
 export const initHandlers = (app: Application) => {
   // Commencez par les routes statiques
@@ -1536,4 +1537,23 @@ export const initHandlers = (app: Application) => {
   app.post('/tictactoe', authMiddleware, createTicTacToeGame);
   app.get('/tictactoe', authMiddleware, getTicTacToeGame);
   app.put('/tictactoe/:id/move', authMiddleware, playTicTacToeMove);
+
+  // Routes pour le système de suggestions et d'interactions
+  // app.use('/api/suggestions', suggestionRoutes);
+
+  app.post("/interactions", authMiddleware, recordInteraction);
+  app.put("/interactions/:id", authMiddleware, updateInteraction);
+  app.get("/interactions/recent", authMiddleware, getUserRecentInteractions);
+  
+  // Routes pour les affinités et statistiques
+  app.get("/affinities", authMiddleware, getUserAffinities);
+  app.get("/affinities/:targetUserId", authMiddleware, getAffinityScore);
+  app.get("/stats", authMiddleware, getUserStats);
+  app.get("/categories", authMiddleware, getUserFavoriteCategories);
+  
+  // Routes pour les suggestions
+  app.get("/suggestions", authMiddleware, getSuggestions);
+  app.post("/suggestions/view", authMiddleware, recordSuggestionView);
+  app.post("/suggestions/feedback", authMiddleware, recordSuggestionFeedback);
+  app.post("/suggestions/realtime", authMiddleware, getRealTimeSuggestions);
 }
