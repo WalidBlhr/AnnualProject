@@ -82,49 +82,46 @@ export const detailedUserHandler = async (req: Request, res: Response) => {
 // UPDATE - PUT /users/:id
 export const updateUserHandler = async (req: Request, res: Response) => {
   try {
-        // Validation de l'ID depuis les paramètres
-        const idValidation = UserIdValidation.validate(req.params);
-        if (idValidation.error) {
-            res.status(400).send(generateValidationErrorMessage(idValidation.error.details))
-            return
-        }
+      // Validation du body et des params pour les champs à mettre à jour
+      const bodyValidation = UserUpdateValidation.validate({...req.params, ...req.body});
+      if (bodyValidation.error) {
+          res.status(400).send(generateValidationErrorMessage(bodyValidation.error.details))
+          return
+      }
 
-        // Validation du body pour les champs à mettre à jour
-        const bodyValidation = UserUpdateValidation.validate(req.body);
-        if (bodyValidation.error) {
-            res.status(400).send(generateValidationErrorMessage(bodyValidation.error.details))
-            return
-        }
+      const userId = bodyValidation.value.id;
+      const updateData = bodyValidation.value;
+      
+      const userRepository = AppDataSource.getRepository(User)
+      const userFound = await userRepository.findOneBy({ id: userId })
+      if (userFound === null) {
+          res.status(404).send({ "error": `user ${userId} not found` })
+          return
+      }
 
-        const userId = idValidation.value.id;
-        const updateData = bodyValidation.value;
-        
-        const userRepository = AppDataSource.getRepository(User)
-        const userFound = await userRepository.findOneBy({ id: userId })
-        if (userFound === null) {
-            res.status(404).send({ "error": `user ${userId} not found` })
-            return
-        }
+      // Mise à jour des champs seulement s'ils sont fournis
+      if (updateData.lastname !== undefined) {
+          userFound.lastname = updateData.lastname
+      }
 
-        // Mise à jour des champs seulement s'ils sont fournis
-        if (updateData.lastname !== undefined) {
-            userFound.lastname = updateData.lastname
-        }
+      if (updateData.firstname !== undefined) {
+          userFound.firstname = updateData.firstname
+      }
 
-        if (updateData.firstname !== undefined) {
-            userFound.firstname = updateData.firstname
-        }
+      if (updateData.email !== undefined) {
+          userFound.email = updateData.email
+      }
 
-        if (updateData.email !== undefined) {
-            userFound.email = updateData.email
-        }
+      if (updateData.role !== undefined) {
+          if ((req as any).user.role !== 1) {
+            res.status(400).send({error: "`role` is not allowed."});
+            return;
+          }
+          userFound.role = updateData.role
+      }
 
-        if (updateData.role !== undefined) {
-            userFound.role = updateData.role
-        }   
-
-        const userUpdate = await userRepository.save(userFound)
-        res.status(200).send(userUpdate)
+      const userUpdate = await userRepository.save(userFound)
+      res.status(200).send(userUpdate)
   } catch (error) {
       console.log(error)
       res.status(500).send({ error: "Internal error" })

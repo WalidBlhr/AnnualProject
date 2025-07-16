@@ -65,7 +65,7 @@ export const isAdmin = (req: Request, res: Response, next: NextFunction): void =
 };
 
 // Middleware pour vérifier que l'utilisateur est propriétaire ou admin
-export const isOwnerOrAdmin = (req: Request, res: Response, next: NextFunction): void => {
+/*export const isOwnerOrAdmin = (req: Request, res: Response, next: NextFunction): void => {
     const userIdFromToken = (req as any).user?.userId;
     const userIdFromParams = parseInt(req.params.id);
     
@@ -83,4 +83,26 @@ export const isOwnerOrAdmin = (req: Request, res: Response, next: NextFunction):
         console.log('Access denied: user', userIdFromToken, 'trying to access user', userIdFromParams);
         res.status(403).send({ message: 'Forbidden' });
     }
-};
+};*/
+
+export const isOwnerOrAdmin = (propToCheck : string) => {
+    return (req: Request, res: Response, next: NextFunction): void => {
+        const userIdFromToken = (req as any).user?.userId;
+        const userIdFromParams = parseInt(req.params[propToCheck]);
+
+        console.log('isOwnerOrAdmin check:', {
+            userIdFromToken,
+            userIdFromParams,
+            userRole: (req as any).user?.role,
+            isAdmin: (req as any).user?.role === 1,
+            isOwner: userIdFromToken === userIdFromParams
+        });
+
+        if ((req as any).user?.role === 1 || userIdFromToken === userIdFromParams) {
+            next();
+        } else {
+            console.log('Access denied: user', userIdFromToken, 'trying to access user', userIdFromParams);
+            res.status(403).send({ message: 'Forbidden' });
+        }
+    }
+}

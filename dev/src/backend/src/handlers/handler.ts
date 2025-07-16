@@ -329,7 +329,7 @@ export const initHandlers = (app: Application) => {
    *       404:
    *         description: Utilisateur non trouvé
    */
-  app.put("/users/:id", authMiddleware, isOwnerOrAdmin, updateUserHandler);
+  app.put("/users/:id", authMiddleware, isOwnerOrAdmin("id"), updateUserHandler);
 
   /**
    * @openapi
@@ -386,7 +386,7 @@ export const initHandlers = (app: Application) => {
    *       404:
    *         description: Utilisateur non trouvé
    */
-  app.get("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin, getEmailNotificationPreferencesHandler);
+  app.get("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin("id"), getEmailNotificationPreferencesHandler);
 
   /**
    * @openapi
@@ -432,7 +432,7 @@ export const initHandlers = (app: Application) => {
    *       404:
    *         description: Utilisateur non trouvé
    */
-  app.put("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin, updateEmailNotificationPreferencesHandler);
+  app.put("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin("id"), updateEmailNotificationPreferencesHandler);
 
   /**
    * @openapi
@@ -1601,7 +1601,7 @@ export const initHandlers = (app: Application) => {
    *       500:
    *         description: Server error
    */
-  app.get("/message-groups/", authMiddleware, (req, res, next) => {
+  app.get("/message-groups/", authMiddleware, isAdmin, (req, res, next) => {
     listMessageGroups(req, res).catch(next);
   });
 
@@ -1630,7 +1630,7 @@ export const initHandlers = (app: Application) => {
    *       500:
    *         description: Server error
    */
-  app.get("/message-groups/:id", (req, res, next) => {
+  app.get("/message-groups/:id", authMiddleware, (req, res, next) => {
     getMessageGroup(req, res).catch(next);
   });
 
@@ -1671,7 +1671,7 @@ export const initHandlers = (app: Application) => {
    *       500:
    *         description: Server error
    */
-  app.post("/message-groups/", (req, res, next) => {
+  app.post("/message-groups/", authMiddleware, (req, res, next) => {
     createMessageGroup(req, res).catch(next);
   });
 
@@ -1721,7 +1721,7 @@ export const initHandlers = (app: Application) => {
    *       500:
    *         description: Server error
    */
-  app.patch("/message-groups/:id", (req, res, next) => {
+  app.patch("/message-groups/:id", authMiddleware, (req, res, next) => {
     patchMessageGroup(req, res).catch(next);
   });
 
@@ -1750,7 +1750,7 @@ export const initHandlers = (app: Application) => {
    *       500:
    *         description: Server error
    */
-  app.delete("/message-groups/:id", (req, res, next) => {
+  app.delete("/message-groups/:id", authMiddleware, (req, res, next) => {
     deleteMessageGroup(req, res).catch(next);
   });
 }
