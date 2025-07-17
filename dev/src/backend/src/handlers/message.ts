@@ -1,17 +1,13 @@
 import { Request, Response } from "express";
-import { createMessageValidation, updateMessageValidation, MessageIdValidation, ListMessagesValidation } from "./validators/message";
+import { createMessageValidation, MessageIdValidation, ListMessagesValidation} from "./validators/message";
 import { generateValidationErrorMessage } from "./validators/generate-validation-message";
 import { AppDataSource } from "../db/database";
 import { Message } from "../db/models/message";
 import { User } from "../db/models/user";
 import { jwtDecode } from "jwt-decode";  // Modification de l'import
 import jwt from 'jsonwebtoken';
-
-interface DecodedToken {
-  userId: number;
-  email: string;
-  exp: number;
-}
+import { findMessageGroupsByMemberId } from "./messageGroup";
+import { findUserById } from "./user";
 
 /**
  * Create a new Message
@@ -88,7 +84,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
   try {
     console.log('listMessageHandler called with query:', req.query);
     console.log('Authorization header:', req.headers.authorization ? 'Present' : 'Missing');
-    
+
     const validation = ListMessagesValidation.validate(req.query);
     if (validation.error) {
       console.log('Validation error:', validation.error.details);
@@ -113,6 +109,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
         'receiver.lastname',
         'group.id',
         'group.name',
+        'group.description',
         'group.createdAt',
       ])
       .where('message.sender IS NOT NULL AND (message.receiver IS NOT NULL OR message.group IS NOT NULL)') // Exclure les messages avec des relations nulles
@@ -308,3 +305,114 @@ export const deleteMessageHandler = async (req: Request, res: Response) => {
       res.status(500).send({ error: "Internal error" })
   }
 }
+
+export const findLastMessageByGroupId = (id: number) => {
+  return AppDataSource.getRepository(Message)
+    .createQueryBuilder("msg")
+    .where("msg.groupId = :id", {id})
+    .orderBy("msg.date_sent", "DESC")
+    .getOne();
+}
+
+export const findLastMessageByUsersId = (userId1: number, userId2: number) => {
+  return AppDataSource.getRepository(Message)
+    .createQueryBuilder("msg")
+    .where("msg.sender = :userId1 AND msg.receiver = :userId2")
+    .orWhere("msg.sender = :userId2 AND msg.receiver = :userId1")
+    .orderBy("msg.date_sent", "DESC")
+    .setParameters({userId1, userId2})
+    .getOne();
+}
+
+export interface Conversation{
+  convId: string;
+  convName: string;
+  description?: string;
+  lastMessage: {
+    content: string;
+    date_sent: string;
+    status: string;
+  };
+  unreadCount: number;
+}
+
+export const getConversations = async (req: Request, res: Response) => {
+  try {
+    const userInfo = (req as any).user;
+    const conversations : Conversation[] = [];
+
+    const groups = await findMessageGroupsByMemberId(userInfo.userId);
+    for (const group of groups) {
+      const lastMessage = await findLastMessageByGroupId(group.id);
+      conversations.push({
+        convId: "g" + group.id,
+        convName: group.name,
+        description: group.description,
+        lastMessage: {
+          content: lastMessage?.content ?? "",
+          date_sent: lastMessage?.date_sent.toISOString() ?? "",
+          status: lastMessage?.status ?? "non_lu",
+        },
+        unreadCount: 0,
+      });
+    }
+
+    const privateConvs = await getPrivateConversationByUserId(userInfo.userId);
+    for (const conv of privateConvs) {
+      const lastMessage = await findLastMessageByUsersId(userInfo.userId, conv.interlocutorid);
+      conversations.push({
+        convId: "u" + conv.interlocutorid,
+        convName: `${conv.firstname} ${conv.lastname}`,
+        lastMessage: {
+          content: lastMessage?.content ?? "",
+          date_sent: lastMessage?.date_sent.toISOString() ?? "",
+          status: lastMessage?.status ?? "non_lu",
+        },
+        unreadCount: conv.unreadcount,
+      });
+    }
+
+    res.status(200).send(conversations);
+  } catch (error) {
+    console.log(error)
+    res.status(500).send({ error: "Internal error" })
+  }
+};
+
+const getPrivateConversationByUserId = (userId: number) : Promise<{
+  interlocutorid: number;
+  firstname: string;
+  lastname: string;
+  unreadcount: number;
+}[]> => {
+  return AppDataSource.getRepository(Message)
+    .createQueryBuilder('msg')
+    .leftJoin('msg.sender', 'sender')
+    .leftJoin('msg.receiver', 'receiver')
+    // Joindre dynamiquement l’interlocuteur selon le rôle
+    .leftJoin(User, 'interlocutor',
+      `interlocutor.id = CASE 
+          WHEN sender.id = :userId THEN receiver.id 
+          ELSE sender.id 
+      END`)
+    .where('(sender.id = :userId OR receiver.id = :userId)')
+    .andWhere('msg.group IS NULL')
+    .andWhere('msg.sender IS NOT NULL')
+    .select([
+      `CASE 
+        WHEN sender.id = :userId THEN receiver.id 
+        ELSE sender.id 
+      END AS interlocutorId`,
+      `interlocutor.firstname AS firstname`,
+      `interlocutor.lastname AS lastname`,
+      `SUM(CASE 
+        WHEN msg.status = 'non_lu' AND receiver.id = :userId 
+        THEN 1 ELSE 0 
+      END) AS unreadCount`
+    ])
+    .groupBy('interlocutorId')
+    .addGroupBy('interlocutor.firstname')
+    .addGroupBy('interlocutor.lastname')
+    .setParameter('userId', userId)
+    .getRawMany();
+};

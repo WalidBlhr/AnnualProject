@@ -16,47 +16,33 @@ import {
   Chip,
 } from '@mui/material';
 import {useParams, useNavigate} from 'react-router-dom';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import SendIcon from '@mui/icons-material/Send';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import {useSocket} from '../../contexts/SocketContext';
 import {API_URL} from '../../const';
 import {MessageElement} from './MessageElement';
 import {useAuth} from '../../contexts/AuthContext';
+import { GroupMessage, PrivateMessage } from '../../types/messages-types';
+import { ListingResult } from '../../types/ListingResult';
 
 // Types existants ou à ajouter si nécessaire
-export interface Message {
-  id: number;
-  content: string;
-  date_sent: string;
-  status: string;
-  sender: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-  receiver: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-};
-
-interface User {
+interface UserFullname {
   firstname: string;
   lastname: string;
 };
 
 const Conversation = () => {
-  const { userId, trocId } = useParams<{ userId: string, trocId?: string }>();
+  const { userId, trocId, groupId } = useParams<{userId?: string, trocId?: string, groupId?: string}>();
   const navigate = useNavigate();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { socket, isOnline, fetchUserStatuses } = useSocket();
+  const { socket, isOnline, fetchUserStatus } = useSocket();
   const {user} = useAuth();
 
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [otherUser, setOtherUser] = useState<User | null>(null);
+  //const [otherUser, setOtherUser] = useState<UserFullname | null>(null);
+  const [convTitle, setConvTitle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState<{
     open: boolean;
@@ -68,7 +54,7 @@ const Conversation = () => {
 
   useEffect(() => {
     fetchMessages();
-    fetchUserDetails();
+    fetchConvTitle();
   }, [userId]);
 
   useEffect(() => {
@@ -77,22 +63,22 @@ const Conversation = () => {
 
   // Listen for new messages via socket
   useEffect(() => {
-    if (socket && userId) {
-      const handleReceiveMessage = (message: Message) => {
+    if (socket && (userId || groupId)) {
+      const handleReceiveMessage = (message: PrivateMessage | GroupMessage) => {
         // Vérifier si le message appartient à cette conversation
         const token = localStorage.getItem('token');
-        if (token) {
-          //const decoded = jwtDecode<{ userId: number }>(token);
-          if (
-            (message.sender.id === parseInt(userId) && message.receiver.id === (user?.userId ?? 0)) ||
-            (message.sender.id === (user?.userId ?? 0) && message.receiver.id === parseInt(userId))
-          ) {
-            setMessages(prev => [...prev, message]);
 
-            // Marquer le message comme lu si l'utilisateur est le destinataire
-            if (message.receiver.id === (user?.userId ?? 0) && message.status === 'unread') {
-              markMessageAsRead(message.id);
-            }
+        if (token && (
+          (message.group && groupId && message.group.id === parseInt(groupId, 10)) || (
+          message.receiver && userId && (
+          (message.sender.id === parseInt(userId, 10) && message.receiver.id === (user?.userId ?? 0)) ||
+          (message.sender.id === (user?.userId ?? 0) && message.receiver.id === parseInt(userId, 10))
+        )))) {
+          setMessages(prev => [...prev, message]);
+
+          // Marquer le message comme lu si l'utilisateur est le destinataire
+          if (message.sender.id !== (user?.userId ?? 0) && message.status === 'unread') {
+            markMessageAsRead(message.id);
           }
         }
       };
@@ -105,37 +91,70 @@ const Conversation = () => {
     }
   }, [socket, userId]);
 
-  const fetchUserDetails = async () => {
+  const fetchConvTitle = async () => {
+    // TODO Fetch info groupe
+    const reqOptions : AxiosRequestConfig<any> = {
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`,
+      },
+    };
+
     try {
-      const { data } = await axios.get(`${API_URL}/users/${userId}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-      setOtherUser({ firstname: data.firstname, lastname: data.lastname });
+      let newTitle : string = "";
+
+      if (userId !== undefined) {
+        const {data} = await axios.get<{firstname: string, lastname:string}>(
+          API_URL + "/users/" + userId,
+          reqOptions
+        );
+        newTitle = `Conversation avec ${data.firstname} ${data.lastname}`;
+      } else if (groupId !== undefined) {
+        const {data} = await axios.get<{name: string}>(
+          API_URL + "/message-groups/" + groupId,
+          reqOptions
+        );
+        newTitle = data.name + "(Groupe)";
+      }
+
+      setConvTitle(newTitle);
     } catch (error) {
-      showAlert('Erreur lors du chargement des détails de l\'utilisateur', 'error');
+      showAlert("Erreur lors du chargement des détails de l'utilisateur", 'error');
     }
   };
 
   const fetchMessages = async () => {
+    setIsLoading(true);
+    const token = localStorage.getItem('token');
+    const headers = {Authorization: `Bearer ${token}`};
+
     try {
-      setIsLoading(true);
-      const token = localStorage.getItem('token');
-      const { data } = await axios.get(`${API_URL}/messages`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-        params: {
-          senderId: (user?.userId ?? 0),
-          receiverId: userId,
-        },
-      });
-      setMessages(data.data);
+      let messagesData : (PrivateMessage | GroupMessage)[] = [];
+
+      if (userId !== undefined) {
+        const {data} = await axios.get<ListingResult<(PrivateMessage | GroupMessage)[]>>(
+          `${API_URL}/messages`,
+          {
+            headers,
+            params: {
+              senderId: (user?.userId ?? 0),
+              receiverId: userId,
+            },
+          }
+        );
+        messagesData = data.data;
+      } else if (groupId !== undefined) {
+        const {data} = await axios.get<ListingResult<(PrivateMessage | GroupMessage)[]>>(
+          API_URL + `/message-groups/${groupId}/messages/`,
+          {headers}
+        );
+        messagesData = data.data;
+      }
+
+      setMessages(messagesData);
 
       // Marquer tous les messages non lus comme lus
-      const unreadMessages = data.data.filter(
-        (msg: Message) => msg.status === 'unread' && msg.receiver.id === (user?.userId ?? 0)
+      const unreadMessages = messagesData.filter(
+        (msg: PrivateMessage | GroupMessage) => msg.status === 'unread' && msg.sender.id !== (user?.userId ?? 0)
       );
 
       for (const msg of unreadMessages) {
@@ -173,34 +192,48 @@ const Conversation = () => {
 
   const handleSendMessage = async () => {
     if (!newMessage.trim()) return;
+    const headers = {Authorization: `Bearer ${localStorage.getItem('token')}`}
 
+    // TODO Tout retravailler pour implémenter les groupes
+    let savedMessage : PrivateMessage | GroupMessage;
     try {
-      const token = localStorage.getItem('token');
-
-      const messageData = {
-        content: newMessage,
-        date_sent: new Date().toISOString(),
-        senderId: (user?.userId ?? 0),
-        receiverId: Number(userId),
-        status: 'unread',
-      };
-
-      const response = await axios.post<Message>(
-        API_URL + '/messages',
-        messageData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
+      if (userId !== undefined) {
+        const messageData = {
+          content: newMessage,
+          date_sent: new Date().toISOString(),
+          senderId: (user?.userId ?? 0),
+          receiverId: Number(userId),
+          status: 'unread',
+        };
+        const {data} = await axios.post<PrivateMessage>(
+          API_URL + '/messages',
+          messageData,
+          {headers}
+        );
+        savedMessage = data;
+      } else if (groupId !== undefined) {
+        const messageData = {
+          content: newMessage,
+          date_sent: new Date().toISOString(),
+          senderId: (user?.userId ?? 0),
+        };
+        const {data} = await axios.post<GroupMessage>(
+          API_URL + `/message-groups/${groupId}/messages/`,
+          messageData,
+          {headers}
+        );
+        savedMessage = data; 
+      } else {
+        console.error("userId nor groupId are defined.");
+        return;
+      }
 
       // Émettre le message via socket
       if (socket) {
-        socket.emit('new_message', response.data);
+        socket.emit('new_message', savedMessage);
       }
 
-      setMessages(prev => [...prev, response.data]);
+      setMessages(prev => [...prev, savedMessage]);
       setNewMessage('');
       showAlert('Message envoyé', 'success');
     } catch (error) {
@@ -214,10 +247,9 @@ const Conversation = () => {
 
   useEffect(() => {
     if (userId) {
-      // Charger le statut initial de l'autre utilisateur
-      fetchUserStatuses([parseInt(userId)]);
+      fetchUserStatus(parseInt(userId));
     }
-  }, [userId, fetchUserStatuses]);
+  }, [userId, fetchUserStatus]);
 
   if (isLoading) {
     return (
@@ -227,7 +259,7 @@ const Conversation = () => {
     );
   }
 
-  if (!otherUser) {
+  if (!convTitle) {
     return <Container>Chargement...</Container>;
   }
 
@@ -237,19 +269,21 @@ const Conversation = () => {
         <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
             <Typography variant="h6">
-              Conversation avec {otherUser.firstname} {otherUser.lastname}
+              {convTitle}
               {trocId && ' (via une offre de troc)'}
             </Typography>
 
-            <Tooltip title={isOnline(parseInt(userId!)) ? "En ligne" : "Hors ligne"}>
-              <Chip 
-                icon={<FiberManualRecordIcon sx={{ fontSize: 16 }} />} 
-                label={isOnline(parseInt(userId!)) ? "En ligne" : "Hors ligne"}
-                color={isOnline(parseInt(userId!)) ? "success" : "default"}
-                size="small"
-                sx={{ ml: 2 }}
-              />
-            </Tooltip>
+            {userId &&
+              <Tooltip title={isOnline(parseInt(userId)) ? "En ligne" : "Hors ligne"}>
+                <Chip 
+                  icon={<FiberManualRecordIcon sx={{ fontSize: 16 }} />} 
+                  label={isOnline(parseInt(userId)) ? "En ligne" : "Hors ligne"}
+                  color={isOnline(parseInt(userId)) ? "success" : "default"}
+                  size="small"
+                  sx={{ ml: 2 }}
+                />
+              </Tooltip>
+            }
           </Box>
           <Button variant="outlined" onClick={() => navigate(trocId ? `/trocs/${trocId}` : '/messages')}>
             Retour
@@ -267,7 +301,7 @@ const Conversation = () => {
             </Box>
           ) : (
             <List>
-              {messages.map((message : Message) =>
+              {messages.map((message : PrivateMessage | GroupMessage) =>
                 <MessageElement message={message} key={message.id}/>
               )}
               <div ref={messagesEndRef} />

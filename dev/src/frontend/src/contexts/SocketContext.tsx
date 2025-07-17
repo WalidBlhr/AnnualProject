@@ -8,14 +8,14 @@ interface SocketContextType {
   socket: Socket | null;
   onlineUsers: number[];
   isOnline: (userId: number) => boolean;
-  fetchUserStatuses: (userIds: number[]) => Promise<void>;
+  fetchUserStatus: (userId: number) => Promise<void>;
 };
 
 const SocketContext = createContext<SocketContextType>({
   socket: null,
   onlineUsers: [],
   isOnline: () => false,
-  fetchUserStatuses: async () => {}
+  fetchUserStatus: async () => {}
 });
 
 export const useSocket = () => useContext(SocketContext);
@@ -27,13 +27,13 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const token = localStorage.getItem('token');
 
   // Fonction pour charger le statut initial d'un ou plusieurs utilisateurs
-  const fetchUserStatuses = async (userIds: number[]) => {
+  const fetchUserStatus = async (userId: number) => {
     if (!token) return;
 
     try {
       // Appel à notre nouvel endpoint
       const response = await axios.get(
-        `${API_URL}/api/user-status?userId=${userIds[0]}`, // N.B.: on ne traite qu'un utilisateur à la fois
+        `${API_URL}/api/user-status?userId=${userId}`, // N.B.: on ne traite qu'un utilisateur à la fois
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -92,7 +92,7 @@ export const SocketProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isOnline = (userId: number) => onlineUsers.includes(userId);
 
   return (
-    <SocketContext.Provider value={{ socket, onlineUsers, isOnline, fetchUserStatuses }}>
+    <SocketContext.Provider value={{ socket, onlineUsers, isOnline, fetchUserStatus }}>
       {children}
     </SocketContext.Provider>
   );

@@ -15,127 +15,96 @@ import {
   Alert,
   Button,
   Tooltip,
+  ListItemButton,
 } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import jwtDecode from 'jwt-decode';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSocket } from '../../contexts/SocketContext';
 import { API_URL } from '../../const';
+import { useAuth } from '../../contexts/AuthContext';
+import { ListingResult } from '../../types/ListingResult';
+import { GroupMessage, PrivateMessage } from '../../types/messages-types';
+
+// Ajoutez ce type existant ou vérifiez s'il est déjà défini
+interface Conversation {
+  convId: string;
+  convName: string;
+  description?: string;
+  lastMessage: {
+    content: string;
+    date_sent: string;
+    status: string;
+  };
+  unreadCount: number;
+}
+
+// If !isConversationGroup(conv), the conversation is private
+const isConversationGroup = (conv: Conversation) : boolean => {
+  const prefix = conv.convId.slice(0,1);
+  return prefix === 'g';
+}
+
+const getConversationUri = (conv: Conversation) : string => {
+  const convType = conv.convId.slice(0,1);
+  const convRealId = conv.convId.substring(1)
+  if (convType === 'u') {
+    return "/messages/" + convRealId;
+  }
+
+  if (convType === 'g') {
+    return `/message-groups/${convRealId}/messages`;
+  }
+
+  return "/messages";
+}
 
 const Messages = () => {
   const navigate = useNavigate();
+  const {isAuthenticated, user} = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [alert, setAlert] = useState<{
     open: boolean;
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
-  const { isOnline, fetchUserStatuses } = useSocket(); // Utilisé pour vérifier si un utilisateur est en ligne
-  
-  interface Message {
-    id: number;
-    content: string;
-    date_sent: string;
-    status: string;
-    sender: {
-      id: number;
-      firstname: string;
-      lastname: string;
-    };
-    receiver: {
-      id: number;
-      firstname: string;
-      lastname: string;
-    };
-  }
-
-  // Ajoutez ce type existant ou vérifiez s'il est déjà défini
-  interface Conversation {
-    otherUserId: number;
-    otherUserName: string;
-    lastMessage: {
-      content: string;
-      date_sent: string;
-      status: string;
-    };
-    unreadCount: number;
-  }
+  const { isOnline, fetchUserStatus } = useSocket(); // Utilisé pour vérifier si un utilisateur est en ligne
 
   useEffect(() => {
     fetchConversations();
   }, []);
 
   useEffect(() => {
+    // Check if interlocuters is online or not
     if (conversations.length > 0) {
-      // Récupérer le statut initial de tous les utilisateurs de conversation
-      const userIds = conversations.map(conv => conv.otherUserId);
-      
-      // Pour chaque utilisateur, faire un appel séparé
-      // (puisque l'API ne prend qu'un seul userId à la fois)
+      const userIds = conversations.reduce((acc: number[], conv) => {
+        if (isConversationGroup(conv)) {
+          return acc;
+        }
+        return [...acc, parseInt(conv.convId.substring(1), 10)];
+      }, []);
+
       userIds.forEach(id => {
-        fetchUserStatuses([id]);
+        fetchUserStatus(id);
       });
     }
-  }, [conversations, fetchUserStatuses]);
+  }, [conversations, fetchUserStatus]);
 
   const fetchConversations = async () => {
     try {
       const token = localStorage.getItem('token');
-      if (!token) {
+      if (token === null) {
         showAlert('Utilisateur non connecté', 'error');
         return;
       }
 
-      const decoded = jwtDecode<{ userId: number }>(token);
-      const { data } = await axios.get(API_URL + '/messages?page=1&limit=100', {
+      const { data } = await axios.get<Conversation[]>(API_URL + '/me/conversations', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      console.log('Messages reçus:', data); // Pour debug
-
-      // Grouper les messages par conversation
-      const conversationsMap = new Map<number, Conversation>();
-      
-      if (Array.isArray(data.data)) {
-        data.data.forEach((message: Message) => {
-          // Vérifier que le message a bien un sender et un receiver
-          if (!message.sender || !message.receiver) {
-            console.warn('Message incomplet ignoré:', message);
-            return;
-          }
-          
-          const currentUserId = decoded.userId;
-          const otherUser = message.sender.id === currentUserId ? message.receiver : message.sender;
-          
-          // Vérifier que l'autre utilisateur est valide
-          if (!otherUser || !otherUser.id) {
-            console.warn('Autre utilisateur invalide pour le message:', message);
-            return;
-          }
-          
-          const existingConversation = conversationsMap.get(otherUser.id);
-          if (!existingConversation) {
-            conversationsMap.set(otherUser.id, {
-              otherUserId: otherUser.id,
-              otherUserName: `${otherUser.firstname || ''} ${otherUser.lastname || ''}`.trim() || 'Utilisateur',
-              lastMessage: message,
-              unreadCount: message.status === 'non_lu' && message.receiver.id === currentUserId ? 1 : 0
-            });
-          } else {
-            if (new Date(message.date_sent) > new Date(existingConversation.lastMessage.date_sent)) {
-              existingConversation.lastMessage = message;
-            }
-            if (message.status === 'non_lu' && message.receiver.id === currentUserId) {
-              existingConversation.unreadCount++;
-            }
-          }
-        });
-      }
-
-      const sortedConversations = Array.from(conversationsMap.values())
+      const sortedConversations = Array.from(data)
         .sort((a, b) => 
           new Date(b.lastMessage.date_sent).getTime() - new Date(a.lastMessage.date_sent).getTime()
         );
@@ -150,11 +119,24 @@ const Messages = () => {
   const showAlert = (message: string, severity: 'success' | 'error') => {
     setAlert({ open: true, message, severity });
   };
-  
+
+  const isOnlineWrapper = (conv: Conversation) : boolean => {
+    if (isConversationGroup(conv)) {
+      return false;
+    }
+    const otherUserId = parseInt(conv.convId.substring(1), 10);
+    if (isNaN(otherUserId)) {
+      console.warn("Other user id is NaN.");
+      return false;
+    }
+
+    return isOnline(otherUserId);
+  }
+
   return (
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Mes messages</Typography>
-      
+
       <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
         <Button 
           variant="contained" 
@@ -164,7 +146,7 @@ const Messages = () => {
           Nouveau message
         </Button>
       </Box>
-      
+
       <Paper elevation={2}>
         <List>
           {conversations.length === 0 ? (
@@ -177,9 +159,9 @@ const Messages = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <Typography variant="subtitle1" component="span">
-                      {conversation.otherUserName}
+                      {conversation.convName}
                     </Typography>
-                    {isOnline(conversation.otherUserId) && (
+                    {isOnlineWrapper(conversation) && (
                       <Typography
                         variant="caption"
                         component="span"
@@ -190,7 +172,7 @@ const Messages = () => {
                     )}
                   </Box>
                   <Typography variant="body2" color="text.secondary">
-                    {new Date(conversation.lastMessage.date_sent).toLocaleTimeString([], {
+                    {conversation.lastMessage.date_sent && new Date(conversation.lastMessage.date_sent).toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
@@ -199,56 +181,61 @@ const Messages = () => {
               );
 
               return (
-                <React.Fragment key={conversation.otherUserId}>
+                <React.Fragment key={conversation.convId}>
                   {index > 0 && <Divider />}
-                  <ListItem button onClick={() => navigate(`/messages/${conversation.otherUserId}`)}>
-                    <ListItemAvatar>
-                      <Badge
-                        overlap="circular"
-                        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-                        badgeContent={
-                          <Tooltip title={isOnline(conversation.otherUserId) ? "En ligne" : "Hors ligne"}>
-                            <FiberManualRecordIcon 
-                              sx={{ 
-                                fontSize: 14, 
-                                color: isOnline(conversation.otherUserId) ? 'success.main' : 'text.disabled' 
+                  <ListItem disablePadding>
+                    <ListItemButton onClick={() => navigate(getConversationUri(conversation))}>
+                      <ListItemAvatar>
+                        <Badge
+                          overlap="circular"
+                          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                          badgeContent={ isConversationGroup(conversation) ? undefined :
+                            (<Tooltip title={isOnlineWrapper(conversation) ? "En ligne" : "Hors ligne"}>
+                              <FiberManualRecordIcon 
+                                sx={{ 
+                                  fontSize: 14, 
+                                  color: isOnlineWrapper(conversation) ? 'success.main' : 'text.disabled' 
+                                }}
+                              />
+                            </Tooltip>)
+                          }
+                        >
+                          <Avatar>
+                            {conversation.convName.charAt(0)}
+                          </Avatar>
+                        </Badge>
+                      </ListItemAvatar>
+                      <ListItemText
+                        primary={PrimaryText}
+                        secondaryTypographyProps={{component: 'span'}}
+                        secondary={
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary"
+                              sx={{
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                maxWidth: '250px'
                               }}
-                            />
-                          </Tooltip>
+                            >
+                              {conversation.lastMessage.content === "" && isConversationGroup(conversation) ?
+                                conversation.description :
+                                conversation.lastMessage.content
+                              }
+                            </Typography>
+                            {conversation.unreadCount > 0 && (
+                              <Badge 
+                                badgeContent={conversation.unreadCount} 
+                                color="primary" 
+                                sx={{ ml: 1 }}
+                              />
+                            )}
+                          </Box>
                         }
-                      >
-                        <Avatar>
-                          {conversation.otherUserName.charAt(0)}
-                        </Avatar>
-                      </Badge>
-                    </ListItemAvatar>
-
-                    <ListItemText
-                      primary={PrimaryText}
-                      secondary={
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <Typography 
-                            variant="body2" 
-                            color="text.secondary"
-                            sx={{
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              maxWidth: '250px'
-                            }}
-                          >
-                            {conversation.lastMessage.content}
-                          </Typography>
-                          {conversation.unreadCount > 0 && (
-                            <Badge 
-                              badgeContent={conversation.unreadCount} 
-                              color="primary" 
-                              sx={{ ml: 1 }}
-                            />
-                          )}
-                        </Box>
-                      }
-                    />
+                      />
+                    </ListItemButton>
                   </ListItem>
                 </React.Fragment>
               );

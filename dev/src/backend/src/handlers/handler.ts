@@ -25,7 +25,7 @@ import {
 import { createCategoryHandler, deleteCategoryHandler, listCategoriesHandler, updateCategoryHandler } from "./category";
 import { createEventHandler, deleteEventHandler, detailedEventHandler, listEventHandler, updateEventHandler, cancelEventHandler } from "./event";
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
-import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, listMessageHandler, updateMessageHandler } from "./message";
+import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, getConversations, listMessageHandler, updateMessageHandler } from "./message";
 import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, createBookingHandler, acceptBookingHandler, cancelBookingHandler, listBookingHandler } from "./service";
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
@@ -1847,6 +1847,10 @@ export const initHandlers = (app: Application) => {
    */  
   app.post("/message-groups/:groupId/messages", authMiddleware, (req, res, next) => {
     createGroupMessage(req, res).catch(next);
+  });
+
+  app.get("/me/conversations", authMiddleware, (req, res, next) => {
+    getConversations(req, res).catch(next);
   });
 
   // Routes pour le système de suggestions et d'interactions

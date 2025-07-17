@@ -11,6 +11,7 @@ import { connectMongoDB } from "./db/mongodb"; // Import MongoDB connection
 import { initHandlers } from "./handlers/handler"
 import { swaggerDocs } from "./handlers/swagger/swagger"
 import { checkEventStatus } from './jobs/eventStatusChecker'
+import { findMessageGroupById } from "./handlers/messageGroup"
 
 const app = async () => {
     const app = express()
@@ -130,13 +131,25 @@ const app = async () => {
         });
 
         // Écoute des nouveaux messages
-        socket.on('new_message', (message : Message) => {
-            // Diffuser le message vers le destinataire
-            const receiverSockets = connectedUsers.get(message.receiver.id);
-            if (receiverSockets && receiverSockets.length > 0) {
-                receiverSockets.forEach(socketId => {
-                    io.to(socketId).emit('receive_message', message);
-                });
+        socket.on('new_message', async (message : Message) => {
+            const emitEvent = (userId: number) => {
+                const sockets = connectedUsers.get(userId);
+                if (sockets && sockets.length > 0) {
+                    sockets.forEach(socketId => {
+                        io.to(socketId).emit('receive_message', message);
+                    });
+                }
+            };
+
+            if(message.receiver){
+                emitEvent(message.receiver.id);
+            } else if (message.group) {
+                const group = await findMessageGroupById(message.group.id);
+                if (group === null) {
+                    return;
+                }
+
+                group.members.forEach(member => emitEvent(member.id));
             }
         });
     });

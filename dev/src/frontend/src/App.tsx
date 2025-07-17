@@ -71,6 +71,7 @@ const App: React.FC = () => {
                                     <Route path="trocs/:trocId/messages/:userId" element={<Conversation />} />
                                     <Route path="/messages/:userId" element={<Conversation />} />
                                     <Route path="/messages" element={<Messages />} />
+                                    <Route path="/message-groups/:groupId/messages" element={<Conversation />} />
                                     <Route path="/services" element={<ServicesList />} />
                                     <Route path="/my-services" element={<ProtectedRoute><MyServices /></ProtectedRoute>} />
                                     <Route path="/services/:id" element={<ServiceDetail />} />

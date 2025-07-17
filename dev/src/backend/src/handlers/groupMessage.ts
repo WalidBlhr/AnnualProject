@@ -16,7 +16,11 @@ export const listGroupMessages = async (req: Request, res: Response) => {
 
     const sentQueries = validated.value;
     const messageRepo = AppDataSource.getRepository(Message);
-    const query = messageRepo.createQueryBuilder("msg");
+    const query = messageRepo.createQueryBuilder("msg")
+      .leftJoin("msg.sender", "sender")
+      .addSelect(["sender.id", "sender.firstname", "sender.lastname"])
+      .leftJoinAndSelect("msg.receiver", "receiver")
+      .leftJoinAndSelect("msg.group", "group");
 
     // Queries
     query.andWhere("msg.groupId = :groupId", {groupId: sentQueries.groupId});

@@ -101,12 +101,11 @@ export const getMessageGroup = async (req: Request, res: Response) : Promise<voi
     const groupRepo = AppDataSource.getRepository(MessageGroup);
     const group = await groupRepo.findOne({where: {id: sentGroup.id}, relations: ["owner", "members", "messages"]});
     if (group === null) {
-      res.status(404).send({error: `Grooup with id ${sentGroup.id} not found.`});
+      res.status(404).send({error: `Group with id ${sentGroup.id} not found.`});
       return;
     }
 
     const currentUser = (req as any).user
-    console.log(currentUser)
     if (!group.isMemberOfGroup(currentUser.userId) && currentUser.role !== 1 && currentUser.userId !== group.owner.id) {
       res.status(401).send({error: "Forbidden"});
       return;
@@ -179,7 +178,6 @@ export const patchMessageGroup = async (req: Request, res: Response) : Promise<v
     }
 
     const currentUser = (req as any).user
-    console.log(currentUser)
     if (currentUser.role !== 1 && currentUser.userId !== group.owner.id) {
       res.status(401).send({error: "Forbidden"});
       return;
@@ -245,12 +243,11 @@ export const deleteMessageGroup = async (req: Request, res: Response) : Promise<
     const groupRepo = AppDataSource.getRepository(MessageGroup);
     const group = await groupRepo.findOne({where: {id: sentGroup.id}, relations: ["owner", "members", "messages"]});
     if (group === null) {
-      res.status(404).send({"error": `Grooup with id ${sentGroup.id} not found.`});
+      res.status(404).send({"error": `Group with id ${sentGroup.id} not found.`});
       return;
     }
 
     const currentUser = (req as any).user
-    console.log(currentUser)
     if (currentUser.role !== 1 && currentUser.userId !== group.owner.id) {
       res.status(401).send({error: "Forbidden"});
       return;
@@ -266,5 +263,13 @@ export const deleteMessageGroup = async (req: Request, res: Response) : Promise<
 
 export const findMessageGroupById = (id :number) => {
   const groupRepo = AppDataSource.getRepository(MessageGroup);
-  return groupRepo.findOneBy({id});
+  return groupRepo.findOne({where: {id}, relations: ["owner", "members", "messages"]});
 };
+
+export const findMessageGroupsByMemberId = (id: number) => {
+  const groupRepo = AppDataSource.getRepository(MessageGroup);
+  return groupRepo.createQueryBuilder("group")
+    .leftJoin("group.members", "member")
+    .where("member.id = :id", {id})
+    .getMany();
+}

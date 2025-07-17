@@ -1,9 +1,9 @@
 import {Avatar, Box, ListItem, Paper, Typography} from "@mui/material";
-import { Message } from "./Conversation";
 import { useAuth } from "../../contexts/AuthContext";
+import { GroupMessage, PrivateMessage } from "../../types/messages-types";
 
 interface MessageElementProps{
-    message: Message;
+    message: PrivateMessage | GroupMessage;
 }
 
 export function MessageElement({message} : MessageElementProps) {
