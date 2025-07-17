@@ -138,6 +138,7 @@ const Conversation = () => {
             params: {
               senderId: (user?.userId ?? 0),
               receiverId: userId,
+              limit: 500,
             },
           }
         );
@@ -145,7 +146,12 @@ const Conversation = () => {
       } else if (groupId !== undefined) {
         const {data} = await axios.get<ListingResult<(PrivateMessage | GroupMessage)[]>>(
           API_URL + `/message-groups/${groupId}/messages/`,
-          {headers}
+          {
+            headers,
+            params: {
+              limit: 500,
+            },
+          }
         );
         messagesData = data.data;
       }

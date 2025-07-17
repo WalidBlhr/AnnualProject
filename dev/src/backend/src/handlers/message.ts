@@ -350,7 +350,7 @@ export const getConversations = async (req: Request, res: Response) => {
         description: group.description,
         lastMessage: {
           content: lastMessage?.content ?? "",
-          date_sent: lastMessage?.date_sent.toISOString() ?? "",
+          date_sent: lastMessage?.date_sent.toISOString() ?? group.createdAt.toISOString(),
           status: lastMessage?.status ?? "non_lu",
         },
         unreadCount: 0,

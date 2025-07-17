@@ -149,7 +149,10 @@ const app = async () => {
                     return;
                 }
 
-                group.members.forEach(member => emitEvent(member.id));
+                group.members.forEach(member => {
+                    if (member.id !== message.sender.id)
+                        emitEvent(member.id)
+                });
             }
         });
     });

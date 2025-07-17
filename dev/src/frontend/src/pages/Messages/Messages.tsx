@@ -105,9 +105,9 @@ const Messages = () => {
       });
 
       const sortedConversations = Array.from(data)
-        .sort((a, b) => 
-          new Date(b.lastMessage.date_sent).getTime() - new Date(a.lastMessage.date_sent).getTime()
-        );
+        .sort((a, b) => { 
+          return new Date(b.lastMessage.date_sent).getTime() - new Date(a.lastMessage.date_sent).getTime()
+        });
 
       setConversations(sortedConversations);
     } catch (error) {

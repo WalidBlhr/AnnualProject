@@ -27,7 +27,7 @@ export const listGroupMessagesValidation = Joi.object<ListGroupMessagesRequest &
   sentAfter: Joi.date().iso(),
   sentBefore: Joi.date().iso(),
   page: Joi.number().min(1).default(1),
-  limit: Joi.number().min(1).max(100).default(10),
+  limit: Joi.number().min(1).max(500).default(10),
 }).options({abortEarly: false});
 
 export const createGroupMessageValidation = Joi.object<CreateGroupMessageRequest>({

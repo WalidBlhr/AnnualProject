@@ -11,7 +11,7 @@ export interface ListMessagesRequest {
 
 export const ListMessagesValidation = Joi.object<ListMessagesRequest & PaginationRequest>({
   page: Joi.number().min(1).default(1),
-  limit: Joi.number().min(1).max(100).default(10),
+  limit: Joi.number().min(1).max(500).default(10),
   senderId: Joi.number(),
   receiverId: Joi.number()
 }).options({ abortEarly: false });
