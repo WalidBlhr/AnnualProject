@@ -75,7 +75,6 @@ const AdminEvents: React.FC = () => {
     min_participants: 0,
     status: ''
   });
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createFormData, setCreateFormData] = useState<CreateEventData>({
     name: '',
     date: '',
@@ -175,40 +174,6 @@ const AdminEvents: React.FC = () => {
     }
   };
 
-  const handleCreateSubmit = async () => {
-    try {
-      await axios.post(
-        API_URL + '/events',
-        createFormData,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-      showAlert('Événement créé avec succès', 'success');
-      setCreateDialogOpen(false);
-      setCreateFormData({
-        name: '',
-        date: '',
-        location: '',
-        max_participants: 0,
-        min_participants: 0,
-        status: 'draft'
-      });
-      fetchEvents();
-    } catch (error: any) {
-      // Gestion des erreurs de validation
-      if (error.response?.data) {
-        // Si l'erreur contient plusieurs messages, les concaténer
-        const errorMessages = Object.values(error.response.data).join('\n');
-        showAlert(errorMessages, 'error');
-      } else {
-        showAlert('Erreur lors de la création', 'error');
-      }
-    }
-  };
-
   const handleChangePage = (_: unknown, newPage: number) => {
     setPage(newPage);
   };
@@ -227,103 +192,6 @@ const AdminEvents: React.FC = () => {
       <Typography variant="h4" gutterBottom>
         Gestion des Événements
       </Typography>
-
-      {/* Bouton de création */}
-      <Button 
-        variant="contained" 
-        sx={{ mb: 3 }}
-        onClick={() => setCreateDialogOpen(true)}
-      >
-        Créer un événement
-      </Button>
-
-      {/* Dialog de création */}
-      <Dialog open={createDialogOpen} onClose={() => setCreateDialogOpen(false)}>
-        <DialogTitle>Créer un événement</DialogTitle>
-        <DialogContent>
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Nom"
-            value={createFormData.name}
-            onChange={(e) =>
-              setCreateFormData({ ...createFormData, name: e.target.value })
-            }
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Date"
-            type="datetime-local"
-            value={createFormData.date}
-            onChange={(e) =>
-              setCreateFormData({ ...createFormData, date: e.target.value })
-            }
-            InputLabelProps={{
-              shrink: true,
-            }}
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Lieu"
-            value={createFormData.location}
-            onChange={(e) =>
-              setCreateFormData({ ...createFormData, location: e.target.value })
-            }
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Participants maximum"
-            type="number"
-            value={createFormData.max_participants}
-            onChange={(e) =>
-              setCreateFormData({
-                ...createFormData,
-                max_participants: parseInt(e.target.value, 10),
-              })
-            }
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Participants minimum"
-            type="number"
-            value={createFormData.min_participants}
-            onChange={(e) =>
-              setCreateFormData({
-                ...createFormData,
-                min_participants: parseInt(e.target.value, 10),
-              })
-            }
-          />
-          <TextField
-            margin="normal"
-            fullWidth
-            label="Statut"
-            select
-            value={createFormData.status}
-            onChange={(e) =>
-              setCreateFormData({ ...createFormData, status: e.target.value })
-            }
-            SelectProps={{
-              native: true,
-            }}
-          >
-            <option value="draft">Brouillon</option>
-            <option value="open">Ouvert</option>
-            <option value="closed">Fermé</option>
-            <option value="pending">En attente</option>
-          </TextField>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setCreateDialogOpen(false)}>Annuler</Button>
-          <Button onClick={handleCreateSubmit} variant="contained">
-            Créer
-          </Button>
-        </DialogActions>
-      </Dialog>
 
       <TableContainer component={Paper}>
         <Table>
