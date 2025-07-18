@@ -9,14 +9,12 @@ const Login: React.FC = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const [banInfo, setBanInfo] = useState<any>(null);
     const navigate = useNavigate();
     const {login} = useAuth();
 
     const handleLogin = async (event: React.FormEvent) => {
         event.preventDefault();
         setError('');
-        setBanInfo(null);
         
         try {
             await login(email, password);
@@ -31,16 +29,7 @@ const Login: React.FC = () => {
             // Redirection après connexion réussie
             navigate('/');
         } catch (err: any) {
-            console.log('Login error:', err.response?.data);
-            
-            // Vérifier si c'est une erreur de bannissement
-            if (err.response?.data?.message === 'Account Banned') {
-                setBanInfo(err.response.data);
-                setError('');
-            } else {
-                setError(err.response?.data?.message || 'Une erreur est survenue');
-                setBanInfo(null);
-            }
+            setError(err.response?.data?.message || 'Une erreur est survenue');
         }
     };
 
@@ -52,26 +41,6 @@ const Login: React.FC = () => {
             {error && (
                 <Alert severity="error" sx={{ mb: 2 }}>
                     {error}
-                </Alert>
-            )}
-            {banInfo && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    <Typography variant="h6" gutterBottom>
-                        🚫 Compte Banni
-                    </Typography>
-                    <Typography variant="body2" sx={{ mb: 1 }}>
-                        {banInfo.details}
-                    </Typography>
-                    {banInfo.ban_info?.banned_at && (
-                        <Typography variant="caption" display="block" sx={{ mt: 1, opacity: 0.8 }}>
-                            Banni le : {new Date(banInfo.ban_info.banned_at).toLocaleString('fr-FR')}
-                        </Typography>
-                    )}
-                    {banInfo.ban_info?.ban_until && (
-                        <Typography variant="caption" display="block" sx={{ opacity: 0.8 }}>
-                            Fin du bannissement : {new Date(banInfo.ban_info.ban_until).toLocaleString('fr-FR')}
-                        </Typography>
-                    )}
                 </Alert>
             )}
             <form onSubmit={handleLogin}>
