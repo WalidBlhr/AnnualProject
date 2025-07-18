@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import {useState} from 'react';
 import {
   Container,
   Typography,
@@ -8,20 +8,15 @@ import {
   Button,
   Snackbar,
   Alert,
-  Autocomplete,
-  CircularProgress,
-  Avatar,
   Divider,
-  Chip
 } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 import axios from 'axios';
 import jwtDecode from 'jwt-decode';
-import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
-import { useSocket } from '../../contexts/SocketContext';
-import { API_URL } from '../../const';
+import {API_URL} from '../../const';
+import UsersAutocomplete from '../../components/UsersAutocomplete';
 
-interface User {
+export interface User {
   id: number;
   firstname: string;
   lastname: string;
@@ -29,9 +24,7 @@ interface User {
 
 const NewMessage = () => {
   const navigate = useNavigate();
-  const { isOnline } = useSocket();
   
-  const [users, setUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [messageContent, setMessageContent] = useState('');
   const [isDisabled, setIsDisabled] = useState(false);
@@ -41,32 +34,6 @@ const NewMessage = () => {
     message: string;
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem('token');
-      const decoded = token ? jwtDecode<{ userId: number }>(token) : { userId: 0 };
-      
-      const { data } = await axios.get(API_URL + '/users', {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      
-      // Filtrer pour retirer l'utilisateur actuel
-      const filteredUsers = data.data.filter((user: User) => user.id !== decoded.userId);
-      setUsers(filteredUsers);
-      setIsLoading(false);
-    } catch (error) {
-      showAlert('Erreur lors du chargement des utilisateurs', 'error');
-      setIsLoading(false);
-    }
-  };
 
   const handleSendMessage = async () => {
     setIsDisabled(true);
@@ -117,87 +84,53 @@ const NewMessage = () => {
       <Typography variant="h4" gutterBottom>Nouveau message</Typography>
       
       <Paper sx={{ p: 3 }}>
-        {isLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-            <CircularProgress />
+        <>
+          <Typography variant="h6" gutterBottom>
+            Choisir un destinataire
+          </Typography>
+
+          <UsersAutocomplete
+            selectedUser={selectedUser}
+            setSelectedUser={setSelectedUser}
+            showAlert={showAlert}
+            withUsersStatus
+            renderLabel="Destinataire"
+          />
+
+          <Divider sx={{ my: 2 }} />
+          
+          <Typography variant="h6" gutterBottom>
+            Message
+          </Typography>
+          
+          <TextField
+            label="Votre message"
+            multiline
+            rows={4}
+            fullWidth
+            variant="outlined"
+            value={messageContent}
+            onChange={(e) => setMessageContent(e.target.value)}
+            sx={{ mb: 3 }}
+          />
+          
+          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+            <Button 
+              variant="outlined" 
+              onClick={() => navigate('/messages')}
+            >
+              Annuler
+            </Button>
+            <Button 
+              variant="contained" 
+              color="primary"
+              onClick={handleSendMessage}
+              disabled={!selectedUser || !messageContent.trim() || isDisabled}
+            >
+              Envoyer
+            </Button>
           </Box>
-        ) : (
-          <>
-            <Typography variant="h6" gutterBottom>
-              Choisir un destinataire
-            </Typography>
-            
-            <Autocomplete
-              value={selectedUser}
-              onChange={(_, newValue) => {
-                setSelectedUser(newValue);
-              }}
-              options={users}
-              getOptionLabel={(option) => `${option.firstname} ${option.lastname}`}
-              renderOption={(props, option) => {
-                const {key, ...rest} = props;
-                return (
-                <Box component="li" key={key} {...rest}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                    <Avatar sx={{ mr: 2 }}>{option.firstname.charAt(0)}</Avatar>
-                    <Box sx={{ flexGrow: 1 }}>
-                      {option.firstname} {option.lastname}
-                    </Box>
-                    <Chip
-                      icon={<FiberManualRecordIcon sx={{ fontSize: 14 }} />}
-                      label={isOnline(option.id) ? "En ligne" : "Hors ligne"}
-                      color={isOnline(option.id) ? "success" : "default"}
-                      size="small"
-                    />
-                  </Box>
-                </Box>
-              )}}
-              renderInput={(params) => (
-                <TextField
-                  {...params}
-                  label="Destinataire"
-                  variant="outlined"
-                  fullWidth
-                  sx={{ mb: 3 }}
-                />
-              )}
-            />
-            
-            <Divider sx={{ my: 2 }} />
-            
-            <Typography variant="h6" gutterBottom>
-              Message
-            </Typography>
-            
-            <TextField
-              label="Votre message"
-              multiline
-              rows={4}
-              fullWidth
-              variant="outlined"
-              value={messageContent}
-              onChange={(e) => setMessageContent(e.target.value)}
-              sx={{ mb: 3 }}
-            />
-            
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Button 
-                variant="outlined" 
-                onClick={() => navigate('/messages')}
-              >
-                Annuler
-              </Button>
-              <Button 
-                variant="contained" 
-                color="primary"
-                onClick={handleSendMessage}
-                disabled={!selectedUser || !messageContent.trim()}
-              >
-                Envoyer
-              </Button>
-            </Box>
-          </>
-        )}
+        </>
       </Paper>
       
       <Snackbar
