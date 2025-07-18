@@ -52,7 +52,6 @@ const Home: React.FC = () => {
         <Box sx={{ 
             display: 'flex',
             flexDirection: 'column',
-            minHeight: '100vh',
             margin: 0,
             padding: 0
         }}>
