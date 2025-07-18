@@ -63,8 +63,10 @@ export const login = async (req: Request, res: Response) => {
 
         const loginRequest = validation.value
         const userRepository = AppDataSource.getRepository(User)
-        const user : User | null = await userRepository.findOneBy({
-            email: loginRequest.email
+        const user : User | null = await userRepository.findOne({
+            where: { email: loginRequest.email },
+            select: ['id', 'email', 'password', 'firstname', 'lastname', 'role', 
+                    'is_banned', 'banned_at', 'ban_reason', 'ban_until']
         })
         if(user === null) {
             res.status(400).send({"message": "email or password not valid"})
@@ -75,6 +77,36 @@ export const login = async (req: Request, res: Response) => {
         if(!isValid) {
             res.status(400).send({"message": "email or password not valid"})
             return
+        }
+
+        // Vérifier si l'utilisateur est banni
+        if (user.is_banned) {
+            // Vérifier si le bannissement temporaire a expiré
+            if (user.ban_until && new Date() > user.ban_until) {
+                // Le bannissement a expiré, débannir automatiquement
+                user.is_banned = false;
+                user.banned_at = null;
+                user.ban_reason = null;
+                user.ban_until = null;
+                await userRepository.save(user);
+            } else {
+                // L'utilisateur est toujours banni
+                const banMessage = user.ban_until 
+                    ? `Votre compte est banni jusqu'au ${user.ban_until.toLocaleDateString('fr-FR')}. Motif: ${user.ban_reason}`
+                    : `Votre compte est banni définitivement. Motif: ${user.ban_reason}`;
+                    
+                res.status(403).send({
+                    "message": "Account Banned",
+                    "details": banMessage,
+                    "ban_info": {
+                        "is_banned": true,
+                        "banned_at": user.banned_at,
+                        "ban_reason": user.ban_reason,
+                        "ban_until": user.ban_until
+                    }
+                });
+                return;
+            }
         }
 
         const accessTokenCreated = await createAccessToken(user);
