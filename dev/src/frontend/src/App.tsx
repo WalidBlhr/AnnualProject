@@ -47,6 +47,7 @@ import { MyBookings, ReceivedBookings } from './pages/Bookings';
 import Signup from './pages/Signup';
 import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
 import TrocOffersList from './pages/TrocOffers/TrocOffersList';
+import MyTrocOffers from './pages/TrocOffers/MyTrocOffers';
 import SuggestionsPage from './components/Suggestions/SuggestionsPage';
 import './services/axios';
 import NewGroup from './pages/Messages/NewGroup';
@@ -68,6 +69,7 @@ const App: React.FC = () => {
                                     <Route path="/forgot-password" element={<ForgotPassword />} />
                                     <Route path="/reset-password" element={<ResetPassword />} />
                                     <Route path="/trocs" element={<TrocOffersList />} />
+                                    <Route path="/my-trocs" element={<ProtectedRoute><MyTrocOffers /></ProtectedRoute>} />
                                     <Route path="/trocs/:id" element={<TrocOfferDetail />} />
                                     <Route path="trocs/:trocId/messages/:userId" element={<Conversation />} />
                                     <Route path="/messages/:userId" element={<Conversation />} />

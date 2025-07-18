@@ -22,12 +22,14 @@ import {
   Select,
   MenuItem,
   ButtonGroup,
+  InputAdornment,
 } from '@mui/material';
+import SearchIcon from '@mui/icons-material/Search';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import axios from 'axios';
-import jwtDecode from 'jwt-decode'; // Ajoutez cet import
+import jwtDecode from 'jwt-decode';
 import { STATUS_LABELS, STATUS_COLORS, TrocOfferStatus } from '../../types/trocOffer';
 import { styled } from '@mui/material/styles';
-import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import { API_URL } from '../../const';
 
 interface TrocOffer {
@@ -82,6 +84,7 @@ const TrocOffersList: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'offer' | 'request'>('all');
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState<string>('');
 
   useEffect(() => {
     fetchTrocOffers();
@@ -162,9 +165,15 @@ const TrocOffersList: React.FC = () => {
     setAlert({ open: true, message, severity });
   };
 
-  const filteredTrocOffers = trocOffers.filter(offer => 
-    filter === 'all' || offer.type === filter
-  );
+  const filteredTrocOffers = trocOffers.filter(offer => {
+    const matchesFilter = filter === 'all' || offer.type === filter;
+    const matchesSearch = searchTerm === '' || 
+      offer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      offer.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      `${offer.user?.firstname} ${offer.user?.lastname}`.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    return matchesFilter && matchesSearch;
+  });
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
@@ -183,7 +192,22 @@ const TrocOffersList: React.FC = () => {
         </Grid>
       </Grid>
 
-      <Box sx={{ mb: 3, display: 'flex', gap: 2 }}>
+      <Box sx={{ mb: 3, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <TextField
+          fullWidth
+          variant="outlined"
+          placeholder="Rechercher dans les trocs (titre, description, utilisateur)..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+          sx={{ mb: 2 }}
+        />
         <ButtonGroup>
           <Button 
             variant={filter === 'all' ? 'contained' : 'outlined'}
@@ -204,6 +228,11 @@ const TrocOffersList: React.FC = () => {
             Demandes
           </Button>
         </ButtonGroup>
+        {searchTerm && (
+          <Typography variant="body2" color="textSecondary">
+            {filteredTrocOffers.length} résultat(s) pour "{searchTerm}"
+          </Typography>
+        )}
       </Box>
 
       <Grid container spacing={3}>

@@ -32,6 +32,7 @@ const Header: React.FC = () => {
     
     const [drawerOpen, setDrawerOpen] = useState(false);
     const [eventsAnchorEl, setEventsAnchorEl] = useState<null | HTMLElement>(null);
+    const [trocsAnchorEl, setTrocsAnchorEl] = useState<null | HTMLElement>(null);
     const [servicesAnchorEl, setServicesAnchorEl] = useState<null | HTMLElement>(null);
     const [journalAnchorEl, setJournalAnchorEl] = useState<null | HTMLElement>(null);
     const [profileAnchorEl, setProfileAnchorEl] = useState<null | HTMLElement>(null);
@@ -66,9 +67,26 @@ const Header: React.FC = () => {
             <Box sx={{ flexGrow: 1, display: 'flex' }}>
                 {token && (
                     <>
-                        <Button color="inherit" component={Link} to="/trocs">
+                        {/* Trocs dropdown */}
+                        <Button 
+                            color="inherit"
+                            endIcon={<KeyboardArrowDownIcon />}
+                            onClick={(e) => setTrocsAnchorEl(e.currentTarget)}
+                        >
                             Trocs
                         </Button>
+                        <Menu
+                            anchorEl={trocsAnchorEl}
+                            open={Boolean(trocsAnchorEl)}
+                            onClose={() => setTrocsAnchorEl(null)}
+                        >
+                            <MenuItem component={Link} to="/trocs" onClick={() => setTrocsAnchorEl(null)}>
+                                Tous les trocs
+                            </MenuItem>
+                            <MenuItem component={Link} to="/my-trocs" onClick={() => setTrocsAnchorEl(null)}>
+                                Mes trocs
+                            </MenuItem>
+                        </Menu>
                         
                         {/* Services dropdown */}
                         <Button 
@@ -331,7 +349,10 @@ const Header: React.FC = () => {
             {token ? (
                 <>
                     <ListItem button component={Link} to="/trocs" onClick={() => setDrawerOpen(false)}>
-                        <ListItemText primary="Trocs" />
+                        <ListItemText primary="Tous les trocs" />
+                    </ListItem>
+                    <ListItem button component={Link} to="/my-trocs" onClick={() => setDrawerOpen(false)}>
+                        <ListItemText primary="Mes trocs" />
                     </ListItem>
                     <ListItem button component={Link} to="/services" onClick={() => setDrawerOpen(false)}>
                         <ListItemText primary="Tous les services" />
