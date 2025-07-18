@@ -49,6 +49,7 @@ import TrocOfferDetail from './pages/TrocOffers/TrocOfferDetail';
 import TrocOffersList from './pages/TrocOffers/TrocOffersList';
 import SuggestionsPage from './components/Suggestions/SuggestionsPage';
 import './services/axios';
+import NewGroup from './pages/Messages/NewGroup';
 
 const App: React.FC = () => {
     return (
@@ -81,6 +82,7 @@ const App: React.FC = () => {
                                     <Route path="/events/:id" element={<ProtectedRoute><EventDetail /></ProtectedRoute>} />
                                     <Route path="/my-events" element={<ProtectedRoute><MyEvents /></ProtectedRoute>} />
                                     <Route path="/new-message" element={<NewMessage />} />
+                                    <Route path="/new-group" element={<NewGroup />} />
                                     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                                     <Route path="/suggestions" element={<ProtectedRoute><SuggestionsPage /></ProtectedRoute>} />
                                     <Route path="/mini-games" element={<MiniGames />} />

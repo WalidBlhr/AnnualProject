@@ -143,13 +143,14 @@ export const createMessageGroup = async (req: Request, res: Response) : Promise<
     });
 
     if (createGroupReq.membersIDs !== undefined && createGroupReq.membersIDs.length > 0) {
-      const {validUsers, notFoundUsersIDs} = checkUserIdArray(createGroupReq.membersIDs);
+      const {validUsers, notFoundUsersIDs} = await checkUserIdArray(createGroupReq.membersIDs);
       if (notFoundUsersIDs.length > 0) {
         const plural = notFoundUsersIDs.length > 1 ? 's' : '';
         res.status(404).send({error: `User${plural} with ID${plural} ${notFoundUsersIDs} not found. (membersIDs)`});
         return;
       }
 
+      console.log(validUsers)
       group.members.push(...validUsers);
     }
 
@@ -201,7 +202,7 @@ export const patchMessageGroup = async (req: Request, res: Response) : Promise<v
     }
 
     if (sentGroup.newMembersIDs !== undefined && sentGroup.newMembersIDs.length > 0) {
-      const {validUsers, notFoundUsersIDs} = checkUserIdArray(sentGroup.newMembersIDs);
+      const {validUsers, notFoundUsersIDs} = await checkUserIdArray(sentGroup.newMembersIDs);
 
       if (notFoundUsersIDs.length > 0) {
         const plural = notFoundUsersIDs.length > 1 ? 's' : '';
@@ -212,7 +213,7 @@ export const patchMessageGroup = async (req: Request, res: Response) : Promise<v
     }
 
     if (sentGroup.removedMembersIDs !== undefined && sentGroup.removedMembersIDs.length > 0) {
-      const {notFoundUsersIDs} = checkUserIdArray(sentGroup.removedMembersIDs);
+      const {notFoundUsersIDs} = await checkUserIdArray(sentGroup.removedMembersIDs);
 
       if (notFoundUsersIDs.length > 0) {
         const plural = notFoundUsersIDs.length > 1 ? 's' : '';

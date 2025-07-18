@@ -92,7 +92,6 @@ const Conversation = () => {
   }, [socket, userId]);
 
   const fetchConvTitle = async () => {
-    // TODO Fetch info groupe
     const reqOptions : AxiosRequestConfig<any> = {
       headers: {
         Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -113,7 +112,7 @@ const Conversation = () => {
           API_URL + "/message-groups/" + groupId,
           reqOptions
         );
-        newTitle = data.name + "(Groupe)";
+        newTitle = data.name + " (Groupe)";
       }
 
       setConvTitle(newTitle);
@@ -200,7 +199,6 @@ const Conversation = () => {
     if (!newMessage.trim()) return;
     const headers = {Authorization: `Bearer ${localStorage.getItem('token')}`}
 
-    // TODO Tout retravailler pour implémenter les groupes
     let savedMessage : PrivateMessage | GroupMessage;
     try {
       if (userId !== undefined) {

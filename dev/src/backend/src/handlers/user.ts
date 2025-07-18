@@ -285,18 +285,18 @@ export const findUserById = (id: number): Promise<User | null> => {
   return userRepo.findOneBy({id});
 }
 
-export const checkUserIdArray = (ids: number[]) : {validUsers: User[], notFoundUsersIDs: number[]}=> {
+export const checkUserIdArray = async (ids: number[]) : Promise<{validUsers: User[], notFoundUsersIDs: number[]}> => {
   const nullMembers : number[] = [];
   const newMembers : User[] = [];
 
-  ids.forEach(async id => {
-    const user = await findUserById(id);
-      if (user) {
-        newMembers.push(user);
-      } else {
-        nullMembers.push(id);
-      }
-  });
+  for (const id of ids) {
+    const user = await findUserById(id)
+    if (user) {
+      newMembers.push(user);
+    } else {
+      nullMembers.push(id);
+    }
+  }
 
   return {
     validUsers: newMembers,

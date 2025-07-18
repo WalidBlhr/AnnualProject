@@ -22,9 +22,6 @@ import axios from 'axios';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import { useSocket } from '../../contexts/SocketContext';
 import { API_URL } from '../../const';
-import { useAuth } from '../../contexts/AuthContext';
-import { ListingResult } from '../../types/ListingResult';
-import { GroupMessage, PrivateMessage } from '../../types/messages-types';
 
 // Ajoutez ce type existant ou vérifiez s'il est déjà défini
 interface Conversation {
@@ -61,7 +58,6 @@ const getConversationUri = (conv: Conversation) : string => {
 
 const Messages = () => {
   const navigate = useNavigate();
-  const {isAuthenticated, user} = useAuth();
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [alert, setAlert] = useState<{
     open: boolean;
@@ -109,6 +105,7 @@ const Messages = () => {
           return new Date(b.lastMessage.date_sent).getTime() - new Date(a.lastMessage.date_sent).getTime()
         });
 
+        console.log(sortedConversations);
       setConversations(sortedConversations);
     } catch (error) {
       console.error('Erreur:', error); // Pour debug
@@ -137,7 +134,14 @@ const Messages = () => {
     <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Mes messages</Typography>
 
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+      <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2, gap: 2 }}>
+        <Button 
+          variant="contained" 
+          color="primary"
+          onClick={() => navigate('/new-group')}
+        >
+          Nouveau groupe
+        </Button>
         <Button 
           variant="contained" 
           color="primary"
