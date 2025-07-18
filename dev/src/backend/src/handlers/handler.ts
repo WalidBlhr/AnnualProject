@@ -27,7 +27,7 @@ import { createEventHandler, deleteEventHandler, detailedEventHandler, listEvent
 import { createEventParticipantHandler, deleteEventParticipantHandler, detailedEventParticipantHandler, listEventParticipantHandler, updateEventParticipantHandler } from "./eventParticipant";
 import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, getConversations, listMessageHandler, updateMessageHandler } from "./message";
 import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, createBookingHandler, acceptBookingHandler, cancelBookingHandler, listBookingHandler } from "./service";
-import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove } from './tictactoe';
+import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove, acceptTicTacToeInvitation, declineTicTacToeInvitation, getPendingTicTacToeInvitations } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
 import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler } from "./user";
 import { createMessageGroup, deleteMessageGroup, getMessageGroup, listMessageGroups, patchMessageGroup } from "./messageGroup";
@@ -1539,6 +1539,9 @@ export const initHandlers = (app: Application) => {
   app.post('/tictactoe', authMiddleware, createTicTacToeGame);
   app.get('/tictactoe', authMiddleware, getTicTacToeGame);
   app.put('/tictactoe/:id/move', authMiddleware, playTicTacToeMove);
+  app.put('/tictactoe/:id/accept', authMiddleware, acceptTicTacToeInvitation);
+  app.put('/tictactoe/:id/decline', authMiddleware, declineTicTacToeInvitation);
+  app.get('/tictactoe/invitations', authMiddleware, getPendingTicTacToeInvitations);
 
   /**
    * @openapi

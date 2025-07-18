@@ -29,7 +29,7 @@ export const submitData = async (endpoint: string, data: any) => {
 export const fetchAllUsers = async () => {
     try {
         const token = localStorage.getItem('token');
-        const response = await apiClient.get('/users?limit=1000&page=1', {
+        const response = await apiClient.get('/users', {
             headers: {
                 Authorization: `Bearer ${token}`,
             },
@@ -59,6 +59,30 @@ export const getTicTacToeGame = async (opponentId: number) => {
 export const playTicTacToeMove = async (gameId: number, index: number) => {
     const token = localStorage.getItem('token');
     const response = await apiClient.put(`/tictactoe/${gameId}/move`, { index }, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const acceptTicTacToeInvitation = async (gameId: number) => {
+    const token = localStorage.getItem('token');
+    const response = await apiClient.put(`/tictactoe/${gameId}/accept`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const declineTicTacToeInvitation = async (gameId: number) => {
+    const token = localStorage.getItem('token');
+    const response = await apiClient.put(`/tictactoe/${gameId}/decline`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+    return response.data;
+};
+
+export const getPendingTicTacToeInvitations = async () => {
+    const token = localStorage.getItem('token');
+    const response = await apiClient.get('/tictactoe/invitations', {
         headers: { Authorization: `Bearer ${token}` }
     });
     return response.data;

@@ -5,7 +5,7 @@ import { sendNotificationEmail } from "../config/email";
 import { FRONTEND_URL } from "../constants";
 
 export interface NotificationData {
-  type: 'troc' | 'service' | 'event' | 'booking' | 'absence' | 'message' | 'general';
+  type: 'troc' | 'service' | 'event' | 'booking' | 'absence' | 'message' | 'general' | 'game';
   title: string;
   content: string;
   receiverId: number;
@@ -46,6 +46,8 @@ export class NotificationService {
         return `${baseUrl}/absences`;
       case 'message':
         return `${baseUrl}/messages`;
+      case 'game':
+        return `${baseUrl}/mini-games`;
       default:
         return baseUrl;
     }

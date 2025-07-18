@@ -17,8 +17,8 @@ export class TicTacToeGame {
     @Column({ type: 'varchar' })
     nextPlayer!: 'X' | 'O';
 
-    @Column({ type: 'varchar', default: 'active' })
-    status!: 'active' | 'finished';
+    @Column({ type: 'varchar', default: 'pending' })
+    status!: 'pending' | 'active' | 'finished' | 'declined';
 
     @Column({ type: 'varchar', nullable: true })
     winner!: 'X' | 'O' | 'draw' | null;

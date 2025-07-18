@@ -1,23 +1,41 @@
-import { EmojiEvents, RestartAlt } from '@mui/icons-material';
+import { EmojiEvents, RestartAlt, Notifications, Check, Close } from '@mui/icons-material';
 import {
     Alert,
+    Badge,
     Box,
     Button,
     CircularProgress,
     Container,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
     FormControl,
     Grid,
+    IconButton,
     InputLabel,
+    List,
+    ListItem,
+    ListItemText,
     MenuItem,
     Paper,
     Select,
+    Snackbar,
     Typography,
     useMediaQuery,
     useTheme
 } from '@mui/material';
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { createTicTacToeGame, fetchAllUsers, getTicTacToeGame, playTicTacToeMove } from '../../services/api';
+import { 
+    createTicTacToeGame, 
+    fetchAllUsers, 
+    getTicTacToeGame, 
+    playTicTacToeMove,
+    acceptTicTacToeInvitation,
+    declineTicTacToeInvitation,
+    getPendingTicTacToeInvitations
+} from '../../services/api';
 
 type Player = 'X' | 'O' | null;
 
@@ -26,14 +44,20 @@ const TicTacToe: React.FC = () => {
     const [xIsNext, setXIsNext] = useState<boolean>(true);
     const [gameOver, setGameOver] = useState<boolean>(false);
     const [winner, setWinner] = useState<Player>(null);
-    const [xScore, setXScore] = useState<number>(0);
-    const [oScore, setOScore] = useState<number>(0);
     const [users, setUsers] = useState<any[]>([]);
     const [loadingUsers, setLoadingUsers] = useState<boolean>(true);
     const [opponentId, setOpponentId] = useState<number | null>(null);
     const [game, setGame] = useState<any>(null);
     const [loadingGame, setLoadingGame] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+    const [invitations, setInvitations] = useState<any[]>([]);
+    const [invitationsDialogOpen, setInvitationsDialogOpen] = useState(false);
+    const [loadingInvitations, setLoadingInvitations] = useState(false);
+    const [snackbar, setSnackbar] = useState<{
+        open: boolean;
+        message: string;
+        severity: 'success' | 'error' | 'info';
+    }>({ open: false, message: '', severity: 'info' });
     const { user } = useAuth();
     
     const theme = useTheme();
@@ -52,7 +76,20 @@ const TicTacToe: React.FC = () => {
             }
         };
         fetchUsersList();
+        fetchInvitations();
     }, [user]);
+
+    const fetchInvitations = async () => {
+        setLoadingInvitations(true);
+        try {
+            const pendingInvitations = await getPendingTicTacToeInvitations();
+            setInvitations(pendingInvitations);
+        } catch (e) {
+            console.error('Erreur lors du chargement des invitations:', e);
+        } finally {
+            setLoadingInvitations(false);
+        }
+    };
 
     useEffect(() => {
         if (!opponentId) {
@@ -60,6 +97,7 @@ const TicTacToe: React.FC = () => {
             setError(null);
             return;
         }
+        
         const fetchOrCreateGame = async () => {
             setLoadingGame(true);
             setError(null);
@@ -69,7 +107,10 @@ const TicTacToe: React.FC = () => {
                     g = await getTicTacToeGame(opponentId);
                 } catch (err: any) {
                     if (err.response && err.response.status === 404) {
-                        g = await createTicTacToeGame(opponentId);
+                        // Pas de partie en cours
+                        setGame(null);
+                        setLoadingGame(false);
+                        return;
                     } else if (err.response && err.response.data && err.response.data.game) {
                         g = err.response.data.game;
                     } else {
@@ -78,7 +119,7 @@ const TicTacToe: React.FC = () => {
                 }
                 setGame(g);
             } catch (e: any) {
-                setError('Impossible de charger ou créer la partie.');
+                setError('Impossible de charger la partie.');
                 setGame(null);
             } finally {
                 setLoadingGame(false);
@@ -86,6 +127,32 @@ const TicTacToe: React.FC = () => {
         };
         fetchOrCreateGame();
     }, [opponentId]);
+
+    // Polling pour mettre à jour le jeu en temps réel
+    useEffect(() => {
+        if (!game || !opponentId) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const updatedGame = await getTicTacToeGame(opponentId);
+                const previousStatus = game.status;
+                setGame(updatedGame);
+                
+                // Arrêter le polling seulement après avoir affiché le résultat final
+                if (updatedGame.status === 'finished') {
+                    // Attendre un peu pour que l'utilisateur voit le résultat
+                    setTimeout(() => {
+                        clearInterval(interval);
+                    }, 3000); // Arrêt après 3 secondes
+                }
+            } catch (e) {
+                // La partie a peut-être été supprimée ou terminée
+                console.error('Erreur lors de la mise à jour:', e);
+            }
+        }, 2000); // Mise à jour toutes les 2 secondes
+
+        return () => clearInterval(interval);
+    }, [game, opponentId, user?.userId]);
 
     const calculateWinner = (squares: Player[]): Player => {
         const lines = [
@@ -128,19 +195,69 @@ const TicTacToe: React.FC = () => {
         try {
             const g = await createTicTacToeGame(opponentId);
             setGame(g);
+            showSnackbar('Défi envoyé ! En attente de la réponse de votre adversaire.', 'success');
         } catch (e: any) {
             setError('Impossible de créer une nouvelle partie.');
+            showSnackbar('Erreur lors de la création du défi.', 'error');
         } finally {
             setLoadingGame(false);
         }
     };
 
+    const handleAcceptInvitation = async (gameId: number) => {
+        try {
+            const acceptedGame = await acceptTicTacToeInvitation(gameId);
+            setGame(acceptedGame);
+            setOpponentId(acceptedGame.playerXId);
+            setInvitationsDialogOpen(false);
+            fetchInvitations();
+            showSnackbar('Défi accepté ! La partie commence.', 'success');
+        } catch (e: any) {
+            showSnackbar('Erreur lors de l\'acceptation du défi.', 'error');
+        }
+    };
+
+    const handleDeclineInvitation = async (gameId: number) => {
+        try {
+            await declineTicTacToeInvitation(gameId);
+            fetchInvitations();
+            showSnackbar('Défi refusé.', 'info');
+        } catch (e: any) {
+            showSnackbar('Erreur lors du refus du défi.', 'error');
+        }
+    };
+
+    const showSnackbar = (message: string, severity: 'success' | 'error' | 'info') => {
+        setSnackbar({ open: true, message, severity });
+    };
+
     const getStatus = () => {
         if (!game) return '';
+        
+        console.log('Game status:', game.status, 'Winner:', game.winner, 'User ID:', user?.userId, 'PlayerX:', game.playerXId, 'PlayerO:', game.playerOId);
+        
+        if (game.status === 'pending') {
+            const isChallenger = user?.userId === game.playerXId;
+            return isChallenger ? 'En attente de la réponse de votre adversaire...' : 'Invitation reçue ! Acceptez ou refusez.';
+        }
+        
         if (game.status === 'finished') {
             if (game.winner === 'draw') return 'Match nul !';
-            return `Joueur ${game.winner} a gagné !`;
+            
+            // Vérifier si c'est le joueur actuel qui a gagné
+            const isPlayerX = user?.userId === game.playerXId;
+            const isPlayerO = user?.userId === game.playerOId;
+            const playerWon = (game.winner === 'X' && isPlayerX) || (game.winner === 'O' && isPlayerO);
+            
+            console.log('isPlayerX:', isPlayerX, 'isPlayerO:', isPlayerO, 'playerWon:', playerWon);
+            
+            if (playerWon) {
+                return '🎉 Félicitations ! Vous avez gagné ! 🎉';
+            } else {
+                return '😔 Vous avez perdu... Bonne chance pour la prochaine !';
+            }
         }
+        
         const isPlayerX = user?.userId === game.playerXId;
         const isPlayerO = user?.userId === game.playerOId;
         if ((game.nextPlayer === 'X' && isPlayerX) || (game.nextPlayer === 'O' && isPlayerO)) {
@@ -194,6 +311,22 @@ const TicTacToe: React.FC = () => {
                     Morpion
                 </Typography>
 
+                {/* Bouton pour les invitations */}
+                <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', gap: 2 }}>
+                    <Button
+                        variant="outlined"
+                        startIcon={
+                            <Badge badgeContent={invitations.length} color="error">
+                                <Notifications />
+                            </Badge>
+                        }
+                        onClick={() => setInvitationsDialogOpen(true)}
+                        disabled={loadingInvitations}
+                    >
+                        Invitations ({invitations.length})
+                    </Button>
+                </Box>
+
                 {/* Sélection de l'adversaire */}
                 <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
                     <FormControl sx={{ minWidth: 220 }}>
@@ -240,9 +373,19 @@ const TicTacToe: React.FC = () => {
                 {/* Statut et erreurs */}
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                 {loadingGame && <Box sx={{ mb: 2 }}><CircularProgress /></Box>}
+                
                 {game && (
                     <Alert 
-                        severity={game.status === 'finished' ? (game.winner === 'draw' ? 'info' : 'success') : 'info'}
+                        severity={
+                            game.status === 'finished' 
+                                ? (game.winner === 'draw' 
+                                    ? 'info' 
+                                    : ((user?.userId === game.playerXId && game.winner === 'X') || 
+                                       (user?.userId === game.playerOId && game.winner === 'O'))
+                                        ? 'success' 
+                                        : 'error')
+                                : 'info'
+                        }
                         sx={{ mb: 3, fontWeight: 'bold' }}
                     >
                         {getStatus()}
@@ -251,25 +394,57 @@ const TicTacToe: React.FC = () => {
 
                 {/* Game Board */}
                 {game && (
-                    <Grid container spacing={1} sx={{ justifyContent: 'center', mb: 3, width: isMobile ? 246 : 306, margin: '0 auto' }}>
-                        {[0, 1, 2].map(row => (
-                            <Grid container item key={row} spacing={1} justifyContent="center">
-                                {[0, 1, 2].map(col => {
-                                    const index = row * 3 + col;
-                                    return (
-                                        <Grid item key={index}>
-                                            {renderSquare(index)}
-                                        </Grid>
-                                    );
-                                })}
-                            </Grid>
+                    <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: 'repeat(3, 1fr)', 
+                        gap: 1, 
+                        maxWidth: isMobile ? 246 : 306, 
+                        margin: '0 auto',
+                        mb: 3
+                    }}>
+                        {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((index) => (
+                            <Box key={index}>
+                                {renderSquare(index)}
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 )}
 
                 {/* Action Buttons */}
-                {game && (
-                    <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap', mb: 3 }}>
+                    {!game && opponentId && (
+                        <Button
+                            variant="contained"
+                            onClick={handleNewGame}
+                            size="large"
+                            disabled={loadingGame}
+                        >
+                            Lancer un Défi !
+                        </Button>
+                    )}
+                    {game && game.status === 'pending' && user?.userId === game.playerOId && (
+                        <>
+                            <Button
+                                variant="contained"
+                                color="success"
+                                startIcon={<Check />}
+                                onClick={() => handleAcceptInvitation(game.id)}
+                                size="large"
+                            >
+                                Accepter
+                            </Button>
+                            <Button
+                                variant="outlined"
+                                color="error"
+                                startIcon={<Close />}
+                                onClick={() => handleDeclineInvitation(game.id)}
+                                size="large"
+                            >
+                                Refuser
+                            </Button>
+                        </>
+                    )}
+                    {game && game.status === 'active' && (
                         <Button
                             variant="contained"
                             startIcon={<RestartAlt />}
@@ -279,9 +454,77 @@ const TicTacToe: React.FC = () => {
                         >
                             Nouvelle Partie
                         </Button>
-                    </Box>
-                )}
+                    )}
+                    {game && game.status === 'finished' && (
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            startIcon={<RestartAlt />}
+                            onClick={handleNewGame}
+                            size="large"
+                            disabled={loadingGame}
+                        >
+                            Rejouer
+                        </Button>
+                    )}
+                </Box>
             </Box>
+
+            {/* Dialog des invitations */}
+            <Dialog open={invitationsDialogOpen} onClose={() => setInvitationsDialogOpen(false)} maxWidth="sm" fullWidth>
+                <DialogTitle>
+                    Invitations en attente ({invitations.length})
+                </DialogTitle>
+                <DialogContent>
+                    {invitations.length === 0 ? (
+                        <Typography>Aucune invitation en attente.</Typography>
+                    ) : (
+                        <List>
+                            {invitations.map((invitation) => (
+                                <ListItem key={invitation.id} divider>
+                                    <ListItemText
+                                        primary={`Défi de ${invitation.challenger?.firstname} ${invitation.challenger?.lastname}`}
+                                        secondary={`Reçu le ${new Date(invitation.createdAt).toLocaleString()}`}
+                                    />
+                                    <Box sx={{ display: 'flex', gap: 1 }}>
+                                        <IconButton
+                                            color="success"
+                                            onClick={() => handleAcceptInvitation(invitation.id)}
+                                            size="small"
+                                        >
+                                            <Check />
+                                        </IconButton>
+                                        <IconButton
+                                            color="error"
+                                            onClick={() => handleDeclineInvitation(invitation.id)}
+                                            size="small"
+                                        >
+                                            <Close />
+                                        </IconButton>
+                                    </Box>
+                                </ListItem>
+                            ))}
+                        </List>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setInvitationsDialogOpen(false)}>Fermer</Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Snackbar pour les notifications */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={6000}
+                onClose={() => setSnackbar({ ...snackbar, open: false })}
+            >
+                <Alert
+                    severity={snackbar.severity}
+                    onClose={() => setSnackbar({ ...snackbar, open: false })}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 };
