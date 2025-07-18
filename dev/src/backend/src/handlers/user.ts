@@ -285,6 +285,161 @@ export const findUserById = (id: number): Promise<User | null> => {
   return userRepo.findOneBy({id});
 }
 
+// BAN - POST /users/:id/ban
+export const banUserHandler = async (req: Request, res: Response) => {
+  try {
+    const validation = UserIdValidation.validate(req.params);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const { reason, duration } = req.body;
+    
+    // Validation des paramètres
+    if (!reason || typeof reason !== 'string') {
+      res.status(400).send({ error: "Le motif du bannissement est requis" });
+      return;
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: validation.value.id });
+
+    if (!user) {
+      res.status(404).send({ error: "Utilisateur non trouvé" });
+      return;
+    }
+
+    if (user.is_banned) {
+      res.status(400).send({ error: "L'utilisateur est déjà banni" });
+      return;
+    }
+
+    // Calcul de la date de fin de bannissement si une durée est spécifiée (en jours)
+    let banUntil = null;
+    if (duration && typeof duration === 'number' && duration > 0) {
+      banUntil = new Date();
+      banUntil.setDate(banUntil.getDate() + duration);
+    }
+
+    // Mettre à jour le statut de bannissement
+    user.is_banned = true;
+    user.banned_at = new Date();
+    user.ban_reason = reason;
+    user.ban_until = banUntil;
+
+    await userRepository.save(user);
+
+    console.log(`Utilisateur ${user.id} banni par admin ${(req as any).user.id}. Motif: ${reason}`);
+
+    res.send({ 
+      message: "Utilisateur banni avec succès",
+      banned_user: {
+        id: user.id,
+        email: user.email,
+        is_banned: user.is_banned,
+        banned_at: user.banned_at,
+        ban_reason: user.ban_reason,
+        ban_until: user.ban_until
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors du bannissement:', error);
+    res.status(500).send({ error: "Erreur interne du serveur" });
+  }
+};
+
+// UNBAN - POST /users/:id/unban
+export const unbanUserHandler = async (req: Request, res: Response) => {
+  try {
+    const validation = UserIdValidation.validate(req.params);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOneBy({ id: validation.value.id });
+
+    if (!user) {
+      res.status(404).send({ error: "Utilisateur non trouvé" });
+      return;
+    }
+
+    if (!user.is_banned) {
+      res.status(400).send({ error: "L'utilisateur n'est pas banni" });
+      return;
+    }
+
+    // Réinitialiser le statut de bannissement
+    user.is_banned = false;
+    user.banned_at = null;
+    user.ban_reason = null;
+    user.ban_until = null;
+
+    await userRepository.save(user);
+
+    console.log(`Utilisateur ${user.id} débanni par admin ${(req as any).user.id}`);
+
+    res.send({ 
+      message: "Utilisateur débanni avec succès",
+      unbanned_user: {
+        id: user.id,
+        email: user.email,
+        is_banned: user.is_banned
+      }
+    });
+
+  } catch (error) {
+    console.error('Erreur lors du débannissement:', error);
+    res.status(500).send({ error: "Erreur interne du serveur" });
+  }
+};
+
+// GET ban status - GET /users/:id/ban-status
+export const getBanStatusHandler = async (req: Request, res: Response) => {
+  try {
+    const validation = UserIdValidation.validate(req.params);
+    if (validation.error) {
+      res.status(400).send(generateValidationErrorMessage(validation.error.details));
+      return;
+    }
+
+    const userRepository = AppDataSource.getRepository(User);
+    const user = await userRepository.findOne({
+      where: { id: validation.value.id },
+      select: ['id', 'is_banned', 'banned_at', 'ban_reason', 'ban_until']
+    });
+
+    if (!user) {
+      res.status(404).send({ error: "Utilisateur non trouvé" });
+      return;
+    }
+
+    // Vérifier si le bannissement temporaire a expiré
+    if (user.is_banned && user.ban_until && new Date() > user.ban_until) {
+      user.is_banned = false;
+      user.banned_at = null;
+      user.ban_reason = null;
+      user.ban_until = null;
+      await userRepository.save(user);
+    }
+
+    res.send({
+      id: user.id,
+      is_banned: user.is_banned,
+      banned_at: user.banned_at,
+      ban_reason: user.ban_reason,
+      ban_until: user.ban_until
+    });
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération du statut de bannissement:', error);
+    res.status(500).send({ error: "Erreur interne du serveur" });
+  }
+};
+
 export const checkUserIdArray = async (ids: number[]) : Promise<{validUsers: User[], notFoundUsersIDs: number[]}> => {
   const nullMembers : number[] = [];
   const newMembers : User[] = [];

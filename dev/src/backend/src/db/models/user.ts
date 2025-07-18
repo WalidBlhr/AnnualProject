@@ -82,6 +82,18 @@ export class User {
     @Column({ type: "boolean", default: true })
     email_notifications_enabled: boolean;
 
+    @Column({ type: "boolean", default: false })
+    is_banned: boolean;
+
+    @Column({ type: "timestamptz", nullable: true })
+    banned_at: Date | null;
+
+    @Column({ type: "text", nullable: true })
+    ban_reason: string | null;
+
+    @Column({ type: "timestamptz", nullable: true })
+    ban_until: Date | null;
+
     @OneToMany(() => MessageGroup, group => group.owner)
     ownedGroups: MessageGroup[];
 
@@ -109,7 +121,11 @@ export class User {
         last_active: Date,
         email_notifications_enabled: boolean = true,
         ownedGroups: MessageGroup[],
-        joinedGroups: MessageGroup[]
+        joinedGroups: MessageGroup[],
+        is_banned: boolean = false,
+        banned_at: Date | null = null,
+        ban_reason: string | null = null,
+        ban_until: Date | null = null
     ) {
         this.id = id
         this.email = email
@@ -134,5 +150,9 @@ export class User {
         this.email_notifications_enabled = email_notifications_enabled
         this.ownedGroups = ownedGroups
         this.joinedGroups = joinedGroups
+        this.is_banned = is_banned
+        this.banned_at = banned_at
+        this.ban_reason = ban_reason
+        this.ban_until = ban_until
     }
 }

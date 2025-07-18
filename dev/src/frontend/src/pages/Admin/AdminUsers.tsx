@@ -22,6 +22,9 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import BlockIcon from '@mui/icons-material/Block';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import InfoIcon from '@mui/icons-material/Info';
 import axios from 'axios';
 import { API_URL } from '../../const';
 
@@ -32,6 +35,10 @@ interface User {
   lastname: string;
   role: number;
   createdAt: string;
+  is_banned?: boolean;
+  banned_at?: string;
+  ban_reason?: string;
+  ban_until?: string;
 }
 
 interface EditUserData {
@@ -54,6 +61,11 @@ const AdminUsers: React.FC = () => {
   const [totalUsers, setTotalUsers] = useState<number>(0);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [banDialogOpen, setBanDialogOpen] = useState(false);
+  const [banInfoDialogOpen, setBanInfoDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [banReason, setBanReason] = useState('');
+  const [banDuration, setBanDuration] = useState<number | ''>('');
   const [editFormData, setEditFormData] = useState<EditUserData>({
     lastname: '',
     firstname: '',
@@ -129,7 +141,7 @@ const AdminUsers: React.FC = () => {
       return;
 
     try {
-      await axios.delete(`${API_URL}users/${userId}`, {
+      await axios.delete(`${API_URL}/users/${userId}`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('token')}`,
         },
@@ -138,6 +150,75 @@ const AdminUsers: React.FC = () => {
       fetchUsers();
     } catch (error) {
       showAlert('Erreur lors de la suppression', 'error');
+    }
+  };
+
+  const handleBanClick = (user: User) => {
+    setSelectedUser(user);
+    setBanReason('');
+    setBanDuration('');
+    setBanDialogOpen(true);
+  };
+
+  const handleBanSubmit = async () => {
+    if (!selectedUser || !banReason.trim()) {
+      showAlert('Le motif du bannissement est requis', 'error');
+      return;
+    }
+
+    try {
+      const banData: any = { reason: banReason };
+      if (banDuration && typeof banDuration === 'number' && banDuration > 0) {
+        banData.duration = banDuration;
+      }
+
+      await axios.post(
+        `${API_URL}/users/${selectedUser.id}/ban`,
+        banData,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem('token')}`,
+          },
+        },
+      );
+      showAlert('Utilisateur banni avec succès', 'success');
+      setBanDialogOpen(false);
+      fetchUsers();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Erreur lors du bannissement';
+      showAlert(errorMessage, 'error');
+    }
+  };
+
+  const handleUnbanUser = async (userId: number) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir débannir cet utilisateur ?'))
+      return;
+
+    try {
+      await axios.post(`${API_URL}/users/${userId}/unban`, {}, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      showAlert('Utilisateur débanni avec succès', 'success');
+      fetchUsers();
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.error || 'Erreur lors du débannissement';
+      showAlert(errorMessage, 'error');
+    }
+  };
+
+  const handleShowBanInfo = async (user: User) => {
+    try {
+      const response = await axios.get(`${API_URL}/users/${user.id}/ban-status`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      setSelectedUser({ ...user, ...response.data });
+      setBanInfoDialogOpen(true);
+    } catch (error) {
+      showAlert('Erreur lors de la récupération des informations de bannissement', 'error');
     }
   };
 
@@ -171,6 +252,7 @@ const AdminUsers: React.FC = () => {
               <TableCell>Nom</TableCell>
               <TableCell>Prénom</TableCell>
               <TableCell>Rôle</TableCell>
+              <TableCell>Statut</TableCell>
               <TableCell>Date de création</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -186,13 +268,52 @@ const AdminUsers: React.FC = () => {
                   {user.role === 1 ? 'Admin' : 'Utilisateur'}
                 </TableCell>
                 <TableCell>
+                  {user.is_banned ? (
+                    <span style={{ color: 'red', fontWeight: 'bold' }}>
+                      Banni
+                      {user.ban_until && (
+                        <span style={{ fontSize: '0.8em', display: 'block' }}>
+                          Jusqu'au {new Date(user.ban_until).toLocaleDateString()}
+                        </span>
+                      )}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'green' }}>Actif</span>
+                  )}
+                </TableCell>
+                <TableCell>
                   {new Date(user.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
-                  <IconButton onClick={() => handleEditClick(user)}>
+                  <IconButton onClick={() => handleEditClick(user)} title="Modifier">
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDeleteUser(user.id)}>
+                  {user.is_banned ? (
+                    <>
+                      <IconButton 
+                        onClick={() => handleUnbanUser(user.id)} 
+                        title="Débannir"
+                        style={{ color: 'green' }}
+                      >
+                        <CheckCircleIcon />
+                      </IconButton>
+                      <IconButton 
+                        onClick={() => handleShowBanInfo(user)} 
+                        title="Informations de bannissement"
+                      >
+                        <InfoIcon />
+                      </IconButton>
+                    </>
+                  ) : (
+                    <IconButton 
+                      onClick={() => handleBanClick(user)} 
+                      title="Bannir"
+                      style={{ color: 'orange' }}
+                    >
+                      <BlockIcon />
+                    </IconButton>
+                  )}
+                  <IconButton onClick={() => handleDeleteUser(user.id)} title="Supprimer">
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -262,6 +383,98 @@ const AdminUsers: React.FC = () => {
           <Button onClick={handleEditSubmit} variant="contained">
             Enregistrer
           </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ---- Modale de bannissement ---- */}
+      <Dialog open={banDialogOpen} onClose={() => setBanDialogOpen(false)}>
+        <DialogTitle>Bannir l'utilisateur</DialogTitle>
+        <DialogContent>
+          {selectedUser && (
+            <Typography variant="body2" gutterBottom>
+              Utilisateur : {selectedUser.firstname} {selectedUser.lastname} ({selectedUser.email})
+            </Typography>
+          )}
+          <TextField
+            margin="normal"
+            fullWidth
+            label="Motif du bannissement"
+            value={banReason}
+            onChange={(e) => setBanReason(e.target.value)}
+            multiline
+            rows={3}
+            required
+          />
+          <TextField
+            margin="normal"
+            fullWidth
+            label="Durée (en jours - optionnel)"
+            type="number"
+            value={banDuration}
+            onChange={(e) => setBanDuration(e.target.value ? parseInt(e.target.value, 10) : '')}
+            helperText="Laissez vide pour un bannissement permanent"
+            inputProps={{ min: 1 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBanDialogOpen(false)}>Annuler</Button>
+          <Button onClick={handleBanSubmit} variant="contained" color="warning">
+            Bannir
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* ---- Modale d'informations de bannissement ---- */}
+      <Dialog open={banInfoDialogOpen} onClose={() => setBanInfoDialogOpen(false)}>
+        <DialogTitle>Informations de bannissement</DialogTitle>
+        <DialogContent>
+          {selectedUser && (
+            <>
+              <Typography variant="body1" gutterBottom>
+                <strong>Utilisateur :</strong> {selectedUser.firstname} {selectedUser.lastname}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Email :</strong> {selectedUser.email}
+              </Typography>
+              <Typography variant="body2" gutterBottom>
+                <strong>Statut :</strong> {selectedUser.is_banned ? 'Banni' : 'Actif'}
+              </Typography>
+              {selectedUser.is_banned && (
+                <>
+                  <Typography variant="body2" gutterBottom>
+                    <strong>Date de bannissement :</strong>{' '}
+                    {selectedUser.banned_at
+                      ? new Date(selectedUser.banned_at).toLocaleString()
+                      : 'Non disponible'}
+                  </Typography>
+                  <Typography variant="body2" gutterBottom>
+                    <strong>Motif :</strong> {selectedUser.ban_reason || 'Non spécifié'}
+                  </Typography>
+                  <Typography variant="body2" gutterBottom>
+                    <strong>Fin du bannissement :</strong>{' '}
+                    {selectedUser.ban_until
+                      ? new Date(selectedUser.ban_until).toLocaleString()
+                      : 'Bannissement permanent'}
+                  </Typography>
+                </>
+              )}
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBanInfoDialogOpen(false)}>Fermer</Button>
+          {selectedUser?.is_banned && (
+            <Button 
+              onClick={() => {
+                setBanInfoDialogOpen(false);
+                if (selectedUser) handleUnbanUser(selectedUser.id);
+              }} 
+              variant="contained" 
+              color="success"
+            >
+              Débannir
+            </Button>
+          )}
         </DialogActions>
       </Dialog>
 

@@ -29,7 +29,7 @@ import { createMessageHandler, deleteMessageHandler, detailedMessageHandler, get
 import { createServiceHandler, deleteServiceHandler, detailedServiceHandler, listServiceHandler, updateServiceHandler, createBookingHandler, acceptBookingHandler, cancelBookingHandler, listBookingHandler } from "./service";
 import { createTicTacToeGame, getTicTacToeGame, playTicTacToeMove, acceptTicTacToeInvitation, declineTicTacToeInvitation, getPendingTicTacToeInvitations } from './tictactoe';
 import { createTrocOfferHandler, deleteTrocOfferHandler, detailedTrocOfferHandler, listTrocOfferHandler, updateTrocOfferHandler } from "./trocOffer";
-import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler } from "./user";
+import { deleteUserHandler, detailedUserHandler, getUserStatusHandler, listUserHandler, updateUserHandler, updateEmailNotificationPreferencesHandler, getEmailNotificationPreferencesHandler, banUserHandler, unbanUserHandler, getBanStatusHandler } from "./user";
 import { createMessageGroup, deleteMessageGroup, getMessageGroup, listMessageGroups, patchMessageGroup } from "./messageGroup";
 import { createGroupMessage, listGroupMessages } from "./groupMessage";
 import { getAffinityScore, getRealTimeSuggestions, getSuggestions, getUserAffinities, getUserFavoriteCategories, getUserRecentInteractions, getUserStats, recordInteraction, recordSuggestionFeedback, recordSuggestionView, updateInteraction } from "./suggestion";
@@ -435,6 +435,124 @@ export const initHandlers = (app: Application) => {
    *         description: Utilisateur non trouvé
    */
   app.put("/users/:id/email-notifications", authMiddleware, isOwnerOrAdmin("id"), updateEmailNotificationPreferencesHandler);
+
+  /**
+   * @openapi
+   * /users/{id}/ban:
+   *   post:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Bannir un utilisateur (admin uniquement)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: ID de l'utilisateur à bannir
+   *     requestBody:
+   *       required: true
+   *       content:
+   *         application/json:
+   *           schema:
+   *             type: object
+   *             required:
+   *               - reason
+   *             properties:
+   *               reason:
+   *                 type: string
+   *                 description: Motif du bannissement
+   *               duration:
+   *                 type: integer
+   *                 description: Durée du bannissement en jours (optionnel, permanent si non spécifié)
+   *     responses:
+   *       200:
+   *         description: Utilisateur banni avec succès
+   *       400:
+   *         description: Données invalides ou utilisateur déjà banni
+   *       401:
+   *         description: Non authentifié
+   *       403:
+   *         description: Non autorisé (admin uniquement)
+   *       404:
+   *         description: Utilisateur non trouvé
+   */
+  app.post("/users/:id/ban", authMiddleware, isAdmin, banUserHandler);
+
+  /**
+   * @openapi
+   * /users/{id}/unban:
+   *   post:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Débannir un utilisateur (admin uniquement)
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: ID de l'utilisateur à débannir
+   *     responses:
+   *       200:
+   *         description: Utilisateur débanni avec succès
+   *       400:
+   *         description: L'utilisateur n'est pas banni
+   *       401:
+   *         description: Non authentifié
+   *       403:
+   *         description: Non autorisé (admin uniquement)
+   *       404:
+   *         description: Utilisateur non trouvé
+   */
+  app.post("/users/:id/unban", authMiddleware, isAdmin, unbanUserHandler);
+
+  /**
+   * @openapi
+   * /users/{id}/ban-status:
+   *   get:
+   *     tags:
+   *       - Users
+   *     security:
+   *       - bearerAuth: []
+   *     summary: Obtenir le statut de bannissement d'un utilisateur
+   *     parameters:
+   *       - in: path
+   *         name: id
+   *         required: true
+   *         schema:
+   *           type: integer
+   *         description: ID de l'utilisateur
+   *     responses:
+   *       200:
+   *         description: Statut de bannissement récupéré avec succès
+   *         content:
+   *           application/json:
+   *             schema:
+   *               type: object
+   *               properties:
+   *                 id:
+   *                   type: integer
+   *                 is_banned:
+   *                   type: boolean
+   *                 banned_at:
+   *                   type: string
+   *                   format: date-time
+   *                 ban_reason:
+   *                   type: string
+   *                 ban_until:
+   *                   type: string
+   *                   format: date-time
+   *       401:
+   *         description: Non authentifié
+   *       404:
+   *         description: Utilisateur non trouvé
+   */
+  app.get("/users/:id/ban-status", authMiddleware, getBanStatusHandler);
 
   /**
    * @openapi

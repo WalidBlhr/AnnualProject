@@ -11,6 +11,7 @@ import { NextFunction, Request, Response } from "express";
 import { verify } from "jsonwebtoken";
 import { AppDataSource } from "../db/database";
 import { Token } from "../db/models/token";
+import { User } from "../db/models/user";
 
 // Middleware d'authentification existant
 export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
@@ -38,12 +39,50 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
         // Ignore l'expiration si requete pour logout
         const ignoreExpiration = req.path === "/auth/logout";
 
-        verify(token, "valuerandom", {ignoreExpiration}, (err, user) => {
+        verify(token, "valuerandom", {ignoreExpiration}, async (err, user) => {
             if (err) {
                 console.log("expiré");
                 res.status(403).send({ "message": "Access Forbidden" })
                 return
             }
+            
+            // Vérifier le statut de bannissement de l'utilisateur
+            const userRepo = AppDataSource.getRepository(User);
+            const userFromDb = await userRepo.findOne({ 
+                where: { id: (user as any).userId },
+                select: ['id', 'is_banned', 'banned_at', 'ban_reason', 'ban_until']
+            });
+            
+            if (userFromDb) {
+                // Vérifier si le bannissement temporaire a expiré
+                if (userFromDb.is_banned && userFromDb.ban_until && new Date() > userFromDb.ban_until) {
+                    userFromDb.is_banned = false;
+                    userFromDb.banned_at = null;
+                    userFromDb.ban_reason = null;
+                    userFromDb.ban_until = null;
+                    await userRepo.save(userFromDb);
+                }
+                
+                // Si l'utilisateur est encore banni, refuser l'accès
+                if (userFromDb.is_banned) {
+                    const banMessage = userFromDb.ban_until 
+                        ? `Compte banni jusqu'au ${userFromDb.ban_until.toLocaleDateString()}. Motif: ${userFromDb.ban_reason}`
+                        : `Compte banni définitivement. Motif: ${userFromDb.ban_reason}`;
+                        
+                    res.status(403).send({ 
+                        "message": "Account Banned",
+                        "details": banMessage,
+                        "ban_info": {
+                            "is_banned": true,
+                            "banned_at": userFromDb.banned_at,
+                            "ban_reason": userFromDb.ban_reason,
+                            "ban_until": userFromDb.ban_until
+                        }
+                    });
+                    return;
+                }
+            }
+            
             // https://www.geeksforgeeks.org/express-js-res-locals-property/
             (req as any).user = user;
             next();
