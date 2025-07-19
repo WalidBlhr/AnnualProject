@@ -24,6 +24,8 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
 import { API_URL } from '../../const';
+import AdminSearchAndSort, { SortOption } from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 interface Event {
   id: number;
@@ -91,9 +93,44 @@ const AdminEvents: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Options de tri pour les événements
+  const sortOptions: SortOption[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'name', label: 'Nom' },
+    { value: 'date', label: 'Date' },
+    { value: 'location', label: 'Lieu' },
+    { value: 'status', label: 'Statut' },
+    { value: 'createdAt', label: 'Date de création' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: events,
+    searchFields: ['name', 'location', 'status'],
+    defaultSortField: 'date'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedEvents = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   useEffect(() => {
     fetchEvents();
   }, [page, rowsPerPage]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const fetchEvents = async () => {
     try {
@@ -193,6 +230,16 @@ const AdminEvents: React.FC = () => {
         Gestion des Événements
       </Typography>
 
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher par nom, lieu ou statut..."
+      />
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -208,7 +255,7 @@ const AdminEvents: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {events.map((event) => (
+            {paginatedEvents.map((event) => (
               <TableRow key={event.id}>
                 <TableCell>{event.id}</TableCell>
                 <TableCell>{event.name}</TableCell>
@@ -232,7 +279,7 @@ const AdminEvents: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalEvents}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

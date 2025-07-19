@@ -24,6 +24,8 @@ import { API_URL } from '../../const';
 import AdminPage from './AdminPage';
 import { AnyMessage } from '../../types/messages-types';
 import { ListingResult } from '../../types/ListingResult';
+import AdminSearchAndSort, { SortOption } from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 function getReceiverName(message: AnyMessage) : string {
   if (message.receiver) {
@@ -50,9 +52,42 @@ const AdminMessages: React.FC = () => {
     severity: 'success' | 'error';
   }>({ open: false, message: '', severity: 'success' });
 
+  // Options de tri pour les messages
+  const sortOptions: SortOption[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'content', label: 'Contenu' },
+    { value: 'status', label: 'Statut' },
+    { value: 'date_sent', label: 'Date d\'envoi' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: messages,
+    searchFields: ['content'],
+    defaultSortField: 'date_sent'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedMessages = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   useEffect(() => {
     fetchMessages();
   }, [page, rowsPerPage]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const fetchMessages = async () => {
     try {
@@ -124,6 +159,16 @@ const AdminMessages: React.FC = () => {
       alert={alert}
       setAlert={setAlert}
     >
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher dans le contenu des messages..."
+      />
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -138,7 +183,7 @@ const AdminMessages: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {messages.map((message) => (
+            {paginatedMessages.map((message) => (
               <TableRow key={message.id}>
                 <TableCell>{message.id}</TableCell>
                 <TableCell>
@@ -180,7 +225,7 @@ const AdminMessages: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalMessages}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

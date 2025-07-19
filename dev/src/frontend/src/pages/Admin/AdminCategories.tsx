@@ -19,6 +19,8 @@ import {
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../../const';
+import AdminSearchAndSort, { SortOption } from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 export interface Category {
   _id: string;
@@ -46,9 +48,41 @@ const AdminCategories: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Options de tri pour les catégories
+  const sortOptions: SortOption[] = [
+    { value: '_id', label: 'ID' },
+    { value: 'name', label: 'Nom' },
+    { value: 'description', label: 'Description' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: categories,
+    searchFields: ['name', 'description'],
+    defaultSortField: 'name'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedCategories = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   useEffect(() => {
     fetchCategories();
   }, [page, rowsPerPage]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const fetchCategories = async () => {
     try {
@@ -121,6 +155,17 @@ const AdminCategories: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Gestion des Catégories d'Articles</Typography>
+      
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher par nom ou description..."
+      />
+
       <Button variant="contained" startIcon={<AddIcon />} sx={{ mb: 2 }} onClick={() => setAddDialogOpen(true)}>
         Ajouter une catégorie
       </Button>
@@ -135,7 +180,7 @@ const AdminCategories: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {categories.map((category) => (
+            {paginatedCategories.map((category) => (
               <TableRow key={category._id}>
                 <TableCell>{category._id}</TableCell>
                 <TableCell>{category.name}</TableCell>
@@ -151,7 +196,7 @@ const AdminCategories: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalCategories}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

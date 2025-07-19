@@ -7,6 +7,8 @@ import { ListingResult } from "../../types/ListingResult";
 import { Delete, Edit } from "@mui/icons-material";
 import { DetailedMessageGroup, MessageGroup } from "../../types/messages-types";
 import MessageGroupEditingModal from "../../components/modals/MessageGroupEditingModal";
+import AdminSearchAndSort, { SortOption } from "../../components/AdminSearchAndSort";
+import { useAdminSearchAndSort } from "../../hooks/useAdminSearchAndSort";
 
 const tableHeaders = ["ID", "Nom", "Description", "Date de création", "Action"];
 
@@ -21,6 +23,34 @@ const AdminMessageGroups : React.FC = () => {
 
   const [editedGroup, setEditedGroup] = useState<DetailedMessageGroup>();
 
+  // Options de tri pour les groupes de messages
+  const sortOptions: SortOption[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'name', label: 'Nom' },
+    { value: 'description', label: 'Description' },
+    { value: 'createdAt', label: 'Date de création' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: groups,
+    searchFields: ['name', 'description'],
+    defaultSortField: 'id'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedGroups = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   const showAlert = (message: string, severity: 'success' | 'error') => {
     setAlert({ open: true, message, severity });
   };
@@ -33,6 +63,11 @@ const AdminMessageGroups : React.FC = () => {
   useEffect(() => {
     fetchMessageGroups();
   }, [page, rowsPerPage]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const requestWrapper = async (
     req: (token: string) => Promise<void>,
@@ -124,6 +159,16 @@ const AdminMessageGroups : React.FC = () => {
       alert={alert}
       setAlert={setAlert}
     >
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher par nom ou description..."
+      />
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -132,7 +177,7 @@ const AdminMessageGroups : React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {groups.map(group => (
+            {paginatedGroups.map(group => (
               <AdminMessageGroupRow
                 key={group.id}
                 group={group}
@@ -145,7 +190,7 @@ const AdminMessageGroups : React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalGroups}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={(_, newPage) => setPage(newPage)}

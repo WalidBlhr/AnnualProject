@@ -22,6 +22,8 @@ import {
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../../const';
+import AdminSearchAndSort, { SortOption } from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 interface Service {
   id: number;
@@ -55,9 +57,43 @@ const AdminServices: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
 
+  // Options de tri pour les services
+  const sortOptions: SortOption[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'title', label: 'Titre' },
+    { value: 'type', label: 'Type' },
+    { value: 'status', label: 'Statut' },
+    { value: 'date_start', label: 'Date de début' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: services,
+    searchFields: ['title', 'description', 'type'],
+    defaultSortField: 'id'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedServices = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   useEffect(() => {
     fetchServices();
   }, [page, rowsPerPage, filterStatus, filterType]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const fetchServices = async () => {
     try {
@@ -122,6 +158,17 @@ const AdminServices: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Gestion des Services</Typography>
+      
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher par titre, description ou type..."
+      />
+
       <Paper sx={{ mb: 2, p: 2 }}>
         <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} sx={{ mr: 2 }}>
           <MenuItem value="all">Tous statuts</MenuItem>
@@ -151,7 +198,7 @@ const AdminServices: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {services.map((service) => (
+            {paginatedServices.map((service) => (
               <TableRow key={service.id}>
                 <TableCell>{service.id}</TableCell>
                 <TableCell>{service.title}</TableCell>
@@ -172,7 +219,7 @@ const AdminServices: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalServices}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

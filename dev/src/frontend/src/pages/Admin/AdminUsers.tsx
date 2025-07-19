@@ -27,6 +27,8 @@ import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import InfoIcon from '@mui/icons-material/Info';
 import axios from 'axios';
 import { API_URL } from '../../const';
+import AdminSearchAndSort, { SortOption } from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 interface User {
   id: number;
@@ -80,10 +82,45 @@ const AdminUsers: React.FC = () => {
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Options de tri pour les utilisateurs
+  const sortOptions: SortOption[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'firstname', label: 'Prénom' },
+    { value: 'lastname', label: 'Nom' },
+    { value: 'email', label: 'Email' },
+    { value: 'role', label: 'Rôle' },
+    { value: 'createdAt', label: 'Date de création' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: users,
+    searchFields: ['firstname', 'lastname', 'email'],
+    defaultSortField: 'id'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedUsers = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   useEffect(() => {
     fetchUsers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, rowsPerPage]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const fetchUsers = async () => {
     try {
@@ -243,6 +280,16 @@ const AdminUsers: React.FC = () => {
         Gestion des Utilisateurs
       </Typography>
 
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher par nom, prénom ou email..."
+      />
+
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -258,7 +305,7 @@ const AdminUsers: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {users.map((user) => (
+            {paginatedUsers.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>{user.id}</TableCell>
                 <TableCell>{user.email}</TableCell>
@@ -324,7 +371,7 @@ const AdminUsers: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalUsers}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

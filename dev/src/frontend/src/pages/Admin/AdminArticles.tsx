@@ -29,6 +29,8 @@ import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { API_URL } from '../../const';
+import AdminSearchAndSort from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 interface Article {
   _id: string;
@@ -69,21 +71,62 @@ const AdminArticles: React.FC = () => {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [filterPublic, setFilterPublic] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Configuration de la recherche et du tri
+  const searchFields: (keyof Article)[] = ['title', 'authorName', 'category', 'content'];
+  const sortOptions = [
+    { value: 'title', label: 'Titre' },
+    { value: 'authorName', label: 'Auteur' },
+    { value: 'category', label: 'Catégorie' },
+    { value: 'status', label: 'Statut' },
+    { value: 'createdAt', label: 'Date de création' },
+    { value: 'updatedAt', label: 'Date de modification' }
+  ];
+
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange
+  } = useAdminSearchAndSort({ data: articles, searchFields });
+
+  // Application des filtres supplémentaires
+  const finalFilteredData = (filteredAndSortedData as Article[]).filter((article: Article) => {
+    // Recherche dans les champs spécifiés
+    if (searchValue) {
+      const searchLower = searchValue.toLowerCase();
+      const matchesSearch = searchFields.some(field => {
+        const value = article[field as keyof Article];
+        return value && value.toString().toLowerCase().includes(searchLower);
+      });
+      if (!matchesSearch) return false;
+    }
+    
+    if (filterPublic !== 'all' && article.isPublic.toString() !== filterPublic) return false;
+    if (filterStatus !== 'all' && article.status !== filterStatus) return false;
+    return true;
+  });
+
+  // Pagination des données filtrées
+  const paginatedArticles = finalFilteredData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
 
   const categories = ['Actualités', 'Lifestyle', 'Cuisine', 'Jardinage', 'Bricolage', 'Sport', 'Culture', 'Technologie', 'Autre'];
   const statuses = ['draft', 'published', 'archived'];
 
   useEffect(() => {
     fetchArticles();
-  }, [page, rowsPerPage, filterPublic, filterStatus, searchTerm]);
+  }, [filterPublic, filterStatus]);
 
   const fetchArticles = async () => {
     try {
-      let url = `${API_URL}/journal/articles?page=${page + 1}&limit=${rowsPerPage}`;
+      let url = `${API_URL}/journal/articles?page=1&limit=1000`;
       if (filterPublic !== 'all') url += `&isPublic=${filterPublic}`;
       if (filterStatus !== 'all') url += `&status=${filterStatus}`;
-      if (searchTerm) url += `&search=${encodeURIComponent(searchTerm)}`;
       
       const { data } = await axios.get<ArticlesResponse>(url, {
         headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
@@ -173,22 +216,31 @@ const AdminArticles: React.FC = () => {
     setRowsPerPage(parseInt(event.target.value, 10));
     setPage(0);
   };
+  
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue, filterPublic, filterStatus]);
+  
   const showAlert = (message: string, severity: 'success' | 'error') => setAlert({ open: true, message, severity });
 
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Gestion des Articles</Typography>
       
-      {/* Filtres et recherche */}
+      {/* Recherche et tri */}
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+      />
+      
+      {/* Filtres */}
       <Paper sx={{ mb: 2, p: 2 }}>
         <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-          <TextField
-            label="Rechercher"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            size="small"
-            sx={{ minWidth: 200 }}
-          />
           <FormControl size="small" sx={{ minWidth: 120 }}>
             <InputLabel>Visibilité</InputLabel>
             <Select value={filterPublic} onChange={e => setFilterPublic(e.target.value)}>
@@ -223,7 +275,7 @@ const AdminArticles: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {articles.map((article) => (
+            {paginatedArticles.map((article) => (
               <TableRow key={article._id}>
                 <TableCell sx={{ maxWidth: 200 }}>
                   <Typography variant="body2" noWrap title={article.title}>
@@ -278,7 +330,7 @@ const AdminArticles: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalArticles}
+          count={finalFilteredData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

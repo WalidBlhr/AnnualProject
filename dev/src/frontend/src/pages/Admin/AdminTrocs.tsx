@@ -22,6 +22,8 @@ import {
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../../const';
+import AdminSearchAndSort, { SortOption } from '../../components/AdminSearchAndSort';
+import { useAdminSearchAndSort } from '../../hooks/useAdminSearchAndSort';
 
 interface TrocOffer {
   id: number;
@@ -54,9 +56,43 @@ const AdminTrocs: React.FC = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterType, setFilterType] = useState('all');
 
+  // Options de tri pour les trocs
+  const sortOptions: SortOption[] = [
+    { value: 'id', label: 'ID' },
+    { value: 'title', label: 'Titre' },
+    { value: 'type', label: 'Type' },
+    { value: 'status', label: 'Statut' },
+    { value: 'creation_date', label: 'Date de création' },
+  ];
+
+  // Hook pour la recherche et le tri
+  const {
+    searchValue,
+    sortConfig,
+    filteredAndSortedData,
+    handleSearchChange,
+    handleSearchClear,
+    handleSortChange,
+  } = useAdminSearchAndSort({
+    data: trocs,
+    searchFields: ['title', 'description', 'type'],
+    defaultSortField: 'creation_date'
+  });
+
+  // Pagination sur les données filtrées et triées
+  const paginatedTrocs = filteredAndSortedData.slice(
+    page * rowsPerPage,
+    page * rowsPerPage + rowsPerPage
+  );
+
   useEffect(() => {
     fetchTrocs();
   }, [page, rowsPerPage, filterStatus, filterType]);
+
+  // Remettre la page à 0 quand on change la recherche
+  useEffect(() => {
+    setPage(0);
+  }, [searchValue]);
 
   const fetchTrocs = async () => {
     try {
@@ -127,6 +163,17 @@ const AdminTrocs: React.FC = () => {
   return (
     <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
       <Typography variant="h4" gutterBottom>Gestion des Offres de Troc</Typography>
+      
+      <AdminSearchAndSort
+        searchValue={searchValue}
+        onSearchChange={handleSearchChange}
+        onSearchClear={handleSearchClear}
+        sortConfig={sortConfig}
+        onSortChange={handleSortChange}
+        sortOptions={sortOptions}
+        placeholder="Rechercher par titre, description ou type..."
+      />
+
       <Paper sx={{ mb: 2, p: 2 }}>
         <Select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} sx={{ mr: 2 }}>
           <MenuItem value="all">Tous statuts</MenuItem>
@@ -154,7 +201,7 @@ const AdminTrocs: React.FC = () => {
             </TableRow>
           </TableHead>
           <TableBody>
-            {trocs.map((troc) => (
+            {paginatedTrocs.map((troc) => (
               <TableRow key={troc.id}>
                 <TableCell>{troc.id}</TableCell>
                 <TableCell>{troc.title}</TableCell>
@@ -174,7 +221,7 @@ const AdminTrocs: React.FC = () => {
         <TablePagination
           rowsPerPageOptions={[5, 10, 25]}
           component="div"
-          count={totalTrocs}
+          count={filteredAndSortedData.length}
           rowsPerPage={rowsPerPage}
           page={page}
           onPageChange={handleChangePage}

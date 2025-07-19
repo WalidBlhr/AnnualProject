@@ -125,7 +125,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
         }
       );
     } else {
-      // Sinon, récupérer tous les messages de l'utilisateur connecté
+      // Récupérer tous les messages de l'utilisateur connecté, ou tous les messages si admin
       const token = req.headers.authorization?.split(' ')[1];
       if (!token) {
         res.status(401).send({ message: "Token manquant" });
@@ -133,16 +133,20 @@ export const listMessageHandler = async (req: Request, res: Response) => {
       }
 
       try {
-        const decoded = jwtDecode<{ userId: number }>(token);
+        const decoded = jwt.verify(token, "valuerandom") as { userId: number; role: number };
         if (!decoded.userId) {
           res.status(401).send({ message: "Token invalide - userId manquant" });
           return;
         }
 
-        query.andWhere(
-          'message.sender_id = :userId OR message.receiver_id = :userId',
-          { userId: decoded.userId }
-        );
+        // Si l'utilisateur n'est pas admin, filtrer par ses propres messages
+        if (decoded.role !== 1) {
+          query.andWhere(
+            'message.sender_id = :userId OR message.receiver_id = :userId',
+            { userId: decoded.userId }
+          );
+        }
+        // Si l'utilisateur est admin (role === 1), ne pas ajouter de filtre - récupérer tous les messages
       } catch (error) {
         console.error('Erreur lors du décodage du token:', error);
         res.status(401).send({ message: "Token invalide" });
