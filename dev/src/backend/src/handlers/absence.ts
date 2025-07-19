@@ -15,6 +15,7 @@ import jwt from "jsonwebtoken";
 import { In } from "typeorm";
 import { Message } from "../db/models/message";
 import { NotificationService } from "../utils/notificationService";
+import { AutoInteractionService } from "../services/autoInteractionService";
 
 /**
  * Fonction utilitaire pour formater les dates
@@ -82,6 +83,13 @@ export const createAbsenceHandler = async (req: Request, res: Response) => {
     }
     
     const absenceCreated = await absenceRepository.save(absence);
+
+    // Enregistrer l'interaction de création de demande d'absence
+    await AutoInteractionService.onAbsenceCreated(
+        absenceCreated.id,
+        `Absence du ${formatDate(start_date)} au ${formatDate(end_date)}`,
+        user.id
+    );
 
     // Créer les réponses individuelles pour chaque contact de confiance
     if (trusted_contact_ids && trusted_contact_ids.length > 0) {
@@ -349,6 +357,16 @@ export const respondToAbsenceHandler = async (req: Request, res: Response) => {
     // Envoyer une notification à l'utilisateur propriétaire de l'absence
     const contact = await userRepository.findOneBy({ id: decoded.userId });
     if (contact) {
+      // Enregistrer l'interaction si l'aide est acceptée
+      if (status === 'accepted') {
+        await AutoInteractionService.onAbsenceHelpAccepted(
+          updatedAbsence.id,
+          `Absence du ${formatDate(updatedAbsence.start_date)} au ${formatDate(updatedAbsence.end_date)}`,
+          updatedAbsence.user.id,
+          contact.id
+        );
+      }
+      
       const statusMessage = status === 'accepted' ? 
         'accepté de surveiller votre logement' : 
         'refusé la demande de surveillance de logement';

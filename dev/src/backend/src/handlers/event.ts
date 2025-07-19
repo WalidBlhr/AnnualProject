@@ -6,6 +6,7 @@ import { Event } from "../db/models/event";
 import { User } from "../db/models/user";
 import jwt from "jsonwebtoken";
 import { NotificationService } from "../utils/notificationService";
+import { AutoInteractionService } from "../services/autoInteractionService";
 
 /**
  * Create a new Event
@@ -61,6 +62,14 @@ export const createEventHandler = async (req: Request, res: Response) => {
 
       const eventRepository = AppDataSource.getRepository(Event);
       const eventCreated = await eventRepository.save(event);
+
+      // Enregistrer l'interaction de création d'événement
+      await AutoInteractionService.onEventCreated(
+          eventCreated.id,
+          eventCreated.name,
+          eventCreated.category || 'general',
+          user.id
+      );
 
       // Envoyer une notification pour le nouvel événement
       await NotificationService.notifyNewEvent(

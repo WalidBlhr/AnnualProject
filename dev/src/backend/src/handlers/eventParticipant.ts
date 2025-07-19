@@ -8,6 +8,7 @@ import { Event } from "../db/models/event";
 import { Not } from "typeorm";
 import { Message } from "../db/models/message";
 import { NotificationService } from "../utils/notificationService";
+import { AutoInteractionService } from "../services/autoInteractionService";
 
 /**
  * Create a new EventParticipant
@@ -61,6 +62,15 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
     );
     
     const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
+
+    // Enregistrer l'interaction de participation à un événement
+    await AutoInteractionService.onEventJoined(
+      eventId,
+      event.name,
+      event.category || 'general',
+      event.creator.id,
+      userId
+    );
 
     // Envoyer une notification au créateur de l'événement
     const eventWithCreator = await eventRepository.findOne({

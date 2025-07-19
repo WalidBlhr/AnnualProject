@@ -5,6 +5,7 @@ import { AppDataSource } from "../db/database";
 import { TrocOffer } from "../db/models/troc_offer";
 import { User } from "../db/models/user";
 import { NotificationService } from "../utils/notificationService";
+import { AutoInteractionService } from "../services/autoInteractionService";
 
 /**
  * Create a new TrocOffer
@@ -39,6 +40,14 @@ export const createTrocOfferHandler = async (req: Request, res: Response) => {
     });
     
     const trocOfferCreated = await trocOfferRepository.save(trocOffer)
+
+    // Enregistrer l'interaction de création de troc
+    await AutoInteractionService.onTrocOfferCreated(
+        trocOfferCreated.id,
+        trocOfferCreated.title,
+        trocOfferCreated.type || 'general',
+        user.id
+    );
 
     // Recharger l'offre avec les relations pour la réponse
     const trocOfferWithRelations = await trocOfferRepository.findOne({
