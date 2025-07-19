@@ -6,6 +6,8 @@ interface MessageBase{
   sender: User;
 }
 
+export type AnyMessage = PrivateMessage | GroupMessage;
+
 export type PrivateMessage = MessageBase & (
   {receiver: User, group: null}
 );

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Container,
   Paper,
   Table,
   TableBody,
@@ -15,8 +14,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Alert,
-  Snackbar,
   TablePagination,
   Chip,
 } from '@mui/material';
@@ -25,33 +22,25 @@ import VisibilityIcon from '@mui/icons-material/Visibility';
 import axios from 'axios';
 import { API_URL } from '../../const';
 import AdminPage from './AdminPage';
+import { AnyMessage } from '../../types/messages-types';
+import { ListingResult } from '../../types/ListingResult';
 
-interface Message {
-  id: number;
-  content: string;
-  date_sent: string;
-  sender: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-  receiver: {
-    id: number;
-    firstname: string;
-    lastname: string;
-  };
-  status: string;
-}
+function getReceiverName(message: AnyMessage) : string {
+  if (message.receiver) {
+    return `${message.receiver.firstname || ""} ${message.receiver.lastname || ""}`;
+  }
 
-interface MessagesResponse {
-  data: Message[];
-  total_count: number;
+  if (message.group) {
+    return (message.group.name + " (Groupe)") || "";
+  }
+
+  return "Utilisateur inconnu";
 }
 
 const AdminMessages: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<AnyMessage[]>([]);
   const [totalMessages, setTotalMessages] = useState<number>(0);
-  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<AnyMessage | null>(null);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -67,7 +56,7 @@ const AdminMessages: React.FC = () => {
 
   const fetchMessages = async () => {
     try {
-      const { data } = await axios.get<MessagesResponse>(
+      const { data } = await axios.get<ListingResult<AnyMessage[]>>(
         `${API_URL}/messages?page=${page + 1}&limit=${rowsPerPage}`,
         {
           headers: {
@@ -83,7 +72,7 @@ const AdminMessages: React.FC = () => {
     }
   };
 
-  const handleViewMessage = (message: Message) => {
+  const handleViewMessage = (message: AnyMessage) => {
     setSelectedMessage(message);
     setViewDialogOpen(true);
   };
@@ -159,10 +148,7 @@ const AdminMessages: React.FC = () => {
                   }
                 </TableCell>
                 <TableCell>
-                  {message.receiver ? 
-                    `${message.receiver.firstname || ''} ${message.receiver.lastname || ''}` : 
-                    'Utilisateur inconnu'
-                  }
+                  {getReceiverName(message)}
                 </TableCell>
                 <TableCell>
                   {message.content.length > 50
