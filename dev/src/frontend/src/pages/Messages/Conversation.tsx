@@ -362,8 +362,12 @@ const Conversation = () => {
         onGroupSave={(data) => {
           setConvTitle(data.name);
           setCurrentGroup(data);
+          if (data.members.filter(m => m.id === (user?.userId ?? 0)).length === 0) {
+            navigate("/messages");
+          }
         }}
         onCancel={() => setEditedGroup(currentGroup ? {...currentGroup} : undefined)}
+        onGroupDelete={() => navigate("/messages")}
       />
 
       <Snackbar

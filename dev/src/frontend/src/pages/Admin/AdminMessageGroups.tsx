@@ -82,6 +82,9 @@ const AdminMessageGroups : React.FC = () => {
   };
 
   const handleDeleteGroup = async (groupId: number) => {
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?'))
+      return;
+
     requestWrapper(async token => {
       await axios.delete(
         API_URL + "/message-groups/" + groupId,
@@ -156,6 +159,7 @@ const AdminMessageGroups : React.FC = () => {
         editedGroup={editedGroup}
         setEditedGroup={setEditedGroup}
         onGroupSave={onGroupSave}
+        onGroupDelete={() => setGroups(prev => prev.filter(group => group.id !== editedGroup?.id))}
       />
     </AdminPage>
   );

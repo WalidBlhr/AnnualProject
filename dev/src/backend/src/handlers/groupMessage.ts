@@ -13,8 +13,20 @@ export const listGroupMessages = async (req: Request, res: Response) => {
       res.status(400).send(generateValidationErrorMessage(validated.error.details));
       return;
     }
-
     const sentQueries = validated.value;
+
+    const group = await findMessageGroupById(sentQueries.groupId);
+    if (group === null) {
+      res.status(404).send({error: `Group of ID ${sentQueries.groupId} not found. (groupId)`});
+      return;
+    }
+
+    const currentUserId = (req as any).user.userId;
+    if (group.members.filter(m => m.id === currentUserId).length === 0) {
+      res.status(403).send({error: "Forbidden"});
+      return;
+    }
+
     const messageRepo = AppDataSource.getRepository(Message);
     const query = messageRepo.createQueryBuilder("msg")
       .leftJoin("msg.sender", "sender")
@@ -76,6 +88,12 @@ export const createGroupMessage = async (req: Request, res: Response) => {
     const group = await findMessageGroupById(sentInfo.groupId);
     if (group === null) {
       res.status(404).send({error: `Message group with id ${sentInfo.groupId} not found. (groupId)`});
+      return;
+    }
+
+    const currentUserId = (req as any).user.userId;
+    if (group.members.filter(m => m.id === currentUserId).length === 0) {
+      res.status(403).send({error: "Forbidden"});
       return;
     }
 

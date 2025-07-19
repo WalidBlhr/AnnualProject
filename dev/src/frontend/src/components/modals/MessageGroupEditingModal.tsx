@@ -12,15 +12,18 @@ interface GroupEditingModalProps{
   editedGroup: DetailedMessageGroup | undefined;
   setEditedGroup: (group: DetailedMessageGroup | undefined) => void;
   onGroupSave?: (requestResult: DetailedMessageGroup) => void;
+  onGroupDelete?: () => void;
   onCancel?: () => void;
 }
 
-const MessageGroupEditingModal : React.FC<GroupEditingModalProps> = ({dialogOpen, setDialogOpen, showAlert, editedGroup, setEditedGroup, onGroupSave = (_) => {}, onCancel = () => {}}) => {
-  const handleEditGroup = async () => {
-    if (editedGroup === undefined) {
-      return;
-    }
-
+const MessageGroupEditingModal : React.FC<GroupEditingModalProps> = ({
+  dialogOpen, setDialogOpen, showAlert, editedGroup, setEditedGroup,
+  onGroupSave = (_) => {}, onGroupDelete = () => {}, onCancel = () => {}
+}) => {
+  const requestWrapper = async (
+    req: (token: string) => Promise<void>,
+    catch_add: () => void = () => {}
+  ) => {
     const token = localStorage.getItem("token");
     if (!token) {
       console.log("No token provided.");
@@ -28,6 +31,26 @@ const MessageGroupEditingModal : React.FC<GroupEditingModalProps> = ({dialogOpen
     }
 
     try {
+      await req(token);
+    } catch (e: any) {
+      const errorMessage = e.response?.data?.message || 'Erreur lors du chargement des messages';
+      showAlert(errorMessage, 'error');
+      catch_add();
+    }
+  }
+
+  const handleEditGroup = async () => {
+    if (editedGroup === undefined) {
+      return;
+    }
+
+    const membersIDs = editedGroup.members.map(member => member.id);
+    if(membersIDs.indexOf(editedGroup.owner.id) === -1) {
+      showAlert("Le propriétaire doit faire partie du groupe.", "error");
+      return;
+    }
+
+    requestWrapper(async token => {
       const {data} = await axios.patch<DetailedMessageGroup, AxiosResponse<DetailedMessageGroup>, PatchMessageGroupRequestBody>(
         API_URL + "/message-groups/" + editedGroup.id,
         {
@@ -45,10 +68,30 @@ const MessageGroupEditingModal : React.FC<GroupEditingModalProps> = ({dialogOpen
       showAlert('Événement modifié avec succès', 'success');
       setDialogOpen(false);
       onGroupSave(data);
-    } catch (e: any) {
-      const errorMessage = e.response?.data?.message || 'Erreur lors du chargement des messages';
-      showAlert(errorMessage, 'error');
+    });
+  };
+
+  const handleDeleteGroup = async () => {
+    if (editedGroup === undefined) {
+      return;
     }
+
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce groupe ?'))
+      return;
+
+    requestWrapper(async token => {
+      await axios.delete(
+        API_URL + "/message-groups/" + editedGroup.id,
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      );
+      showAlert("Groupe supprimé avec succès", "success");
+      setDialogOpen(false);
+      onGroupDelete();
+    });
   };
 
   const closeDialog = () => {
@@ -105,17 +148,26 @@ const MessageGroupEditingModal : React.FC<GroupEditingModalProps> = ({dialogOpen
               selectedUser={editedGroup.members}
               setSelectedUser={(users: User[]) => setEditedGroup({...editedGroup, members: users})}
               showAlert={showAlert}
-              renderLabel="Admin du groupe"
+              renderLabel="Membres du groupe"
               withCurrentUser
             />
           </>
         )}
       </DialogContent>
       <DialogActions>
-        <Button onClick={closeDialog}>
-          Annuler
-        </Button>
-        <Button onClick={handleEditGroup}>Enregistrer</Button>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+          <Button
+            color="error"
+            onClick={handleDeleteGroup}
+          >
+            Supprimer
+          </Button>
+
+          <Box>
+            <Button onClick={closeDialog}>Annuler</Button>
+            <Button onClick={handleEditGroup}>Enregistrer</Button>
+          </Box>
+        </Box>
       </DialogActions>
     </Dialog>
   );
