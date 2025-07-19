@@ -23,14 +23,10 @@ import {useSocket} from '../../contexts/SocketContext';
 import {API_URL} from '../../const';
 import {MessageElement} from './MessageElement';
 import {useAuth} from '../../contexts/AuthContext';
-import { GroupMessage, PrivateMessage } from '../../types/messages-types';
+import { DetailedMessageGroup, GroupMessage, PrivateMessage } from '../../types/messages-types';
 import { ListingResult } from '../../types/ListingResult';
-
-// Types existants ou à ajouter si nécessaire
-interface UserFullname {
-  firstname: string;
-  lastname: string;
-};
+import MessageGroupEditingModal from '../../components/modals/MessageGroupEditingModal';
+import { Settings } from '@mui/icons-material';
 
 const Conversation = () => {
   const { userId, trocId, groupId } = useParams<{userId?: string, trocId?: string, groupId?: string}>();
@@ -39,9 +35,12 @@ const Conversation = () => {
   const { socket, isOnline, fetchUserStatus } = useSocket();
   const {user} = useAuth();
 
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [currentGroup, setCurrentGroup] = useState<DetailedMessageGroup>();
+  const [editedGroup, setEditedGroup] = useState<DetailedMessageGroup>();
+
   const [messages, setMessages] = useState<(PrivateMessage | GroupMessage)[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  //const [otherUser, setOtherUser] = useState<UserFullname | null>(null);
   const [convTitle, setConvTitle] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [alert, setAlert] = useState<{
@@ -108,11 +107,13 @@ const Conversation = () => {
         );
         newTitle = `Conversation avec ${data.firstname} ${data.lastname}`;
       } else if (groupId !== undefined) {
-        const {data} = await axios.get<{name: string}>(
+        const {data} = await axios.get<DetailedMessageGroup>(
           API_URL + "/message-groups/" + groupId,
           reqOptions
         );
         newTitle = data.name + " (Groupe)";
+        setCurrentGroup(data);
+        setEditedGroup(data);
       }
 
       setConvTitle(newTitle);
@@ -288,6 +289,11 @@ const Conversation = () => {
                 />
               </Tooltip>
             }
+            { currentGroup !== undefined && currentGroup.owner.id === (user?.userId ?? 0) &&
+              <IconButton onClick={() => setEditDialogOpen(true)} sx={{ ml: 1 }}>
+                <Settings />
+              </IconButton>
+            }
           </Box>
           <Button variant="outlined" onClick={() => navigate(trocId ? `/trocs/${trocId}` : '/messages')}>
             Retour
@@ -302,6 +308,11 @@ const Conversation = () => {
               <Typography color="textSecondary">
                 Aucun message. Commencez la conversation!
               </Typography>
+              {currentGroup && currentGroup.description && (
+                <Typography color="textSecondary" sx={{mt: 3}}>
+                  {currentGroup.description}
+                </Typography>
+              )}
             </Box>
           ) : (
             <List>
@@ -341,6 +352,19 @@ const Conversation = () => {
           </IconButton>
         </Box>
       </Paper>
+
+      <MessageGroupEditingModal
+        dialogOpen={editDialogOpen}
+        setDialogOpen={setEditDialogOpen}
+        showAlert={showAlert}
+        editedGroup={editedGroup}
+        setEditedGroup={setEditedGroup}
+        onGroupSave={(data) => {
+          setConvTitle(data.name);
+          setCurrentGroup(data);
+        }}
+        onCancel={() => setEditedGroup(currentGroup ? {...currentGroup} : undefined)}
+      />
 
       <Snackbar
         open={alert.open}

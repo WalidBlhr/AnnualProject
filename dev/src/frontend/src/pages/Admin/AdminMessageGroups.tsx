@@ -1,19 +1,18 @@
 import { useEffect, useState } from "react";
 import AdminPage, { Alert } from "./AdminPage";
-import { Button, CircularProgress, Container, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow, TextField } from "@mui/material";
-import axios, { AxiosResponse } from "axios";
+import { IconButton, Paper, Table, TableBody, TableCell, TableContainer, TableHead, TablePagination, TableRow } from "@mui/material";
+import axios from "axios";
 import { API_URL } from "../../const";
 import { ListingResult } from "../../types/ListingResult";
 import { Delete, Edit } from "@mui/icons-material";
-import { DetailedMessageGroup, MessageGroup, PatchMessageGroupRequestBody, User } from "../../types/messages-types";
-import { Box } from "@mui/system";
-import UsersAutocomplete from "../../components/UsersAutocomplete";
+import { DetailedMessageGroup, MessageGroup } from "../../types/messages-types";
+import MessageGroupEditingModal from "../../components/modals/MessageGroupEditingModal";
 
 const tableHeaders = ["ID", "Nom", "Description", "Date de création", "Action"];
 
 const AdminMessageGroups : React.FC = () => {
   const [alert, setAlert] = useState<Alert>({open: false, message: "", severity: "success"});
-  const [viewDialogOpen, setEditDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
 
   const [groups, setGroups] = useState<MessageGroup[]>([]);
   const [totalGroups, setTotalGroups] = useState(0);
@@ -73,35 +72,13 @@ const AdminMessageGroups : React.FC = () => {
     });
   };
 
-  const handleEditGroup = async () => {
-    if (editedGroup === undefined) {
-      return;
-    }
-
-    requestWrapper(async token => {
-      const {data} = await axios.patch<DetailedMessageGroup, AxiosResponse<DetailedMessageGroup>, PatchMessageGroupRequestBody>(
-        API_URL + "/message-groups/" + editedGroup.id,
-        {
-          name: editedGroup.name,
-          description: editedGroup.description,
-          ownerId: editedGroup.owner.id,
-          membersIDs: editedGroup.members.map(member => member.id),
-        },
-        {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-        }
-      );
-      showAlert('Événement modifié avec succès', 'success');
-      setEditDialogOpen(false);
-      setGroups(groups.map(group => {
-        if (group.id === data.id)
-          return data;
-        else
-          return group;
-      }));
-    });
+  const onGroupSave = (data: DetailedMessageGroup) => {
+    setGroups(groups.map(group => {
+      if (group.id === data.id)
+        return data;
+      else
+        return group;
+    }));
   };
 
   const handleDeleteGroup = async (groupId: number) => {
@@ -172,65 +149,14 @@ const AdminMessageGroups : React.FC = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
-      <Dialog
-        open={viewDialogOpen}
-        onClose={() => setEditDialogOpen(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>Modifier un groupe</DialogTitle>
-        <DialogContent>
-          { editedGroup === undefined ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <>
-              <TextField
-                margin="normal"
-                fullWidth
-                label="Nom"
-                value={editedGroup.name}
-                onChange={(e) =>
-                  setEditedGroup({...editedGroup, name: e.target.value})
-                }
-                sx={{mb: 3}}
-              />
-              <TextField
-                label="Description"
-                multiline
-                rows={4}
-                fullWidth
-                variant="outlined"
-                value={editedGroup.description}
-                onChange={(e) => 
-                  setEditedGroup({...editedGroup, description: e.target.value})
-                }
-                sx={{mb: 3}}
-              />
-              <UsersAutocomplete
-                selectedUser={editedGroup.owner}
-                setSelectedUser={(user: User) => setEditedGroup({...editedGroup, owner: user})}
-                showAlert={showAlert}
-                renderLabel="Admin du groupe"
-                withCurrentUser
-              />
-              <UsersAutocomplete
-                multipleSelection
-                selectedUser={editedGroup.members}
-                setSelectedUser={(users: User[]) => setEditedGroup({...editedGroup, members: users})}
-                showAlert={showAlert}
-                renderLabel="Admin du groupe"
-                withCurrentUser
-              />
-            </>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setEditDialogOpen(false)}>Annuler</Button>
-          <Button onClick={handleEditGroup}>Enregistrer</Button>
-        </DialogActions>
-      </Dialog>
+      <MessageGroupEditingModal
+        dialogOpen={editDialogOpen}
+        setDialogOpen={setEditDialogOpen}
+        showAlert={showAlert}
+        editedGroup={editedGroup}
+        setEditedGroup={setEditedGroup}
+        onGroupSave={onGroupSave}
+      />
     </AdminPage>
   );
 };
