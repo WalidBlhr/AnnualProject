@@ -182,7 +182,7 @@ export const listMessageHandler = async (req: Request, res: Response) => {
       data: validMessages,
       page_size: validation.value.limit,
       page: validation.value.page,
-      total_count: validMessages.length, // Utiliser le nombre de messages valides
+      total_count: totalCount, // Utiliser le nombre de messages valides
       total_pages: totalPages,
     });
   } catch (error) {

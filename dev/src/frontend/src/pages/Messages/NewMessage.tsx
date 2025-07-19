@@ -15,12 +15,7 @@ import axios from 'axios';
 import jwtDecode from 'jwt-decode';
 import {API_URL} from '../../const';
 import UsersAutocomplete from '../../components/UsersAutocomplete';
-
-export interface User {
-  id: number;
-  firstname: string;
-  lastname: string;
-}
+import { User } from '../../types/messages-types';
 
 const NewMessage = () => {
   const navigate = useNavigate();

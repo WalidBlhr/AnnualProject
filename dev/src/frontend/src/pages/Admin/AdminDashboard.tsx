@@ -1,10 +1,8 @@
-import ArticleIcon from '@mui/icons-material/Article';
-import CategoryIcon from '@mui/icons-material/Category';
-import EventIcon from '@mui/icons-material/Event';
-import HandymanIcon from '@mui/icons-material/Handyman';
-import MessageIcon from '@mui/icons-material/Message';
-import PeopleIcon from '@mui/icons-material/People';
-import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
+import {
+    Article,Category, Event,
+    Forum, Handyman, Message,
+    People, SwapHoriz,
+} from '@mui/icons-material';
 import {
     Box,
     Card,
@@ -17,17 +15,18 @@ import Grid from '@mui/material/Grid';
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-const AdminDashboard: React.FC = () => {
-    const adminModules = [
-        { title: 'Utilisateurs', icon: <PeopleIcon sx={{ fontSize: 40 }}/>, path: '/admin/users', description: 'Gérer les utilisateurs' },
-        { title: 'Événements', icon: <EventIcon sx={{ fontSize: 40 }}/>, path: '/admin/events', description: 'Gérer les événements' },
-        { title: 'Messages', icon: <MessageIcon sx={{ fontSize: 40 }}/>, path: '/admin/messages', description: 'Gérer la messagerie' },
-        { title: 'Trocs', icon: <SwapHorizIcon sx={{ fontSize: 40 }}/>, path: '/admin/trocs', description: 'Gérer les offres de troc' },
-        { title: 'Services', icon: <HandymanIcon sx={{ fontSize: 40 }}/>, path: '/admin/services', description: 'Gérer les services' },
-        { title: 'Articles', icon: <ArticleIcon sx={{ fontSize: 40 }}/>, path: '/admin/articles', description: 'Gérer le journal' },
-        { title: 'Catégories', icon: <CategoryIcon sx={{ fontSize: 40 }}/>, path: '/admin/categories', description: 'Gérer les catégories d\'articles' },
-    ];
+const adminModules = [
+    { title: 'Utilisateurs', icon: <People sx={{ fontSize: 40 }}/>, path: '/admin/users', description: 'Gérer les utilisateurs' },
+    { title: 'Événements', icon: <Event sx={{ fontSize: 40 }}/>, path: '/admin/events', description: 'Gérer les événements' },
+    { title: 'Messages', icon: <Message sx={{ fontSize: 40 }}/>, path: '/admin/messages', description: 'Gérer la messagerie' },
+    { title: 'Trocs', icon: <SwapHoriz sx={{ fontSize: 40 }}/>, path: '/admin/trocs', description: 'Gérer les offres de troc' },
+    { title: 'Services', icon: <Handyman sx={{ fontSize: 40 }}/>, path: '/admin/services', description: 'Gérer les services' },
+    { title: 'Articles', icon: <Article sx={{ fontSize: 40 }}/>, path: '/admin/articles', description: 'Gérer le journal' },
+    { title: 'Catégories', icon: <Category sx={{ fontSize: 40 }}/>, path: '/admin/categories', description: 'Gérer les catégories d\'articles' },
+    { title: 'Messageries', icon: <Forum sx={{ fontSize: 40 }}/>, path: '/admin/message-groups', description: 'Gérer les groupes' },
+];
 
+const AdminDashboard: React.FC = () => {
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
             <Typography variant="h3" gutterBottom component="h3" marginBottom={5}>

@@ -14,11 +14,10 @@ export type GroupMessage = MessageBase & (
   {receiver: null, group: Group}
 );
 
-interface User{
+export interface User{
   id: number;
   firstname: string;
   lastname: string;
-  email_notifications_enabled: boolean;
 }
 
 interface Group{
@@ -26,3 +25,25 @@ interface Group{
   name: string;
   createdAt: string;
 }
+
+export interface MessageGroup{
+  id: number;
+  name: string;
+  description: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type DetailedMessageGroup = MessageGroup & {
+  owner: User;
+  members: User[];
+}
+
+export type PatchMessageGroupRequestBody = {
+  name?: string;
+  description?: string;
+  ownerId?: number;
+} & ({
+  newMembersIDs?: number[];
+  removedMembersIDs?: number[];
+} | {membersIDs?: number[]})

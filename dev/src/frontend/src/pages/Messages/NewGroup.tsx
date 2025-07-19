@@ -14,8 +14,8 @@ import {useNavigate} from 'react-router-dom';
 import axios from 'axios';
 import {API_URL} from '../../const';
 import {useAuth} from '../../contexts/AuthContext';
-import {User} from './NewMessage';
 import UsersAutocomplete from '../../components/UsersAutocomplete';
+import { User } from '../../types/messages-types';
 
 const NewGroup = () => {
   const navigate = useNavigate();

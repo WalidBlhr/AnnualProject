@@ -24,6 +24,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import axios from 'axios';
 import { API_URL } from '../../const';
+import AdminPage from './AdminPage';
 
 interface Message {
   id: number;
@@ -129,11 +130,11 @@ const AdminMessages: React.FC = () => {
   };
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-      <Typography variant="h4" gutterBottom>
-        Gestion des Messages
-      </Typography>
-
+    <AdminPage
+      title="Gestion des messages"
+      alert={alert}
+      setAlert={setAlert}
+    >
       <TableContainer component={Paper}>
         <Table>
           <TableHead>
@@ -234,21 +235,7 @@ const AdminMessages: React.FC = () => {
           <Button onClick={() => setViewDialogOpen(false)}>Fermer</Button>
         </DialogActions>
       </Dialog>
-
-      <Snackbar
-        open={alert.open}
-        autoHideDuration={6000}
-        onClose={() => setAlert({ ...alert, open: false })}
-      >
-        <Alert
-          severity={alert.severity}
-          onClose={() => setAlert({ ...alert, open: false })}
-          sx={{ whiteSpace: 'pre-line' }}
-        >
-          {alert.message}
-        </Alert>
-      </Snackbar>
-    </Container>
+    </AdminPage>
   );
 };
 

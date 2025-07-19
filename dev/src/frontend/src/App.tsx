@@ -51,6 +51,7 @@ import MyTrocOffers from './pages/TrocOffers/MyTrocOffers';
 import SuggestionsPage from './components/Suggestions/SuggestionsPage';
 import './services/axios';
 import NewGroup from './pages/Messages/NewGroup';
+import AdminMessageGroups from './pages/Admin/AdminMessageGroups';
 
 const App: React.FC = () => {
     return (
@@ -117,6 +118,11 @@ const App: React.FC = () => {
                                             </AdminRoute>
                                         } 
                                     />
+                                    <Route path="/admin/message-groups" element={
+                                        <ProtectedRoute>
+                                            <AdminMessageGroups />
+                                        </ProtectedRoute>
+                                    } />
                                     <Route path="/absences" element={
                                         <ProtectedRoute>
                                             <Absences />

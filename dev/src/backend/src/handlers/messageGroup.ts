@@ -99,7 +99,7 @@ export const getMessageGroup = async (req: Request, res: Response) : Promise<voi
 
     const sentGroup = validated.value;
     const groupRepo = AppDataSource.getRepository(MessageGroup);
-    const group = await groupRepo.findOne({where: {id: sentGroup.id}, relations: ["owner", "members", "messages"]});
+    const group = await groupRepo.findOne({where: {id: sentGroup.id}, relations: ["owner", "members"]});
     if (group === null) {
       res.status(404).send({error: `Group with id ${sentGroup.id} not found.`});
       return;
@@ -199,6 +199,16 @@ export const patchMessageGroup = async (req: Request, res: Response) : Promise<v
         return;
       }
       group.owner = newOwner;
+    }
+
+    if (sentGroup.membersIDs) {
+      const {validUsers, notFoundUsersIDs} = await checkUserIdArray(sentGroup.membersIDs);
+      if (notFoundUsersIDs.length > 0) {
+        const plural = notFoundUsersIDs.length > 1 ? 's' : '';
+        res.status(404).send({error: `User${plural} with ID${plural} ${notFoundUsersIDs} not found. (newMembersIDs)`});
+        return;
+      }
+      group.members = validUsers;
     }
 
     if (sentGroup.newMembersIDs !== undefined && sentGroup.newMembersIDs.length > 0) {

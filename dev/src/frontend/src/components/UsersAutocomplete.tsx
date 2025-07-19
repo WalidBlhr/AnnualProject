@@ -1,31 +1,31 @@
 import { Autocomplete, Avatar, Chip, TextField } from "@mui/material";
-import { User } from "../pages/Messages/NewMessage";
-import { Box } from "@mui/system";
+import { Box, SxProps } from "@mui/system";
 import { FiberManualRecord } from "@mui/icons-material";
 import { useSocket } from "../contexts/SocketContext";
 import { useEffect, useState } from "react";
 import { API_URL } from "../const";
 import axios from "axios";
 import { useAuth } from "../contexts/AuthContext";
+import { User } from "../types/messages-types";
+import { ListingResult } from "../types/ListingResult";
 
 type UsersAutocompleteProps = {
   showAlert: (message: string, severity: "success" | "error") => void;
   withUsersStatus?: boolean;
+  withCurrentUser?: boolean;
   renderLabel: string;
-  //multipleSelection?: boolean;
-  //selectedUser: User | User[] | null;
-  //setSelectedUser: React.Dispatch<React.SetStateAction<User[] | (User | null)>>;
+  sx?: SxProps;
 } & ({
   multipleSelection?: false;
   selectedUser: User | null;
-  setSelectedUser: React.Dispatch<React.SetStateAction<User | null>>;
+  setSelectedUser: (user: User) => void;
 } | {
   multipleSelection?: true;
   selectedUser: User[] | null;
-  setSelectedUser: React.Dispatch<React.SetStateAction<User[]>>;
+  setSelectedUser: (users: User[]) => void;
 })
 
-const UsersAutocomplete : React.FC<UsersAutocompleteProps> = ({selectedUser, setSelectedUser, showAlert, renderLabel, withUsersStatus = false, multipleSelection = false}) => {
+const UsersAutocomplete : React.FC<UsersAutocompleteProps> = ({selectedUser, setSelectedUser, showAlert, renderLabel, withUsersStatus = false, multipleSelection = false, withCurrentUser = false, sx = {}}) => {
   const { isOnline } = useSocket();
   const {user: currentUser} = useAuth();
 
@@ -44,14 +44,18 @@ const UsersAutocomplete : React.FC<UsersAutocompleteProps> = ({selectedUser, set
       setIsDisabled(true);
       const token = localStorage.getItem('token');
       
-      const { data } = await axios.get(API_URL + '/users', {
+      const { data } = await axios.get<ListingResult<User[]>>(API_URL + '/users', {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
 
-      const filteredUsers = data.data.filter((userData: User) => userData.id !== (currentUser?.userId ?? 0));
-      setUsers(filteredUsers);
+      let gotUsers = data.data;
+      if (!withCurrentUser) {
+        gotUsers = gotUsers.filter((userData: User) => userData.id !== (currentUser?.userId ?? 0));
+      }
+
+      setUsers(gotUsers);
       setIsDisabled(false);
     } catch (error) {
       console.error(error)
@@ -62,6 +66,7 @@ const UsersAutocomplete : React.FC<UsersAutocompleteProps> = ({selectedUser, set
 
   return (
     <Autocomplete
+      sx={sx}
       value={selectedUser}
       multiple={multipleSelection}
       onChange={(_, newValue) => {
@@ -70,6 +75,7 @@ const UsersAutocomplete : React.FC<UsersAutocompleteProps> = ({selectedUser, set
       disabled={isDisabled}
       options={users}
       getOptionLabel={(option) => `${option.firstname} ${option.lastname}`}
+      isOptionEqualToValue={(option, value) => option.id === value.id}
       renderOption={(props, option) => {
         const {key, ...rest} = props;
         return (

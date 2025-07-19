@@ -28,7 +28,8 @@ export interface PatchMessageGroupRequest{
   description?: string;
   ownerId?: number;
   newMembersIDs?: number[];
-  removedMembersIDs?: number[]; 
+  removedMembersIDs?: number[];
+  membersIDs?: number[];
 }
 
 export const listMessageGroupsValidation = Joi.object<ListMessageGroupsRequest & PaginationRequest>({
@@ -61,4 +62,10 @@ export const patchMessageGroupValidation = Joi.object<PatchMessageGroupRequest>(
   ownerId: Joi.number().min(1),
   newMembersIDs: Joi.array().items(Joi.number()),
   removedMembersIDs: Joi.array().items(Joi.number()),
-}).options({abortEarly: false});
+  membersIDs: Joi.array().items(Joi.number()),
+}).oxor('membersIDs', 'newMembersIDs')
+  .oxor('membersIDs', 'removedMembersIDs')
+  .messages({
+    'object.oxor': `"membersIDs" ne peut pas être présent en même temps que "newMembersIDs" ou "removedMembersIDs".`
+  })
+  .options({abortEarly: false});
