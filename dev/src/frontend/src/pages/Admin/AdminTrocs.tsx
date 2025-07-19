@@ -1,14 +1,18 @@
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import {
   Alert,
+  Box,
   Button,
   Container,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
+  FormControl,
   IconButton,
+  InputLabel,
   MenuItem,
   Paper,
   Select,
@@ -19,6 +23,7 @@ import {
   TextField,
   Typography
 } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import axios from 'axios';
 import React, { useEffect, useState } from 'react';
 import { API_URL } from '../../const';
@@ -37,13 +42,28 @@ interface TrocOffer {
     firstname: string;
     lastname: string;
   };
+  image_url?: string;
 }
+
+const VisuallyHiddenInput = styled('input')({
+  clip: 'rect(0 0 0 0)',
+  clipPath: 'inset(50%)',
+  height: 1,
+  overflow: 'hidden',
+  position: 'absolute',
+  bottom: 0,
+  left: 0,
+  whiteSpace: 'nowrap',
+  width: 1,
+});
 
 const AdminTrocs: React.FC = () => {
   const [trocs, setTrocs] = useState<TrocOffer[]>([]);
   const [totalTrocs, setTotalTrocs] = useState<number>(0);
   const [editingTroc, setEditingTroc] = useState<TrocOffer | null>(null);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editFormData, setEditFormData] = useState({
     title: '',
     description: '',
@@ -117,25 +137,62 @@ const AdminTrocs: React.FC = () => {
       status: troc.status,
       type: troc.type
     });
+    setSelectedImage(null);
+    setPreviewUrl(troc.image_url ? API_URL + troc.image_url : null);
     setEditDialogOpen(true);
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      setSelectedImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
   const handleEditSubmit = async () => {
     if (!editingTroc) return;
     try {
-      const body = {
-        id: editingTroc.id,
-        title: editFormData.title,
-        description: editFormData.description,
-        status: editFormData.status,
+      // Validation des données
+      if (!editFormData.title.trim()) {
+        showAlert('Le titre est requis', 'error');
+        return;
+      }
+      if (!editFormData.description.trim()) {
+        showAlert('La description est requise', 'error');
+        return;
+      }
+
+      // Utiliser la même approche que MyTrocOffers
+      const updateData = {
+        title: editFormData.title.trim(),
+        description: editFormData.description.trim(),
+        status: editFormData.status
       };
-      await axios.put(`${API_URL}/trocoffers/${editingTroc.id}`, body, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+
+      await axios.put(`${API_URL}/trocoffers/${editingTroc.id}`, updateData, {
+        headers: { 
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json',
+        },
       });
-      showAlert('Offre de troc modifiée avec succès', 'success');
+
+      // Mettre à jour l'état local immédiatement
+      setTrocs(prevTrocs => 
+        prevTrocs.map(troc => 
+          troc.id === editingTroc.id 
+            ? { ...troc, ...updateData } 
+            : troc
+        )
+      );
+
       setEditDialogOpen(false);
-      fetchTrocs();
+      setEditingTroc(null);
+      setSelectedImage(null);
+      setPreviewUrl(null);
+      showAlert('Offre de troc modifiée avec succès', 'success');
     } catch (error) {
+      console.error('Error updating troc offer:', error);
       showAlert('Erreur lors de la modification', 'error');
     }
   };
@@ -228,17 +285,70 @@ const AdminTrocs: React.FC = () => {
           onRowsPerPageChange={handleChangeRowsPerPage}
         />
       </TableContainer>
-      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)}>
+      <Dialog open={editDialogOpen} onClose={() => setEditDialogOpen(false)} maxWidth="md" fullWidth>
         <DialogTitle>Modifier l'offre de troc</DialogTitle>
         <DialogContent>
-          <TextField margin="normal" fullWidth label="Titre" value={editFormData.title} onChange={e => setEditFormData({ ...editFormData, title: e.target.value })} />
-          <TextField margin="normal" fullWidth label="Description" value={editFormData.description} onChange={e => setEditFormData({ ...editFormData, description: e.target.value })} />
-          <TextField margin="normal" fullWidth label="Statut" value={editFormData.status} onChange={e => setEditFormData({ ...editFormData, status: e.target.value })} />
-          <TextField margin="normal" fullWidth label="Type" value={editFormData.type} onChange={e => setEditFormData({ ...editFormData, type: e.target.value })} />
+          {editingTroc && (
+            <>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Titre"
+                fullWidth
+                value={editFormData.title}
+                onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+              />
+              <TextField
+                margin="dense"
+                label="Description"
+                fullWidth
+                multiline
+                rows={4}
+                value={editFormData.description}
+                onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })}
+              />
+              <FormControl fullWidth margin="dense">
+                <InputLabel>Statut</InputLabel>
+                <Select
+                  value={editFormData.status}
+                  onChange={(e) => setEditFormData({ ...editFormData, status: e.target.value })}
+                >
+                  <MenuItem value="open">Disponible</MenuItem>
+                  <MenuItem value="pending">En négociation</MenuItem>
+                  <MenuItem value="closed">Terminé</MenuItem>
+                </Select>
+              </FormControl>
+              <Typography variant="body2" color="textSecondary" sx={{ mt: 2, mb: 1 }}>
+                Type: {editFormData.type === 'offer' ? 'Offre' : 'Demande'} (non modifiable)
+              </Typography>
+              <Box sx={{ mt: 2 }}>
+                <Button
+                  component="label"
+                  variant="contained"
+                  startIcon={<CloudUploadIcon />}
+                  sx={{ mb: 2 }}
+                >
+                  Changer la photo
+                  <VisuallyHiddenInput type="file" accept="image/*" onChange={handleImageChange} />
+                </Button>
+                {previewUrl && (
+                  <Box sx={{ mt: 2 }}>
+                    <img 
+                      src={previewUrl} 
+                      alt="Aperçu" 
+                      style={{ maxWidth: '100%', maxHeight: '200px' }} 
+                    />
+                  </Box>
+                )}
+              </Box>
+            </>
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setEditDialogOpen(false)}>Annuler</Button>
-          <Button onClick={handleEditSubmit} variant="contained">Enregistrer</Button>
+          <Button onClick={handleEditSubmit} variant="contained">
+            Sauvegarder
+          </Button>
         </DialogActions>
       </Dialog>
       <Snackbar open={alert.open} autoHideDuration={6000} onClose={() => setAlert({ ...alert, open: false })}>
