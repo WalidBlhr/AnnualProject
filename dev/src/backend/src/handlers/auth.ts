@@ -65,7 +65,7 @@ export const login = async (req: Request, res: Response) => {
         const userRepository = AppDataSource.getRepository(User)
         const user : User | null = await userRepository.findOne({
             where: { email: loginRequest.email },
-            select: ['id', 'email', 'password', 'firstname', 'lastname', 'role', 
+            select: ['id', 'email', 'password', 'firstname', 'lastname', 'createdAt', 'role', 
                     'is_banned', 'banned_at', 'ban_reason', 'ban_until']
         })
         if(user === null) {
