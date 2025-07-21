@@ -23,21 +23,21 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
     }
 
     const { userId, eventId, date_inscription, status_participation, comment } = validation.value;
-    
+
     // Récupérer les entités User et Event
     const userRepository = AppDataSource.getRepository(User);
     const eventRepository = AppDataSource.getRepository(Event);
     const eventParticipantRepository = AppDataSource.getRepository(EventParticipant);
-    
+
     // Trouver les objets complets
     const user = await userRepository.findOneBy({ id: userId });
-    const event = await eventRepository.findOneBy({ id: eventId });
-    
+    const event = await eventRepository.findOne({where: {id: eventId}, relations: ["creator"] });
+
     if (!user || !event) {
       res.status(404).send({ message: "Utilisateur ou événement non trouvé" });
       return;
     }
-    
+
     // Vérifier si l'événement a atteint son quota maximum
     const currentParticipantsCount = await eventParticipantRepository.count({
       where: {
@@ -45,12 +45,12 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
         status_participation: Not('canceled')
       }
     });
-    
+
     if (currentParticipantsCount >= event.max_participants) {
       res.status(400).send({ error: "Le nombre maximum de participants est atteint" });
       return;
     }
-    
+
     // Créer l'inscription avec le constructeur comme dans vos autres handlers
     const eventParticipant = new EventParticipant(
       0, // L'ID sera généré automatiquement
@@ -60,7 +60,7 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
       status_participation || 'pending',
       comment
     );
-    
+
     const eventParticipantCreated = await eventParticipantRepository.save(eventParticipant);
 
     // Enregistrer l'interaction de participation à un événement
@@ -77,7 +77,7 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
       where: { id: eventId },
       relations: ['creator']
     });
-    
+
     if (eventWithCreator && eventWithCreator.creator.id !== userId) {
       await NotificationService.notifyEventParticipation(
         eventId,
@@ -91,7 +91,7 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
     if (currentParticipantsCount + 1 >= (event.min_participants ?? 0) && event.status === 'pending') {
       event.status = 'confirmed';
       await eventRepository.save(event);
-      
+
       // Notifier tous les participants que l'événement est confirmé
       if (event.type === 'community') {
         const messageRepository = AppDataSource.getRepository(Message);
@@ -104,10 +104,10 @@ export const createEventParticipantHandler = async (req: Request, res: Response)
         });
         await messageRepository.save(newMessage);
       }
-      
+
       await sendEventConfirmationNotifications(event.id);
     }
-    
+
     res.status(201).send(eventParticipantCreated);
   } catch (error) {
     if (error instanceof Error) {
