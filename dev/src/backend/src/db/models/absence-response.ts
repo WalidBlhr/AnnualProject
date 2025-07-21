@@ -7,7 +7,7 @@ export class AbsenceResponse {
     @PrimaryGeneratedColumn()
     id!: number;
 
-    @ManyToOne(() => Absence, absence => absence.responses)
+    @ManyToOne(() => Absence, absence => absence.responses, { onDelete: 'CASCADE' })
     @JoinColumn({ name: "absence_id" })
     absence: Absence;
 

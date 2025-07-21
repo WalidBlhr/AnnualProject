@@ -102,6 +102,14 @@ const statusLabels: Record<string, string> = {
   'canceled': 'Annulée'
 };
 
+interface AbsenceData {
+  start_date: string,
+  end_date: string,
+  userId?: number|null,
+  notes: string,
+  trusted_contact_ids: number[],
+};
+
 const Absences: React.FC = () => {
   const [tabValue, setTabValue] = useState(0);
   const [myAbsences, setMyAbsences] = useState<Absence[]>([]);
@@ -271,10 +279,10 @@ const Absences: React.FC = () => {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const absenceData = {
+      const absenceData : AbsenceData = {
         start_date: startDate.format('YYYY-MM-DD'),
         end_date: endDate.format('YYYY-MM-DD'),
-        userId,
+        //userId,
         notes,
         trusted_contact_ids: selectedContacts,
       };
@@ -292,6 +300,7 @@ const Absences: React.FC = () => {
         );
         showAlert('Absence mise à jour avec succès', 'success');
       } else {
+        absenceData["userId"] = userId;
         // Create new absence
         await axios.post(
           API_URL + '/absences',
